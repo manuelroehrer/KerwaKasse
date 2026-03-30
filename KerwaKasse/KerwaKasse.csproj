@@ -18,7 +18,6 @@
   <ItemGroup>
     <Resource Include="Assets\*.png" />
     <Resource Include="Assets\*.ico" />
-    <Content Include="Assets\kerwakasse-logo.ico" />
   </ItemGroup>
 
   <ItemGroup>
