@@ -8,25 +8,48 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Grid VerticalAlignment="Stretch"
-                              HorizontalAlignment="Stretch"
-                              Background="{TemplateBinding Background}">
-                            <ContentPresenter x:Name="MyContentPresenter" Content="{TemplateBinding Content}"/>
-                        </Grid>
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"
+                                ClipToBounds="True">
+                            <Grid>
+                                <!-- Active indicator bar on the left -->
+                                <Border x:Name="ActiveIndicator"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Stretch"
+                                        Width="3"
+                                        Background="Transparent"
+                                        CornerRadius="0,1.5,1.5,0"
+                                        Margin="0,4,0,4"/>
+                                <ContentPresenter x:Name="MyContentPresenter"
+                                                  Content="{TemplateBinding Content}"
+                                                  VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0E2D3C"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#26FFFFFF"/>
+                                <Setter TargetName="ActiveIndicator" Property="Background" Value="White"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#33FFFFFF"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Height" Value="60"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="54"/>
+            <Setter Property="Cursor" Value="Hand"/>
         </Style.Setters>
-
-        <Style.Triggers>
-            <Trigger Property="IsChecked" Value="True">
-                <Setter Property="Background" Value="#404F54"/>
-                <Setter Property="Foreground" Value="Black"/>
-            </Trigger>
-        </Style.Triggers>
     </Style>
 </ResourceDictionary>

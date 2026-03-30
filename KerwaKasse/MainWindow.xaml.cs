@@ -2,6 +2,7 @@
 using KerwaKasse.MVVM.ViewModel;
 using KerwaKasse.Core.Data;
 using System.Windows;
+using System.Windows.Input;
 using System;
 using System.IO;
 
@@ -23,6 +24,23 @@ namespace KerwaKasse
 
             DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath);
             InitializeComponent();
+        }
+
+        private void NavButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Tg_Btn.IsChecked == true)
+                Tg_Btn.IsChecked = false;
+        }
+
+        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        {
+            base.OnPreviewMouseDown(e);
+            if (Tg_Btn.IsChecked == true)
+            {
+                var pos = e.GetPosition(nav_pnl);
+                if (pos.X < 0 || pos.X > nav_pnl.ActualWidth || pos.Y < 0 || pos.Y > nav_pnl.ActualHeight)
+                    Tg_Btn.IsChecked = false;
+            }
         }
     }
 }
