@@ -1,0 +1,223 @@
+﻿<UserControl x:Class="KerwaKasse.MVVM.View.ProductsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:helper="clr-namespace:KerwaKasse.Helper"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
+
+        <DataTemplate x:Key="AvailabilityDataTemplate">
+            <TextBlock Text="{Binding AvailableIcon}" FontFamily="Segoe MDL2 Assets" FontSize="28" Margin="16,0,0,0"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ColorDataTemplate">
+            <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" MinWidth="35" MinHeight="30" Margin="2" Background="{Binding Color}" BorderBrush="#A9A9A9" BorderThickness="1">
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
+
+    <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="4"/>
+            <ColumnDefinition Width="{Binding SidePanelWidth, Converter={StaticResource DoubleToGridLengthConverter}, FallbackValue=300}"/>
+        </Grid.ColumnDefinitions>
+        
+        <TextBlock Text="Produkte" Foreground="Black" FontSize="30" Margin="20,0,0,0"/>
+        
+        <DockPanel Grid.Row="1" Margin="0,0,14,0">
+
+            <Grid HorizontalAlignment="Center" DockPanel.Dock="Bottom" Margin="2,10,2,0" Width="380">
+                <Button HorizontalAlignment="Center" DockPanel.Dock="Bottom" Margin="2,0,3,0" Width="380" Background="#74AD3F"
+                    Command="{Binding AddNewProductCommand}">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="&#xE710;" Foreground="White" FontSize="18" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <Label Content="Neues Produkt anlegen" Foreground="White" FontSize="18" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Visible"></Setter>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Mode_AddNew}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+            </Grid>
+
+            
+
+            <ListView SelectedItem="{Binding SelectedProduct}" ItemsSource="{Binding Products}" SelectionMode="Single">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn  Width="50" DisplayMemberBinding="{Binding PositionNumber}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Tag="Pos.">Pos.</GridViewColumnHeader>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn Width="60" CellTemplate="{StaticResource ColorDataTemplate}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Tag="Farbe">Farbe</GridViewColumnHeader>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn  Width="240" DisplayMemberBinding="{Binding Description}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Tag="Bezeichnung">Bezeichnung</GridViewColumnHeader>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn Width="70" DisplayMemberBinding="{Binding Price, StringFormat={}{0:C}}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Tag="Preis">Preis</GridViewColumnHeader>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn Width="100" CellTemplate="{StaticResource AvailabilityDataTemplate}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Tag="Verfügbar">Verfügbar</GridViewColumnHeader>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </DockPanel>
+
+
+        <GridSplitter Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" DragCompleted="GridSplitter_DragCompleted"/>
+
+        <!--Edit Product-->
+
+        <DockPanel Margin="10,40,0,0" LastChildFill="False" Grid.Row="1" Grid.Column="2">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Setter Property="Visibility" Value="Collapsed"></Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Mode_Editing}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
+
+            <TextBlock DockPanel.Dock="Top" Text="Produkt bearbeiten" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,20" FontWeight="SemiBold"/>
+            <TextBlock DockPanel.Dock="Top" Text="Bezeichnung" FontSize="16"/>
+            <TextBox DockPanel.Dock="Top" Text="{Binding EditingProduct.Description}" Margin ="0,0,10,10" FontSize="16" IsEnabled="False"/>
+            <TextBlock DockPanel.Dock="Top" Text="Preis" FontSize="16"/>
+            <TextBox DockPanel.Dock="Top" Text="{Binding EditingProduct.Price, StringFormat={}{0:C}}" Margin ="0,0,10,10" FontSize="16"/>
+            <TextBlock DockPanel.Dock="Top" Text="Farbe" FontSize="16"/>
+            <xctk:ColorPicker DockPanel.Dock="Top" UsingAlphaChannel="False" Margin ="0,0,10,10" Height="30" SelectedColor="{Binding EditingProduct.ColorAsString}"/>
+            <TextBlock DockPanel.Dock="Top" Text="Position" FontSize="16"/>
+            <ComboBox DockPanel.Dock="Top" HorizontalAlignment="Stretch" Margin ="0,0,10,10" SelectedItem ="{Binding CmbSelection}" 
+                      ItemsSource="{Binding CmbItems}"/>
+            <TextBlock DockPanel.Dock="Top" Text="Verfügbar" FontSize="16"/>
+            <ui:ToggleSwitch DockPanel.Dock="Top" Margin="5,5,0,0" IsOn="{Binding EditingProduct.Available}" OffContent="" OnContent=""/>
+
+            <Grid DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <Button Command="{Binding DiscardEditingProductCommand}" HorizontalAlignment="Stretch">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="&#xE106;" FontSize="18" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <Label Content="Verwerfen" FontSize="18" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
+                <Button Command="{Binding SaveEditingProductCommand}" Grid.Column="2" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="&#xE105;" Foreground="White" FontSize="18" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <Label Content="Speichern" Foreground="White" FontSize="18" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </Grid>
+        </DockPanel>
+
+        <!--Adding New Product-->
+
+        <DockPanel Margin="10,40,0,0" LastChildFill="False" Grid.Row="1" Grid.Column="2">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Setter Property="Visibility" Value="Collapsed"></Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Mode_AddNew}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
+
+            <TextBlock DockPanel.Dock="Top" Text="Neues Produkt anlegen" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,20" FontWeight="SemiBold"/>
+            <TextBlock DockPanel.Dock="Top" Text="Bezeichnung" FontSize="16"/>
+            <TextBox DockPanel.Dock="Top" Text="{Binding NewProduct.Description}" Margin ="0,0,10,10" FontSize="16"/>
+            <TextBlock DockPanel.Dock="Top" Text="Preis" FontSize="16"/>
+            <TextBox DockPanel.Dock="Top" Text="{Binding NewProduct.Price, StringFormat={}{0:C}}" Margin ="0,0,10,10" FontSize="16"/>
+            <TextBlock DockPanel.Dock="Top" Text="Farbe" FontSize="16"/>
+            <xctk:ColorPicker DockPanel.Dock="Top" UsingAlphaChannel="False" Margin ="0,0,10,10" Height="30" SelectedColor="{Binding NewProduct.ColorAsString}"/>
+            <TextBlock DockPanel.Dock="Top" Text="Verfügbar" FontSize="16"/>
+            <CheckBox DockPanel.Dock="Top" Margin="5,5,0,0" IsChecked="{Binding NewProduct.Available, Mode=TwoWay}"/>
+
+            <Grid DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <Button Command="{Binding DiscardNewProductCommand}" HorizontalAlignment="Stretch">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="&#xE106;" FontSize="18" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <Label Content="Verwerfen" FontSize="18" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
+                <Button Command="{Binding SaveNewProductCommand}" Grid.Column="2" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="&#xE105;" Foreground="White" FontSize="18" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <Label Content="Speichern" Foreground="White" FontSize="18" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </Grid>
+        </DockPanel>
+        
+        <!--No Product selected-->
+
+        <Grid Grid.Row="1" Grid.Column="2">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Visible"></Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Mode_None}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <TextBlock Text="Kein Produkt ausgewählt" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+    </Grid>
+</UserControl>

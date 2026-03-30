@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>KerwaKasse</RootNamespace>
+    <AssemblyName>KerwaKasse</AssemblyName>
+    <ApplicationIcon>Assets\kerwakasse-logo.ico</ApplicationIcon>
+    <Product>KerwaKasse</Product>
+    <Copyright>Copyright © 2026</Copyright>
+    <Authors>Manuel Röhrer</Authors>
+    <AssemblyVersion>2.0.0</AssemblyVersion>
+    <FileVersion>2.0.0</FileVersion>
+	<Version>2.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\*.png" />
+    <Resource Include="Assets\*.ico" />
+    <Content Include="Assets\kerwakasse-logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.72" />
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="4.3.0" />
+    <PackageReference Include="LiveChartsCore" Version="2.0.0" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="2.0.0" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0" />
+    <PackageReference Include="ModernWpfUI" Version="0.9.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KerwaKasse.Core\KerwaKasse.Core.csproj" />
+  </ItemGroup>
+
+</Project>
