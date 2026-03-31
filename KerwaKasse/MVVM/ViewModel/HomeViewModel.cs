@@ -275,6 +275,9 @@ namespace KerwaKasse.MVVM.ViewModel
         /// </summary>
         public void SaveOrder()
         {
+            if (OrderPositions.Count == 0)
+                return;
+
             try
             {
                 var positions = OrderPositions.Select(op => new OrderPosition
