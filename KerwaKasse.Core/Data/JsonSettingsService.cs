@@ -22,9 +22,16 @@ public class JsonSettingsService : ISettingsService
             return;
         }
 
-        var json = File.ReadAllText(_filePath);
-        _settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
-                    ?? new Dictionary<string, JsonElement>();
+        try
+        {
+            var json = File.ReadAllText(_filePath);
+            _settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
+                        ?? new Dictionary<string, JsonElement>();
+        }
+        catch
+        {
+            _settings = new Dictionary<string, JsonElement>();
+        }
     }
 
     public T? Get<T>(string key, T? defaultValue = default)
