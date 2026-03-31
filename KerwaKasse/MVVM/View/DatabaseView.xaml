@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <StackPanel Margin="20,0,20,0">
+    <StackPanel Margin="20,10,20,10">
         <TextBlock Text="Datenbank" Foreground="Black" FontSize="30" Margin="0,0,0,20"/>
         <TextBlock Text="Backup" Foreground="Black" FontSize="22" FontWeight="SemiBold"/>
         <TextBlock Text="Es wird empfohlen mindestens ein Backup täglich zu erstellen." TextWrapping="Wrap" Foreground="Black" FontSize="20" Margin="0,8,0,14"/>

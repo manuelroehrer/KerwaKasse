@@ -45,7 +45,7 @@
     </Window.Resources>
     
     <Grid>
-        <ContentControl x:Name="MainContent" Margin="60,10,10,10" Content="{Binding CurrentView}"
+        <ContentControl x:Name="MainContent" Margin="60,0,0,0" Content="{Binding CurrentView}"
                         Background="Transparent"/>
 
         <!--// Navigation Panel //-->
