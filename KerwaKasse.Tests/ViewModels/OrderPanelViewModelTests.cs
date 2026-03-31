@@ -7,15 +7,15 @@ using NSubstitute;
 
 namespace KerwaKasse.Tests.ViewModels;
 
-public class HomeViewModelTests
+public class OrderPanelViewModelTests
 {
     private readonly IProductService _productService;
     private readonly IOrderService _orderService;
     private readonly ISettingsService _settings;
     private readonly IDialogService _dialogService;
-    private readonly HomeViewModel _sut;
+    private readonly OrderPanelViewModel _sut;
 
-    public HomeViewModelTests()
+    public OrderPanelViewModelTests()
     {
         _productService = Substitute.For<IProductService>();
         _orderService = Substitute.For<IOrderService>();
@@ -28,15 +28,12 @@ public class HomeViewModelTests
             new() { Id = 2, Description = "Bier", Price = 2.80m, Available = true, SortOrder = 2 }
         });
 
-        _settings.Get("buttonResizeFactor", 2.0).Returns(2.0);
-        _settings.Get("buttonDefaultHeight", 55.0).Returns(55.0);
-        _settings.Get("buttonDefaultWidth", 80.0).Returns(80.0);
-        _settings.Get("buttonsDefaultFontSizeBody", 6.0).Returns(6.0);
-        _settings.Get("buttonsDefaultFontSizeHead", 10.0).Returns(10.0);
-        _settings.Get("buttonsDefaultPadding", 4.0).Returns(4.0);
-        _settings.Get("homeOrderPanelWidth", 350.0).Returns(350.0);
+        _settings.Get("orderPanelCardScaleFactor", 1.0).Returns(1.0);
+        _settings.Get("orderPanelUseColoredBorder", true).Returns(true);
+        _settings.Get("orderPanelBorderDarkenFactor", 0.7).Returns(0.7);
+        _settings.Get("orderPanelWidth", 350.0).Returns(350.0);
 
-        _sut = new HomeViewModel(_productService, _orderService, _settings, _dialogService);
+        _sut = new OrderPanelViewModel(_productService, _orderService, _settings, _dialogService);
     }
 
     [Fact]
@@ -141,19 +138,10 @@ public class HomeViewModelTests
     [Fact]
     public void Constructor_LoadsPreferencesFromSettings()
     {
-        Assert.Equal(2.0, _sut.Button_ResizeFactor);
+        Assert.Equal(1.0, _sut.Button_ResizeFactor);
         Assert.Equal(350.0, _sut.OrderPanelWidth);
-    }
-
-    [Fact]
-    public void ResizeButtonProperties_ScalesDefaults()
-    {
-        // With factor 2.0, defaults should be doubled
-        Assert.Equal(110.0, _sut.Buttons_Height);   // 55 * 2
-        Assert.Equal(160.0, _sut.Buttons_Width);     // 80 * 2
-        Assert.Equal(12.0, _sut.Buttons_FontSizeBody); // 6 * 2
-        Assert.Equal(20.0, _sut.Buttons_FontSizeHead); // 10 * 2
-        Assert.Equal(8.0, _sut.Buttons_Padding);     // 4 * 2
+        Assert.True(_sut.UseColoredBorder);
+        Assert.Equal(0.7, _sut.BorderDarkenFactor);
     }
 
     [Fact]

@@ -1,0 +1,264 @@
+<UserControl x:Class="KerwaKasse.MVVM.View.OrderPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:helper="clr-namespace:KerwaKasse.Helper"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
+        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+    </UserControl.Resources>
+
+    <Grid x:Name="MainGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="3"/>
+            <ColumnDefinition Width="{Binding OrderPanelWidth, Converter={StaticResource DoubleToGridLengthConverter}, FallbackValue=350}" MinWidth="280" MaxWidth="600"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Product grid -->
+        <ScrollViewer Grid.Column="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="4,10,4,10">
+            <ItemsControl ItemsSource="{Binding Products}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding Path=DataContext.AddOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}">
+                            <Button.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding Path=DataContext.Button_ResizeFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ScaleY="{Binding Path=DataContext.Button_ResizeFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                            </Button.LayoutTransform>
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Card" Width="170" Height="105" CornerRadius="5" Background="White" Margin="4,3,4,7"
+                                            BorderThickness="0.9">
+                                        <Border.BorderBrush>
+                                            <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                                <Binding Path="Color"/>
+                                                <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                            </MultiBinding>
+                                        </Border.BorderBrush>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="4" ShadowDepth="1.5" Direction="270" Opacity="0.18" Color="Black"/>
+                                        </Border.Effect>
+                                        <Grid ClipToBounds="True">
+                                            <Border Background="{Binding Color}" VerticalAlignment="Top"
+                                                    Height="18" CornerRadius="4,4,0,0"
+                                                    BorderThickness="0,0,0,0.9">
+                                                <Border.BorderBrush>
+                                                    <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                                        <Binding Path="Color"/>
+                                                        <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                        <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                    </MultiBinding>
+                                                </Border.BorderBrush>
+                                            </Border>
+
+                                            <!-- Hover overlay -->
+                                            <Border x:Name="Overlay" Background="Transparent" CornerRadius="5"/>
+
+                                            <!-- Content -->
+                                            <StackPanel VerticalAlignment="Center" Margin="15,21,14,8">
+                                                <TextBlock Text="{Binding Description}"
+                                                           Foreground="#1A1A1A"
+                                                           FontWeight="SemiBold"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="20"/>
+                                                <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
+                                                           Foreground="#606060"
+                                                           Margin="0,3,0,0"
+                                                           FontSize="13"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#08000000" TargetName="Overlay"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Background" Value="#12000000" TargetName="Overlay"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Success notification toast -->
+        <Grid Grid.Column="0" VerticalAlignment="Bottom" HorizontalAlignment="Center"
+              Margin="0,0,0,16" Panel.ZIndex="10">
+            <Border Background="#74AD3F" CornerRadius="5" Padding="18,10">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE73E;" Foreground="White" FontSize="18" FontFamily="Segoe MDL2 Assets"
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="Bestellung erfolgreich gespeichert" Foreground="White" FontSize="16"
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="4" ShadowDepth="2.5" Direction="270" Opacity="0.22" Color="Black"/>
+                </Border.Effect>
+            </Border>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ShowNotification}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+        </Grid>
+
+        <!-- Divider + splitter -->
+        <GridSplitter Grid.Column="1" Width="3" HorizontalAlignment="Stretch"
+                      Background="#cdcdcd" DragCompleted="GridSplitter_DragCompleted"/>
+
+        <!-- Order panel -->
+        <Border Grid.Column="2" Background="White">
+            <DockPanel LastChildFill="True">
+
+                <!-- Header -->
+                <Grid DockPanel.Dock="Top" Margin="16,14,12,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Bestellung" FontWeight="Bold" FontSize="27" VerticalAlignment="Center"/>
+
+                    <!-- Settings gear button with Flyout -->
+                    <Button Grid.Column="1" VerticalAlignment="Center" Cursor="Hand" ToolTip="UI-Anpassungen">
+                        <ui:FlyoutService.Flyout>
+                            <ui:Flyout Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="260">
+                                    <TextBlock Text="Größe der Produkt-Buttons" Foreground="#444" FontSize="13"
+                                               FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                    <Slider Minimum="0.5" Value="{Binding Button_ResizeFactor}" Maximum="2.5"
+                                            Thumb.DragCompleted="Slider_DragCompleted"/>
+                                </StackPanel>
+                            </ui:Flyout>
+                        </ui:FlyoutService.Flyout>
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="BtnBg" Background="Transparent" CornerRadius="4" Padding="6">
+                                    <TextBlock x:Name="AdjustIcon" Text="&#xE9E9;" FontSize="22"
+                                               FontFamily="Segoe MDL2 Assets" Foreground="#666"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="BtnBg" Property="Background" Value="#0A000000"/>
+                                        <Setter TargetName="AdjustIcon" Property="Foreground" Value="#333"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="BtnBg" Property="Background" Value="#14000000"/>
+                                        <Setter TargetName="AdjustIcon" Property="Foreground" Value="#0A2433"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!-- Total + action buttons (docked to bottom) -->
+                <Border DockPanel.Dock="Bottom" Background="#EFF0F2" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0" Padding="16,16,16,18">
+                    <StackPanel>
+                        <!-- Total row -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Gesamt" FontWeight="Medium" FontSize="22" Foreground="#616161" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Total, StringFormat={}{0:C}}"
+                                       FontWeight="Bold" FontSize="32" Foreground="#0A2433" VerticalAlignment="Center"/>
+                        </Grid>
+                        <!-- Action buttons -->
+                        <Grid Height="52">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="52"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding DiscardOrderCommand}"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    ToolTip="Bestellung verwerfen">
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="23" Foreground="#444444"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding SaveOrderCommand}"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="23"
+                                               Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Speichern" FontSize="22" FontWeight="SemiBold"
+                                               Foreground="White" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Order positions list -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Padding="10,6,10,4">
+                    <ItemsControl ItemsSource="{Binding OrderPositions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="2,4" Background="#F5F6F7" CornerRadius="7" ClipToBounds="True">
+                                    <Grid MinHeight="54">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="46"/>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Accent color indicator -->
+                                        <Border Grid.Column="0" Background="{Binding Product.Color}" CornerRadius="6,0,0,6"/>
+                                        <!-- Amount -->
+                                        <TextBlock Grid.Column="1" Text="{Binding Amount}"
+                                                   FontSize="22" FontWeight="Bold" Foreground="#333"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        <!-- Product name -->
+                                        <TextBlock Grid.Column="2" Text="{Binding Product.Description}"
+                                                   FontSize="16" FontWeight="SemiBold" Foreground="#222"
+                                                   TextWrapping="Wrap" VerticalAlignment="Center"
+                                                   Margin="6,10,6,10"/>
+                                        <!-- Unit price -->
+                                        <TextBlock Grid.Column="3" Text="{Binding Product.Price, StringFormat={}{0:C}}"
+                                                   FontSize="14" Foreground="#888"
+                                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

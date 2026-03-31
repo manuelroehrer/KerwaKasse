@@ -12,7 +12,7 @@
         ui:TitleBar.Foreground="White"
         ui:TitleBar.InactiveBackground="#06141E"
         ui:TitleBar.InactiveForeground="#80FFFFFF"
-        mc:Ignorable="d" Background="#F5F6F6"
+        mc:Ignorable="d" Background="#F3F3F3"
         Title="KerwaKasse" Height="700" Width="1000">
 
     <ui:TitleBar.ButtonStyle>
@@ -27,8 +27,8 @@
     </ui:TitleBar.ButtonStyle>
 
     <Window.Resources>
-        <DataTemplate DataType="{x:Type vm:HomeViewModel}">
-            <view:HomeView/>
+        <DataTemplate DataType="{x:Type vm:OrderPanelViewModel}">
+            <view:OrderPanelView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProductsViewModel}">
             <view:ProductsView/>
@@ -171,9 +171,9 @@
                 </Border>
 
                 <DockPanel LastChildFill="False" VerticalAlignment="Stretch">
-                    <!-- Startseite -->
+                    <!-- Kasse -->
                     <RadioButton DockPanel.Dock="Top" Style="{StaticResource NavigationButtonTheme}"
-                             Command="{Binding HomeViewCommand}" IsChecked="True"
+                             Command="{Binding OrderPanelViewCommand}" IsChecked="True"
                              Click="NavButton_Click">
                         <RadioButton.Content>
                             <Grid>

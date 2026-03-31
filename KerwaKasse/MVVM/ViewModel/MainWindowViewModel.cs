@@ -5,7 +5,7 @@ namespace KerwaKasse.MVVM.ViewModel
 {
     public class MainWindowViewModel : PropertyChangedBase
     {
-        public RelayCommand HomeViewCommand { get; set; }
+        public RelayCommand OrderPanelViewCommand { get; set; }
         public RelayCommand ProductsViewCommand { get; set; }
         public RelayCommand HistoryViewCommand { get; set; }
         public RelayCommand StatisticsViewCommand { get; set; }
@@ -38,13 +38,13 @@ namespace KerwaKasse.MVVM.ViewModel
 
             DatabaseVM = new DatabaseViewModel(dialogService, dbFilePath);
 
-            HomeViewCommand = new RelayCommand(o => CurrentView = new HomeViewModel(_productService, _orderService, _settingsService, _dialogService));
+            OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _settingsService));
             HistoryViewCommand = new RelayCommand(o => CurrentView = new HistoryViewModel(_orderService));
             StatisticsViewCommand = new RelayCommand(o => CurrentView = new StatisticsViewModel(_orderService));
             DatabaseViewCommand = new RelayCommand(o => CurrentView = DatabaseVM);
 
-            CurrentView = new HomeViewModel(_productService, _orderService, _settingsService, _dialogService);
+            CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService);
         }
     }
 }

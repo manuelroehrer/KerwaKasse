@@ -55,6 +55,14 @@ public class JsonSettingsService : ISettingsService
         _settings[key] = JsonDocument.Parse(json).RootElement.Clone();
     }
 
+    public bool SetIfAbsent<T>(string key, T value)
+    {
+        if (_settings.ContainsKey(key))
+            return false;
+        Set(key, value);
+        return true;
+    }
+
     public void Save()
     {
         var options = new JsonSerializerOptions { WriteIndented = true };

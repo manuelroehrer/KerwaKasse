@@ -30,18 +30,18 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void Constructor_SetsHomeViewAsDefault()
+    public void Constructor_SetsOrderPanelViewAsDefault()
     {
-        Assert.IsType<HomeViewModel>(_sut.CurrentView);
+        Assert.IsType<OrderPanelViewModel>(_sut.CurrentView);
     }
 
     [Fact]
-    public void HomeViewCommand_SetsHomeViewModel()
+    public void OrderPanelViewCommand_SetsOrderPanelViewModel()
     {
         _sut.ProductsViewCommand.Execute(null); // switch away first
-        _sut.HomeViewCommand.Execute(null);
+        _sut.OrderPanelViewCommand.Execute(null);
 
-        Assert.IsType<HomeViewModel>(_sut.CurrentView);
+        Assert.IsType<OrderPanelViewModel>(_sut.CurrentView);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class MainWindowViewModelTests
     {
         _sut.DatabaseViewCommand.Execute(null);
         var first = _sut.CurrentView;
-        _sut.HomeViewCommand.Execute(null);
+        _sut.OrderPanelViewCommand.Execute(null);
         _sut.DatabaseViewCommand.Execute(null);
 
         Assert.Same(first, _sut.CurrentView);
