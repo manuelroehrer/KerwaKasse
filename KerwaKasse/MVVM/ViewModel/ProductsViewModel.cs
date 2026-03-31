@@ -239,6 +239,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _productService.Update(new Product
             {
                 Id = EditingProduct.ProductID,
+                Description = EditingProduct.Description,
                 Price = EditingProduct.Price,
                 Available = EditingProduct.Available,
                 Color = EditingProduct.ColorAsString,

@@ -46,7 +46,7 @@ public class SqliteProductService : IProductService
         using var connection = new SqliteConnection(_connectionString);
         connection.Execute(
             """
-            UPDATE Product SET Price = @Price, Available = @Available, Color = @Color, ImagePath = @ImagePath, SortOrder = @SortOrder
+            UPDATE Product SET Description = @Description, Price = @Price, Available = @Available, Color = @Color, ImagePath = @ImagePath, SortOrder = @SortOrder
             WHERE Id = @Id
             """,
             product);
