@@ -10,6 +10,9 @@ namespace KerwaKasse
 {
     public partial class MainWindow : Window
     {
+        private const string WindowStateSettingKey = "MainWindow.WindowState";
+        private readonly JsonSettingsService _settingsService;
+
         public MainWindow()
         {
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
@@ -21,9 +24,11 @@ namespace KerwaKasse
             var orderService = new SqliteOrderService(connectionString);
             var settingsService = new JsonSettingsService(settingsFilePath);
             var dialogService = new DialogService();
+            _settingsService = settingsService;
 
             DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath);
             InitializeComponent();
+            RestoreWindowState();
         }
 
         private void NavButton_Click(object sender, RoutedEventArgs e)
@@ -41,6 +46,30 @@ namespace KerwaKasse
                 if (pos.X < 0 || pos.X > nav_pnl.ActualWidth || pos.Y < 0 || pos.Y > nav_pnl.ActualHeight)
                     Tg_Btn.IsChecked = false;
             }
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            SaveWindowState();
+            base.OnClosing(e);
+        }
+
+        private void RestoreWindowState()
+        {
+            var savedState = _settingsService.Get<string>(WindowStateSettingKey);
+            WindowState = string.Equals(savedState, nameof(WindowState.Maximized), StringComparison.Ordinal)
+                ? WindowState.Maximized
+                : WindowState.Normal;
+        }
+
+        private void SaveWindowState()
+        {
+            var normalizedState = WindowState == WindowState.Maximized
+                ? nameof(WindowState.Maximized)
+                : nameof(WindowState.Normal);
+
+            _settingsService.Set(WindowStateSettingKey, normalizedState);
+            _settingsService.Save();
         }
     }
 }
