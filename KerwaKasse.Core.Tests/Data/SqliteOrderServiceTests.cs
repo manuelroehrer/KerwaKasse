@@ -84,6 +84,33 @@ public class SqliteOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetOrdersByDate_FindsOrdersStoredInCanonicalDateFormat()
+    {
+        // OrderTime is stored as TEXT and filtered with a lexicographic BETWEEN, so the query
+        // bounds must use the same canonical "yyyy-MM-dd HH:mm:ss" format as the stored values.
+        // An ISO "o" bound (with a 'T' separator) would sort a space-separated timestamp below
+        // the lower bound and hide it from the History/Statistics views.
+        var product = AddTestProduct();
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price, ProductDescription = product.Description }
+        });
+
+        var historic = new DateTime(2022, 7, 29, 19, 44, 44);
+        using (var cmd = _keepAlive.CreateCommand())
+        {
+            cmd.CommandText = "UPDATE \"Order\" SET OrderTime = @t";
+            cmd.Parameters.AddWithValue("@t", historic.ToString("yyyy-MM-dd HH:mm:ss"));
+            cmd.ExecuteNonQuery();
+        }
+
+        var orders = _sut.GetOrdersByDate(historic.Date);
+
+        Assert.Single(orders);
+        Assert.Equal(historic, orders[0].OrderTime);
+    }
+
+    [Fact]
     public void UpdateOrderPositions_ChangesAmounts()
     {
         var product = AddTestProduct();

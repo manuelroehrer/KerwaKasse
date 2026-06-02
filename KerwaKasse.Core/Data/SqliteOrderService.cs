@@ -1,3 +1,4 @@
+using System.Globalization;
 using Dapper;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
@@ -7,6 +8,12 @@ namespace KerwaKasse.Core.Data;
 
 public class SqliteOrderService : IOrderService
 {
+    // Canonical text format for the OrderTime column. OrderTime is stored as TEXT and filtered
+    // with a lexicographic BETWEEN, so every value must use the exact same format for the date
+    // range queries below to work. This SQLite-native format sorts chronologically as text;
+    // an ISO round-trip format (e.g. "o", with a 'T' separator) would not align with the bounds.
+    private const string SqliteDateFormat = "yyyy-MM-dd HH:mm:ss";
+
     private readonly string _connectionString;
 
     public SqliteOrderService(string connectionString)
@@ -22,7 +29,7 @@ public class SqliteOrderService : IOrderService
 
         var orderId = connection.ExecuteScalar<int>(
             """INSERT INTO "Order" (OrderTime) VALUES (@Now); SELECT last_insert_rowid();""",
-            new { Now = DateTime.Now.ToString("o") },
+            new { Now = DateTime.Now.ToString(SqliteDateFormat) },
             transaction);
 
         foreach (var pos in positions)
@@ -50,8 +57,8 @@ public class SqliteOrderService : IOrderService
     {
         using var connection = new SqliteConnection(_connectionString);
 
-        var dayStart = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0).ToString("o");
-        var dayEnd = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59).ToString("o");
+        var dayStart = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0).ToString(SqliteDateFormat);
+        var dayEnd = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59).ToString(SqliteDateFormat);
 
         var rows = connection.Query<OrderPositionRow>(
             """
@@ -72,7 +79,7 @@ public class SqliteOrderService : IOrderService
                 order = new Order
                 {
                     Id = row.OrderId,
-                    OrderTime = DateTime.Parse(row.OrderTime)
+                    OrderTime = DateTime.Parse(row.OrderTime, CultureInfo.InvariantCulture)
                 };
                 orders[row.OrderId] = order;
             }
@@ -129,7 +136,7 @@ public class SqliteOrderService : IOrderService
             GROUP BY op.ProductId, op.ProductDescription
             ORDER BY TotalAmount DESC
             """,
-            new { From = from.ToString("o"), To = to.ToString("o") }).ToList();
+            new { From = from.ToString(SqliteDateFormat), To = to.ToString(SqliteDateFormat) }).ToList();
     }
 
     private class OrderPositionRow
