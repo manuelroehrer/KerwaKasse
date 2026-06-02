@@ -185,7 +185,6 @@ namespace KerwaKasse.MVVM.ViewModel
                 Price = p.Price,
                 Available = p.Available,
                 ColorAsString = p.Color,
-                ImgPath = p.ImagePath,
                 PositionNumber = p.SortOrder
             }).OrderBy(o => o.PositionNumber).ToList();
         }
@@ -211,8 +210,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 Description = NewProduct.Description,
                 Price = NewProduct.Price,
                 Available = NewProduct.Available,
-                Color = NewProduct.ColorAsString,
-                ImagePath = NewProduct.ImgPath
+                Color = NewProduct.ColorAsString
             });
             Reload();
         }
@@ -243,7 +241,6 @@ namespace KerwaKasse.MVVM.ViewModel
                 Price = EditingProduct.Price,
                 Available = EditingProduct.Available,
                 Color = EditingProduct.ColorAsString,
-                ImagePath = EditingProduct.ImgPath,
                 SortOrder = EditingProduct.PositionNumber
             });
 
@@ -292,8 +289,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     AvailableIcon = SelectedProduct.AvailableIcon,
                     ColorAsString = SelectedProduct.ColorAsString,
                     PositionNumber = SelectedProduct.PositionNumber,
-                    Color = SelectedProduct.Color,
-                    ImgPath = SelectedProduct.ImgPath
+                    Color = SelectedProduct.Color
                 };
 
                 Mode_AddNew = false;

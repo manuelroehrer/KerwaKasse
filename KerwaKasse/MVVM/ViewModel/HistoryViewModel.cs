@@ -76,8 +76,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     OrderId = order.OrderID,
                     ProductId = op.Product.ProductID,
                     Amount = op.Amount,
-                    UnitPrice = op.Product.Price,
-                    ProductDescription = op.Product.Description
+                    UnitPrice = op.Product.Price
                 }).ToList()
             };
             _orderService.UpdateOrderPositions(coreOrder);

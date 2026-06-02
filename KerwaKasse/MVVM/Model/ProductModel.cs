@@ -110,17 +110,6 @@ namespace KerwaKasse.MVVM.Model
             }
         }
 
-        private string imgPath;
-        public string ImgPath
-        {
-            get { return imgPath; }
-            set
-            {
-                imgPath = value;
-                OnPropertyChanged();
-            }
-        }
-
         private static Brush ConvertFromString(string color)
         {
             Brush brush = (Brush)new BrushConverter().ConvertFrom(color);

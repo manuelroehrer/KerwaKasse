@@ -120,7 +120,6 @@ public class OrderPanelViewModelTests
         Assert.Equal(1, positions[0].ProductId);
         Assert.Equal(2, positions[0].Amount);
         Assert.Equal(3.50m, positions[0].UnitPrice);
-        Assert.Equal("Bratwurst", positions[0].ProductDescription);
     }
 
     [Fact]

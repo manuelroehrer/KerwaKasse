@@ -38,8 +38,7 @@ public class SqliteOrderServiceTests : IDisposable
             {
                 ProductId = product.Id,
                 Amount = 2,
-                UnitPrice = product.Price,
-                ProductDescription = product.Description
+                UnitPrice = product.Price
             }
         };
 
@@ -50,6 +49,7 @@ public class SqliteOrderServiceTests : IDisposable
         Assert.Single(orders[0].Positions);
         Assert.Equal(2, orders[0].Positions[0].Amount);
         Assert.Equal(product.Price, orders[0].Positions[0].UnitPrice);
+        // Name is resolved from the current product via JOIN, not from a snapshot.
         Assert.Equal("Bratwurst", orders[0].Positions[0].ProductDescription);
     }
 
@@ -61,8 +61,8 @@ public class SqliteOrderServiceTests : IDisposable
 
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = p1.Id, Amount = 1, UnitPrice = p1.Price, ProductDescription = p1.Description },
-            new OrderPosition { ProductId = p2.Id, Amount = 3, UnitPrice = p2.Price, ProductDescription = p2.Description }
+            new OrderPosition { ProductId = p1.Id, Amount = 1, UnitPrice = p1.Price },
+            new OrderPosition { ProductId = p2.Id, Amount = 3, UnitPrice = p2.Price }
         });
 
         var orders = _sut.GetOrdersByDate(DateTime.Today);
@@ -76,7 +76,7 @@ public class SqliteOrderServiceTests : IDisposable
         var product = AddTestProduct();
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price, ProductDescription = product.Description }
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price }
         });
 
         var orders = _sut.GetOrdersByDate(DateTime.Today.AddDays(-1));
@@ -93,13 +93,13 @@ public class SqliteOrderServiceTests : IDisposable
         var product = AddTestProduct();
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price, ProductDescription = product.Description }
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price }
         });
 
         var historic = new DateTime(2022, 7, 29, 19, 44, 44);
         using (var cmd = _keepAlive.CreateCommand())
         {
-            cmd.CommandText = "UPDATE \"Order\" SET OrderTime = @t";
+            cmd.CommandText = "UPDATE Orders SET OrderTime = @t";
             cmd.Parameters.AddWithValue("@t", historic.ToString("yyyy-MM-dd HH:mm:ss"));
             cmd.ExecuteNonQuery();
         }
@@ -116,7 +116,7 @@ public class SqliteOrderServiceTests : IDisposable
         var product = AddTestProduct();
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price, ProductDescription = product.Description }
+            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price }
         });
 
         var order = _sut.GetOrdersByDate(DateTime.Today)[0];
@@ -136,12 +136,12 @@ public class SqliteOrderServiceTests : IDisposable
         // Two orders with the same products
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = p1.Id, Amount = 2, UnitPrice = p1.Price, ProductDescription = p1.Description },
-            new OrderPosition { ProductId = p2.Id, Amount = 1, UnitPrice = p2.Price, ProductDescription = p2.Description }
+            new OrderPosition { ProductId = p1.Id, Amount = 2, UnitPrice = p1.Price },
+            new OrderPosition { ProductId = p2.Id, Amount = 1, UnitPrice = p2.Price }
         });
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = p1.Id, Amount = 3, UnitPrice = p1.Price, ProductDescription = p1.Description }
+            new OrderPosition { ProductId = p1.Id, Amount = 3, UnitPrice = p1.Price }
         });
 
         var from = DateTime.Today;
@@ -173,11 +173,59 @@ public class SqliteOrderServiceTests : IDisposable
         var product = AddTestProduct();
         _sut.PlaceOrder(new[]
         {
-            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price, ProductDescription = product.Description }
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price }
         });
 
         var order = _sut.GetOrdersByDate(DateTime.Today)[0];
         Assert.Equal(DateTime.Today.Date, order.OrderTime.Date);
+    }
+
+    [Fact]
+    public void RenamedProduct_HistoryAndStatistics_UseCurrentName()
+    {
+        // A product is sold, then renamed (e.g. a typo correction), then sold again.
+        var product = AddTestProduct("Currywurst+Pommes", 7.50m);
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price }
+        });
+
+        product.Description = "Currywurst und Pommes";
+        _productService.Update(product);
+
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price }
+        });
+
+        // History reflects the CURRENT name for every order, old and new.
+        var orders = _sut.GetOrdersByDate(DateTime.Today);
+        Assert.Equal(2, orders.Count);
+        Assert.All(orders.SelectMany(o => o.Positions),
+            p => Assert.Equal("Currywurst und Pommes", p.ProductDescription));
+
+        // Statistics aggregate into a single row per ProductId (not split by name).
+        var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1));
+        var row = Assert.Single(figures);
+        Assert.Equal(product.Id, row.ProductId);
+        Assert.Equal("Currywurst und Pommes", row.ProductDescription);
+        Assert.Equal(3, row.TotalAmount);        // 1 + 2
+        Assert.Equal(22.50m, row.TotalRevenue);  // 3 * 7.50
+    }
+
+    [Fact]
+    public void GetSalesFigures_MoneyIsExact_NoFloatDrift()
+    {
+        // 0.10 is not exactly representable as a float; with integer-cent storage the
+        // summed revenue stays exact (this is the whole point of the cent switch).
+        var product = AddTestProduct("Brezel", 0.10m);
+        for (int i = 0; i < 3; i++)
+            _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price } });
+
+        var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1));
+        var row = Assert.Single(figures);
+        Assert.Equal(3, row.TotalAmount);
+        Assert.Equal(0.30m, row.TotalRevenue);
     }
 
     public void Dispose()
