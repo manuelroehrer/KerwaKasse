@@ -14,7 +14,60 @@
                 <ui:ThemeResources RequestedTheme="Light" AccentColor ="#0A2433" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
+            <!-- Rebuild of the ModernWpf AccentButton. Reason for the rebuild: the original looks
+                 poor when disabled with a dark AccentColor and white content – ModernWpf bakes in a
+                 grey disabled background that cannot be overridden from outside, leaving white text
+                 on grey. This style instead fades to a derived accent shade when disabled.
+                 Background, hover and pressed reference ModernWpf's accent brushes and the corner
+                 radius uses ControlCornerRadius, so the style tracks the application AccentColor;
+                 the disabled state uses SystemAccentColorLight2 and dims the content via opacity, so
+                 it reads as inactive without hard-coding a foreground colour.
+                 Note: despite being a rebuild, this style stays tightly coupled to ModernWpf. Every
+                 resource it uses (AccentButtonBackground, AccentButtonBackgroundPointerOver,
+                 AccentButtonBackgroundPressed, AccentButtonForeground, SystemAccentColorLight2,
+                 ControlCornerRadius) is provided by that package; removing ModernWpf breaks it. -->
+            <Style x:Key="CustomAccentButtonStyle" TargetType="Button">
+                <Setter Property="Foreground" Value="{DynamicResource AccentButtonForeground}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" SnapsToDevicePixels="True"
+                                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                                    Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter x:Name="content"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="bd" Property="Background">
+                                        <Setter.Value>
+                                            <SolidColorBrush Color="{DynamicResource SystemAccentColorLight2}"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <!-- Dynamic grey veil: dim the content (text + icon) so the disabled
+                                         state reads as inactive regardless of the foreground colour. -->
+                                    <Setter TargetName="content" Property="Opacity" Value="0.55"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
