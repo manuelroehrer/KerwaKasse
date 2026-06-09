@@ -96,11 +96,22 @@ namespace KerwaKasse.MVVM.ViewModel
         {
             get
             {
-                if (decimal.TryParse(_priceText, NumberStyles.Any, CultureInfo.CurrentCulture, out var p) && p >= 0)
+                if (TryParsePrice(_priceText, out var p) && p >= 0 && decimal.Round(p, 2) == p)
                     return p;
                 return null;
             }
         }
+
+        /// <summary>
+        /// Parses a price accepting both ',' and '.' as the decimal separator (touch keypads vary);
+        /// '.' is never treated as a thousands separator.
+        /// </summary>
+        private static bool TryParsePrice(string text, out decimal value) =>
+            decimal.TryParse(
+                (text ?? string.Empty).Trim().Replace(',', '.'),
+                NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+                CultureInfo.InvariantCulture,
+                out value);
 
         // ── Color ───────────────────────────────────────────────
         private string _colorAsString;
@@ -169,10 +180,12 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 if (columnName == nameof(PriceText))
                 {
-                    if (!decimal.TryParse(_priceText, NumberStyles.Any, CultureInfo.CurrentCulture, out var val))
+                    if (!TryParsePrice(_priceText, out var val))
                         return "Kein gültiger Preis";
                     if (val < 0)
                         return "Preis darf nicht negativ sein";
+                    if (decimal.Round(val, 2) != val)
+                        return "Höchstens zwei Nachkommastellen";
                 }
                 if (columnName == nameof(Name))
                 {

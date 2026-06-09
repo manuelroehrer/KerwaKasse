@@ -83,4 +83,26 @@ public class ProductDetailViewModelTests
         Assert.True(vm.HasErrors);
         Assert.Equal($"Maximal {ProductDetailViewModel.MaxNameLength} Zeichen erlaubt", vm["Name"]);
     }
+
+    [Fact]
+    public void PriceWithMoreThanTwoDecimals_IsInvalid()
+    {
+        var vm = ExistingProduct();
+
+        vm.PriceText = "7,9999";
+
+        Assert.True(vm.HasErrors);
+        Assert.Equal("Höchstens zwei Nachkommastellen", vm["PriceText"]);
+    }
+
+    [Fact]
+    public void PriceWithDotSeparator_IsParsedAsDecimal()
+    {
+        var vm = ExistingProduct();
+
+        vm.PriceText = "8.50";
+
+        Assert.False(vm.HasErrors);
+        Assert.Equal(8.50m, vm.ParsedPrice);
+    }
 }
