@@ -39,7 +39,7 @@ namespace KerwaKasse.MVVM.ViewModel
             DatabaseVM = new DatabaseViewModel(dialogService, dbFilePath);
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
-            ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _settingsService));
+            ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _settingsService, _dialogService));
             HistoryViewCommand = new RelayCommand(o => CurrentView = new HistoryViewModel(_orderService));
             StatisticsViewCommand = new RelayCommand(o => CurrentView = new StatisticsViewModel(_orderService));
             DatabaseViewCommand = new RelayCommand(o => CurrentView = DatabaseVM);
