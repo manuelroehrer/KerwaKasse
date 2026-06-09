@@ -45,7 +45,10 @@
         <!-- Prices use a monospace face so the digits line up and stand out a little. -->
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
 
-        <!-- Subtle outline buttons for the reorder actions (white fill, thin border). -->
+        <!-- Subtle outline buttons for the reorder actions (white fill, thin border).
+             When disabled (the top/bottom item) the button is hidden rather than greyed — a greyed
+             default-button background would look more prominent than this subtle enabled style.
+             Hidden (not Collapsed) keeps the sibling button in place. -->
         <Style x:Key="MoveButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#D5DAE0"/>
@@ -53,6 +56,11 @@
             <Setter Property="Foreground" Value="#3A4750"/>
             <Setter Property="Padding" Value="14,9"/>
             <Setter Property="FontSize" Value="15"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Visibility" Value="Hidden"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Table row: adjoining rows with a bottom divider; selection adds a left accent bar. -->
