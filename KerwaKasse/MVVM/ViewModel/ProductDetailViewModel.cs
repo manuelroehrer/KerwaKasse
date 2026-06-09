@@ -22,7 +22,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly string _origName;
         private readonly string _origPriceText;
         private readonly string _origColor;
-        private readonly bool _origAvailable;
+        private bool _origAvailable;
 
         // ── Name ────────────────────────────────────────────────
         private string _name;
@@ -144,6 +144,17 @@ namespace KerwaKasse.MVVM.ViewModel
 
         /// <summary>Caption next to the availability toggle; reflects the current state.</summary>
         public string AvailabilityText => _available ? "Verfügbar" : "Nicht verfügbar";
+
+        /// <summary>
+        /// Applies an availability change that was already persisted elsewhere (the in-list toggle
+        /// writes through immediately). The comparison baseline is updated too, so the panel does
+        /// not report this as an unsaved change.
+        /// </summary>
+        public void AcceptPersistedAvailability(bool available)
+        {
+            _origAvailable = available;
+            Available = available;
+        }
 
         // ── Dirty tracking ──────────────────────────────────────
         /// <summary>True when any editable field differs from the loaded values (drives Save enablement).</summary>

@@ -122,6 +122,19 @@ public class ProductsViewModelTests
     }
 
     [Fact]
+    public void TogglingAvailabilityInList_ForSelectedProduct_DoesNotMarkDetailDirty()
+    {
+        _sut.SelectedProduct = _sut.Products[0];
+        Assert.False(_sut.DetailPanel!.HasUnsavedChanges);
+
+        _sut.Products[0].Available = false; // in-list toggle writes through to the DB
+
+        Assert.False(_sut.DetailPanel!.IsDirty);
+        Assert.False(_sut.DetailPanel.HasUnsavedChanges);
+        Assert.False(_sut.DetailPanel.Available);
+    }
+
+    [Fact]
     public void MoveSelectedDown_ReordersAndPersists()
     {
         _sut.SelectedProduct = _sut.Products[0]; // Bratwurst at index 0

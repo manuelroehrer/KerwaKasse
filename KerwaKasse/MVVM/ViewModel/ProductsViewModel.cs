@@ -166,7 +166,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _productService.UpdateAvailability(productId, available);
 
             if (DetailPanel != null && DetailPanel.ProductId == productId)
-                DetailPanel.Available = available;
+                DetailPanel.AcceptPersistedAvailability(available);
         }
 
         // ── Selection ────────────────────────────────────────────
