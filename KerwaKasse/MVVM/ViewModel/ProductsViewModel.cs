@@ -151,7 +151,7 @@ namespace KerwaKasse.MVVM.ViewModel
             foreach (var p in coreProducts)
             {
                 Products.Add(new ProductListItemViewModel(
-                    p.Id, p.Description, p.Price, p.Color, p.Available,
+                    p.Id, p.Name, p.Price, p.Color, p.Available,
                     OnProductAvailabilityToggled));
             }
 
@@ -189,7 +189,7 @@ namespace KerwaKasse.MVVM.ViewModel
             var p = _productService.GetAll().First(x => x.Id == productId);
             int usageCount = _productService.GetUsageCount(productId);
             DetailPanel = new ProductDetailViewModel(
-                p.Id, p.Description, p.Price, p.Color, p.Available, usageCount, isNew: false);
+                p.Id, p.Name, p.Price, p.Color, p.Available, usageCount, isNew: false);
         }
 
         /// <summary>Returns to the "no product selected" placeholder.</summary>
@@ -230,7 +230,7 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 _productService.Add(new Product
                 {
-                    Description = DetailPanel.Description.Trim(),
+                    Name = DetailPanel.Name.Trim(),
                     Price = price,
                     Available = DetailPanel.Available,
                     Color = DetailPanel.ColorAsString
@@ -245,7 +245,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 _productService.Update(new Product
                 {
                     Id = DetailPanel.ProductId,
-                    Description = DetailPanel.Description.Trim(),
+                    Name = DetailPanel.Name.Trim(),
                     Price = price,
                     Available = DetailPanel.Available,
                     Color = DetailPanel.ColorAsString,
@@ -278,14 +278,14 @@ namespace KerwaKasse.MVVM.ViewModel
             int usage = DetailPanel.UsageCount;
             string msg = usage > 0
                 ? $"Dieses Produkt wurde bereits in {usage} Bestellungen verwendet.\n\n" +
-                  "Eine Änderung der Bezeichnung beeinflusst die Interpretation dieser historischen Daten. " +
+                  "Eine Änderung des Namens beeinflusst die Interpretation dieser historischen Daten. " +
                   "Bitte nur für echte Korrekturen (z. B. Tippfehler) verwenden, nicht für inhaltliche Änderungen.\n\n" +
                   "Trotzdem fortfahren?"
-                : "Die Bezeichnung des Produkts entsperren?\n\n" +
+                : "Den Namen des Produkts entsperren?\n\n" +
                   "Bitte nur für echte Korrekturen verwenden, nicht für eine Neuausrichtung des Produkts.\n\n" +
                   "Fortfahren?";
 
-            if (await _dialogService.ShowConfirmationAsync("Bezeichnung entsperren", msg))
+            if (await _dialogService.ShowConfirmationAsync("Name entsperren", msg))
                 DetailPanel.NameUnlocked = true;
         }
 

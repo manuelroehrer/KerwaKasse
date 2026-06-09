@@ -10,7 +10,7 @@ public class OrderPosition
     /// Product (see SqliteOrderService). Historical orders therefore always reflect the
     /// product's current description; only UnitPrice is snapshotted at order time.
     /// </summary>
-    public string ProductDescription { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
 
     public int Amount { get; set; } = 1;
     public decimal UnitPrice { get; set; }

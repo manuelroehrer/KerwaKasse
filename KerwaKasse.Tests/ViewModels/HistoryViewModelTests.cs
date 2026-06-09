@@ -53,7 +53,7 @@ public class HistoryViewModelTests
                 OrderTime = testDate.AddHours(12),
                 Positions =
                 [
-                    new OrderPosition { ProductId = 1, ProductDescription = "Bratwurst", Amount = 2, UnitPrice = 3.50m }
+                    new OrderPosition { ProductId = 1, ProductName = "Bratwurst", Amount = 2, UnitPrice = 3.50m }
                 ]
             }
         });
@@ -77,7 +77,7 @@ public class HistoryViewModelTests
                 OrderTime = testDate,
                 Positions =
                 [
-                    new OrderPosition { ProductId = 1, ProductDescription = "Bratwurst", Amount = 1, UnitPrice = 3.50m }
+                    new OrderPosition { ProductId = 1, ProductName = "Bratwurst", Amount = 1, UnitPrice = 3.50m }
                 ]
             }
         });
@@ -106,7 +106,7 @@ public class HistoryViewModelTests
                 OrderTime = testDate,
                 Positions =
                 [
-                    new OrderPosition { ProductId = 1, ProductDescription = "Bratwurst", Amount = 2, UnitPrice = 3.50m }
+                    new OrderPosition { ProductId = 1, ProductName = "Bratwurst", Amount = 2, UnitPrice = 3.50m }
                 ]
             }
         });

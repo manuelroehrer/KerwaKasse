@@ -9,5 +9,5 @@ public class Order
     public decimal Total => Positions.Sum(p => p.Amount * p.UnitPrice);
 
     public string ShortDescription =>
-        string.Join(", ", Positions.Select(p => p.ProductDescription));
+        string.Join(", ", Positions.Select(p => p.ProductName));
 }

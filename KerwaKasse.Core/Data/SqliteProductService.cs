@@ -18,7 +18,7 @@ public class SqliteProductService : IProductService
     {
         using var connection = new SqliteConnection(_connectionString);
         return connection.Query<ProductRow>(
-            "SELECT Id, Description, PriceCents, Available, Color, SortOrder FROM Products ORDER BY SortOrder"
+            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products ORDER BY SortOrder"
         ).Select(ToProduct).ToList();
     }
 
@@ -26,7 +26,7 @@ public class SqliteProductService : IProductService
     {
         using var connection = new SqliteConnection(_connectionString);
         return connection.Query<ProductRow>(
-            "SELECT Id, Description, PriceCents, Available, Color, SortOrder FROM Products WHERE Available = 1 ORDER BY SortOrder"
+            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products WHERE Available = 1 ORDER BY SortOrder"
         ).Select(ToProduct).ToList();
     }
 
@@ -35,10 +35,10 @@ public class SqliteProductService : IProductService
         using var connection = new SqliteConnection(_connectionString);
         connection.Execute(
             """
-            INSERT INTO Products (Description, PriceCents, Available, Color, SortOrder)
-            VALUES (@Description, @PriceCents, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1))
+            INSERT INTO Products (Name, PriceCents, Available, Color, SortOrder)
+            VALUES (@Name, @PriceCents, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1))
             """,
-            new { product.Description, PriceCents = ToCents(product.Price), product.Available, product.Color });
+            new { product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color });
     }
 
     public void Update(Product product)
@@ -46,10 +46,10 @@ public class SqliteProductService : IProductService
         using var connection = new SqliteConnection(_connectionString);
         connection.Execute(
             """
-            UPDATE Products SET Description = @Description, PriceCents = @PriceCents, Available = @Available, Color = @Color, SortOrder = @SortOrder
+            UPDATE Products SET Name = @Name, PriceCents = @PriceCents, Available = @Available, Color = @Color, SortOrder = @SortOrder
             WHERE Id = @Id
             """,
-            new { product.Id, product.Description, PriceCents = ToCents(product.Price), product.Available, product.Color, product.SortOrder });
+            new { product.Id, product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color, product.SortOrder });
     }
 
     public void UpdateAvailability(int productId, bool available)
@@ -90,7 +90,7 @@ public class SqliteProductService : IProductService
     private static Product ToProduct(ProductRow r) => new()
     {
         Id = r.Id,
-        Description = r.Description,
+        Name = r.Name,
         Price = r.PriceCents / 100m,
         Available = r.Available,
         Color = r.Color,
@@ -100,7 +100,7 @@ public class SqliteProductService : IProductService
     private class ProductRow
     {
         public int Id { get; set; }
-        public string Description { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public long PriceCents { get; set; }
         public bool Available { get; set; }
         public string? Color { get; set; }

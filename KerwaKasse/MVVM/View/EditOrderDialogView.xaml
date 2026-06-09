@@ -1,4 +1,4 @@
-﻿<ui:ContentDialog x:Class="KerwaKasse.MVVM.View.EditOrderDialogView"
+<ui:ContentDialog x:Class="KerwaKasse.MVVM.View.EditOrderDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -24,7 +24,7 @@
                                 <ColumnDefinition Width="120"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="{Binding Product.Description}" Foreground="Black"
+                            <TextBlock Text="{Binding Product.Name}" Foreground="Black"
                                                FontSize="20" VerticalAlignment="Center" TextWrapping="Wrap"/>
 
                             <ui:NumberBox Value="{Binding Amount}" Minimum="0" Maximum="100" SpinButtonPlacementMode="Inline" Grid.Column="1"

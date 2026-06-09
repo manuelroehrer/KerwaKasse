@@ -203,7 +203,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 Product = new ProductModel
                 {
                     ProductID = sf.ProductId,
-                    Description = sf.ProductDescription,
+                    Name = sf.ProductName,
                     ColorAsString = sf.ProductColor
                 }
             }).ToList();
@@ -227,10 +227,10 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 var pieSeries = new PieSeries<double>
                 {
-                    Name = orderPos.Product.Description,
+                    Name = orderPos.Product.Name,
                     Values = new[] { (double)orderPos.Amount },
                     DataLabelsPaint = new SolidColorPaint(SKColors.Black),
-                    DataLabelsFormatter = point => orderPos.Product.Description,
+                    DataLabelsFormatter = point => orderPos.Product.Name,
                     ToolTipLabelFormatter = point => $"{orderPos.Amount}"
                 };
 

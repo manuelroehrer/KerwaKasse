@@ -37,7 +37,7 @@ public class ProductDetailViewModelTests
 
         Assert.False(vm.HasErrors);
         Assert.Equal(string.Empty, vm["PriceText"]);
-        Assert.Equal(string.Empty, vm["Description"]);
+        Assert.Equal(string.Empty, vm["Name"]);
     }
 
     [Fact]
@@ -63,24 +63,24 @@ public class ProductDetailViewModelTests
     }
 
     [Fact]
-    public void EmptyDescription_IsInvalid()
+    public void EmptyName_IsInvalid()
     {
         var vm = ExistingProduct();
 
-        vm.Description = "   ";
+        vm.Name = "   ";
 
         Assert.True(vm.HasErrors);
-        Assert.Equal("Bezeichnung darf nicht leer sein", vm["Description"]);
+        Assert.Equal("Name darf nicht leer sein", vm["Name"]);
     }
 
     [Fact]
-    public void DescriptionExceedingMaxLength_IsInvalid()
+    public void NameExceedingMaxLength_IsInvalid()
     {
         var vm = ExistingProduct();
 
-        vm.Description = new string('x', ProductDetailViewModel.MaxDescriptionLength + 1);
+        vm.Name = new string('x', ProductDetailViewModel.MaxNameLength + 1);
 
         Assert.True(vm.HasErrors);
-        Assert.Equal($"Maximal {ProductDetailViewModel.MaxDescriptionLength} Zeichen erlaubt", vm["Description"]);
+        Assert.Equal($"Maximal {ProductDetailViewModel.MaxNameLength} Zeichen erlaubt", vm["Name"]);
     }
 }

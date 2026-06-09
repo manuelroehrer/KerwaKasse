@@ -160,7 +160,7 @@
                                             </MultiBinding>
                                         </Border.BorderBrush>
                                     </Border>
-                                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Description}"
+                                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Name}"
                                                FontSize="16" FontWeight="SemiBold" Foreground="#222222"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                 </Grid>
@@ -309,8 +309,8 @@
                                     <ColumnDefinition/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="DescriptionTextBox" Grid.Column="0"
-                                         Text="{Binding DetailPanel.Description, Mode=TwoWay,
+                                <TextBox x:Name="NameTextBox" Grid.Column="0"
+                                         Text="{Binding DetailPanel.Name, Mode=TwoWay,
                                                         UpdateSourceTrigger=PropertyChanged,
                                                         ValidatesOnDataErrors=True}"
                                          IsEnabled="{Binding DetailPanel.NameUnlocked}"
@@ -341,11 +341,11 @@
                             <!-- Error + character counter -->
                             <Grid Margin="0,5,0,0">
                                 <TextBlock FontSize="12" Foreground="#E53935"
-                                           Text="{Binding (Validation.Errors)[0].ErrorContent, ElementName=DescriptionTextBox}"
-                                           Visibility="{Binding (Validation.HasError), ElementName=DescriptionTextBox,
+                                           Text="{Binding (Validation.Errors)[0].ErrorContent, ElementName=NameTextBox}"
+                                           Visibility="{Binding (Validation.HasError), ElementName=NameTextBox,
                                                                 Converter={StaticResource BoolToVisibility}}"/>
                                 <TextBlock FontSize="12" Foreground="#A0A0A0" HorizontalAlignment="Right"
-                                           Text="{Binding DetailPanel.Description.Length, FallbackValue=0,
+                                           Text="{Binding DetailPanel.Name.Length, FallbackValue=0,
                                                           StringFormat={}{0} / 40}"/>
                             </Grid>
                             <!-- Warning banner: only when an existing name is unlocked -->
@@ -372,7 +372,7 @@
                                          Style="{StaticResource ValidatedTextBox}"
                                          FontFamily="{StaticResource PriceFont}" FontSize="16"
                                          VerticalContentAlignment="Center"
-                                         MinHeight="{Binding ActualHeight, ElementName=DescriptionTextBox}"
+                                         MinHeight="{Binding ActualHeight, ElementName=NameTextBox}"
                                          Padding="30,5,8,5"/>
                                 <!-- Static, non-editable euro sign overlay – same font/size and centered
                                      like the price so the two sit on one line. -->

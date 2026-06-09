@@ -72,7 +72,7 @@
 
                                             <!-- Content -->
                                             <StackPanel VerticalAlignment="Center" Margin="15,21,14,8">
-                                                <TextBlock Text="{Binding Description}"
+                                                <TextBlock Text="{Binding Name}"
                                                            Foreground="#1A1A1A"
                                                            FontWeight="SemiBold"
                                                            TextWrapping="Wrap"
@@ -243,7 +243,7 @@
                                                    FontSize="22" FontWeight="Bold" Foreground="#333"
                                                    VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                         <!-- Product name -->
-                                        <TextBlock Grid.Column="2" Text="{Binding Product.Description}"
+                                        <TextBlock Grid.Column="2" Text="{Binding Product.Name}"
                                                    FontSize="16" FontWeight="SemiBold" Foreground="#222"
                                                    TextWrapping="Wrap" VerticalAlignment="Center"
                                                    Margin="6,10,6,10"/>

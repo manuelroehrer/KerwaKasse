@@ -39,14 +39,14 @@ public class OrderTests
     }
 
     [Fact]
-    public void ShortDescription_JoinsProductDescriptions()
+    public void ShortDescription_JoinsProductNames()
     {
         var order = new Order
         {
             Positions =
             [
-                new OrderPosition { ProductDescription = "Bratwurst" },
-                new OrderPosition { ProductDescription = "Bier" }
+                new OrderPosition { ProductName = "Bratwurst" },
+                new OrderPosition { ProductName = "Bier" }
             ]
         };
 
@@ -58,7 +58,7 @@ public class OrderTests
     {
         var order = new Order
         {
-            Positions = [new OrderPosition { ProductDescription = "Schnitzel" }]
+            Positions = [new OrderPosition { ProductName = "Schnitzel" }]
         };
 
         Assert.Equal("Schnitzel", order.ShortDescription);

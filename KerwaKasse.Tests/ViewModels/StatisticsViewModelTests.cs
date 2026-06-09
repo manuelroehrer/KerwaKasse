@@ -38,8 +38,8 @@ public class StatisticsViewModelTests
         _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>())
             .Returns(new List<SalesFigure>
             {
-                new() { ProductId = 1, ProductDescription = "Bratwurst", TotalAmount = 10, TotalRevenue = 35.00m },
-                new() { ProductId = 2, ProductDescription = "Bier", TotalAmount = 5, TotalRevenue = 14.00m }
+                new() { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 35.00m },
+                new() { ProductId = 2, ProductName = "Bier", TotalAmount = 5, TotalRevenue = 14.00m }
             });
 
         // Trigger reload via DateFrom setter (use different date to trigger change)
@@ -96,15 +96,15 @@ public class StatisticsViewModelTests
         _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>())
             .Returns(new List<SalesFigure>
             {
-                new() { ProductId = 1, ProductDescription = "Bratwurst", TotalAmount = 10, TotalRevenue = 35.00m },
-                new() { ProductId = 2, ProductDescription = "Leer", TotalAmount = 0, TotalRevenue = 0m }
+                new() { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 35.00m },
+                new() { ProductId = 2, ProductName = "Leer", TotalAmount = 0, TotalRevenue = 0m }
             });
 
         _sut.DateFrom = DateTime.Today.AddDays(-1);
 
         // Only non-zero amount should appear
         Assert.Single(_sut.OrderPositions);
-        Assert.Equal("Bratwurst", _sut.OrderPositions[0].Product.Description);
+        Assert.Equal("Bratwurst", _sut.OrderPositions[0].Product.Name);
     }
 
     [Fact]
@@ -113,13 +113,13 @@ public class StatisticsViewModelTests
         _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>())
             .Returns(new List<SalesFigure>
             {
-                new() { ProductId = 1, ProductDescription = "Wenig", TotalAmount = 2, TotalRevenue = 7.00m },
-                new() { ProductId = 2, ProductDescription = "Viel", TotalAmount = 20, TotalRevenue = 56.00m }
+                new() { ProductId = 1, ProductName = "Wenig", TotalAmount = 2, TotalRevenue = 7.00m },
+                new() { ProductId = 2, ProductName = "Viel", TotalAmount = 20, TotalRevenue = 56.00m }
             });
 
         _sut.DateFrom = DateTime.Today.AddDays(-1);
 
-        Assert.Equal("Viel", _sut.OrderPositions[0].Product.Description);
-        Assert.Equal("Wenig", _sut.OrderPositions[1].Product.Description);
+        Assert.Equal("Viel", _sut.OrderPositions[0].Product.Name);
+        Assert.Equal("Wenig", _sut.OrderPositions[1].Product.Name);
     }
 }

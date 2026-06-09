@@ -19,23 +19,23 @@ namespace KerwaKasse.MVVM.ViewModel
         public int UsageCount { get; }
 
         // Original values to detect whether anything actually changed.
-        private readonly string _origDescription;
+        private readonly string _origName;
         private readonly string _origPriceText;
         private readonly string _origColor;
         private readonly bool _origAvailable;
 
         // ── Name ────────────────────────────────────────────────
-        private string _description;
-        private bool _descriptionTouched;
+        private string _name;
+        private bool _nameTouched;
 
-        public string Description
+        public string Name
         {
-            get => _description;
+            get => _name;
             set
             {
-                if (_description != value)
-                    _descriptionTouched = true;
-                _description = value;
+                if (_name != value)
+                    _nameTouched = true;
+                _name = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasErrors));
                 OnPropertyChanged(nameof(IsDirty));
@@ -66,8 +66,8 @@ namespace KerwaKasse.MVVM.ViewModel
         public string LockGlyph => NameUnlocked ? ((char)0xE785).ToString() : ((char)0xE72E).ToString();
 
         public string LockTooltip => NameUnlocked
-            ? "Bezeichnung wieder sperren"
-            : "Bezeichnung entsperren (nur für Korrekturen)";
+            ? "Name wieder sperren"
+            : "Name entsperren (nur für Korrekturen)";
 
         /// <summary>Warning shown only while an existing product's name is unlocked.
         /// KerwaKasse is not a receipt system — only evaluations (not receipts) are affected.</summary>
@@ -137,7 +137,7 @@ namespace KerwaKasse.MVVM.ViewModel
         // ── Dirty tracking ──────────────────────────────────────
         /// <summary>True when any editable field differs from the loaded values (drives Save enablement).</summary>
         public bool IsDirty =>
-            _description != _origDescription ||
+            _name != _origName ||
             _priceText != _origPriceText ||
             _available != _origAvailable ||
             !SameColor(_colorAsString, _origColor);
@@ -149,7 +149,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public string UnsavedChipText => IsNew ? "Nicht gespeichert" : "Geändert";
 
         // ── Validation ──────────────────────────────────────────
-        public const int MaxDescriptionLength = 40;
+        public const int MaxNameLength = 40;
 
         /// <summary>
         /// True when the data is invalid (used by SaveDetailCommand CanExecute).
@@ -157,8 +157,8 @@ namespace KerwaKasse.MVVM.ViewModel
         /// </summary>
         public bool HasErrors =>
             ParsedPrice == null ||
-            string.IsNullOrWhiteSpace(_description) ||
-            (_description?.Length ?? 0) > MaxDescriptionLength;
+            string.IsNullOrWhiteSpace(_name) ||
+            (_name?.Length ?? 0) > MaxNameLength;
 
         // IDataErrorInfo
         string IDataErrorInfo.Error => string.Empty;
@@ -174,13 +174,13 @@ namespace KerwaKasse.MVVM.ViewModel
                     if (val < 0)
                         return "Preis darf nicht negativ sein";
                 }
-                if (columnName == nameof(Description))
+                if (columnName == nameof(Name))
                 {
-                    if (!_descriptionTouched) return string.Empty;
-                    if (string.IsNullOrWhiteSpace(_description))
-                        return "Bezeichnung darf nicht leer sein";
-                    if (_description.Length > MaxDescriptionLength)
-                        return $"Maximal {MaxDescriptionLength} Zeichen erlaubt";
+                    if (!_nameTouched) return string.Empty;
+                    if (string.IsNullOrWhiteSpace(_name))
+                        return "Name darf nicht leer sein";
+                    if (_name.Length > MaxNameLength)
+                        return $"Maximal {MaxNameLength} Zeichen erlaubt";
                 }
                 return string.Empty;
             }
@@ -199,13 +199,13 @@ namespace KerwaKasse.MVVM.ViewModel
             IsNew = isNew;
             UsageCount = usageCount;
 
-            _description = description;
-            _descriptionTouched = !isNew;
+            _name = description;
+            _nameTouched = !isNew;
             _priceText = price.ToString("F2", CultureInfo.CurrentCulture);
             _colorAsString = colorAsString;
             _available = available;
 
-            _origDescription = _description;
+            _origName = _name;
             _origPriceText = _priceText;
             _origColor = _colorAsString;
             _origAvailable = _available;

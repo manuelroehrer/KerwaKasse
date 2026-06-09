@@ -62,7 +62,7 @@ public class SqliteOrderService : IOrderService
         var rows = connection.Query<OrderPositionRow>(
             """
             SELECT o.Id AS OrderId, o.OrderTime, op.ProductId, op.Amount, op.UnitPriceCents,
-                   COALESCE(p.Description, '(unbekanntes Produkt)') AS ProductDescription
+                   COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName
             FROM Orders o
             INNER JOIN OrderPositions op ON o.Id = op.OrderId
             LEFT JOIN Products p ON p.Id = op.ProductId
@@ -89,7 +89,7 @@ public class SqliteOrderService : IOrderService
             {
                 OrderId = row.OrderId,
                 ProductId = row.ProductId,
-                ProductDescription = row.ProductDescription,
+                ProductName = row.ProductName,
                 Amount = row.Amount,
                 UnitPrice = row.UnitPriceCents / 100m
             });
@@ -126,7 +126,7 @@ public class SqliteOrderService : IOrderService
             """
             SELECT
                 op.ProductId,
-                COALESCE(p.Description, '(unbekanntes Produkt)') AS ProductDescription,
+                COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName,
                 p.Color AS ProductColor,
                 SUM(op.Amount) AS TotalAmount,
                 SUM(op.Amount * op.UnitPriceCents) AS TotalRevenueCents
@@ -141,7 +141,7 @@ public class SqliteOrderService : IOrderService
             .Select(r => new SalesFigure
             {
                 ProductId = r.ProductId,
-                ProductDescription = r.ProductDescription,
+                ProductName = r.ProductName,
                 ProductColor = r.ProductColor,
                 TotalAmount = r.TotalAmount,
                 TotalRevenue = r.TotalRevenueCents / 100m
@@ -157,13 +157,13 @@ public class SqliteOrderService : IOrderService
         public int ProductId { get; set; }
         public int Amount { get; set; }
         public long UnitPriceCents { get; set; }
-        public string ProductDescription { get; set; } = "";
+        public string ProductName { get; set; } = "";
     }
 
     private class SalesFigureRow
     {
         public int ProductId { get; set; }
-        public string ProductDescription { get; set; } = "";
+        public string ProductName { get; set; } = "";
         public string? ProductColor { get; set; }
         public int TotalAmount { get; set; }
         public long TotalRevenueCents { get; set; }

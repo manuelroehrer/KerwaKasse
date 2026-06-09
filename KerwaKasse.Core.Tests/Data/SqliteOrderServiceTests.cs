@@ -23,7 +23,7 @@ public class SqliteOrderServiceTests : IDisposable
 
     private Product AddTestProduct(string desc = "Bratwurst", decimal price = 3.50m)
     {
-        _productService.Add(new Product { Description = desc, Price = price, Available = true });
+        _productService.Add(new Product { Name = desc, Price = price, Available = true });
         return _productService.GetAll().Last();
     }
 
@@ -50,7 +50,7 @@ public class SqliteOrderServiceTests : IDisposable
         Assert.Equal(2, orders[0].Positions[0].Amount);
         Assert.Equal(product.Price, orders[0].Positions[0].UnitPrice);
         // Name is resolved from the current product via JOIN, not from a snapshot.
-        Assert.Equal("Bratwurst", orders[0].Positions[0].ProductDescription);
+        Assert.Equal("Bratwurst", orders[0].Positions[0].ProductName);
     }
 
     [Fact]
@@ -148,11 +148,11 @@ public class SqliteOrderServiceTests : IDisposable
         var to = DateTime.Today.AddDays(1);
         var figures = _sut.GetSalesFigures(from, to);
 
-        var bratwurst = figures.First(f => f.ProductDescription == "Bratwurst");
+        var bratwurst = figures.First(f => f.ProductName == "Bratwurst");
         Assert.Equal(5, bratwurst.TotalAmount);       // 2 + 3
         Assert.Equal(17.50m, bratwurst.TotalRevenue);  // 5 * 3.50
 
-        var bier = figures.First(f => f.ProductDescription == "Bier");
+        var bier = figures.First(f => f.ProductName == "Bier");
         Assert.Equal(1, bier.TotalAmount);
         Assert.Equal(2.80m, bier.TotalRevenue);
     }
@@ -190,7 +190,7 @@ public class SqliteOrderServiceTests : IDisposable
             new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price }
         });
 
-        product.Description = "Currywurst und Pommes";
+        product.Name = "Currywurst und Pommes";
         _productService.Update(product);
 
         _sut.PlaceOrder(new[]
@@ -202,13 +202,13 @@ public class SqliteOrderServiceTests : IDisposable
         var orders = _sut.GetOrdersByDate(DateTime.Today);
         Assert.Equal(2, orders.Count);
         Assert.All(orders.SelectMany(o => o.Positions),
-            p => Assert.Equal("Currywurst und Pommes", p.ProductDescription));
+            p => Assert.Equal("Currywurst und Pommes", p.ProductName));
 
         // Statistics aggregate into a single row per ProductId (not split by name).
         var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1));
         var row = Assert.Single(figures);
         Assert.Equal(product.Id, row.ProductId);
-        Assert.Equal("Currywurst und Pommes", row.ProductDescription);
+        Assert.Equal("Currywurst und Pommes", row.ProductName);
         Assert.Equal(3, row.TotalAmount);        // 1 + 2
         Assert.Equal(22.50m, row.TotalRevenue);  // 3 * 7.50
     }

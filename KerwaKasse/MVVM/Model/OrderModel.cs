@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -77,7 +77,7 @@ namespace KerwaKasse.MVVM.Model
 
             for (int i = 0; i < OrderPositions.Count; i++)
             {
-                ShortDescription += OrderPositions[i].Product.Description;
+                ShortDescription += OrderPositions[i].Product.Name;
                 
                 if (i < OrderPositions.Count-1)
                 {

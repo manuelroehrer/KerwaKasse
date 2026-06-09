@@ -149,7 +149,7 @@ namespace KerwaKasse.MVVM.ViewModel
             Products = coreProducts.Select(p => new ProductModel
             {
                 ProductID = p.Id,
-                Description = p.Description,
+                Name = p.Name,
                 Price = p.Price,
                 Available = p.Available,
                 ColorAsString = p.Color,

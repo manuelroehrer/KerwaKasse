@@ -3,7 +3,7 @@ namespace KerwaKasse.Core.Models;
 public class Product
 {
     public int Id { get; set; }
-    public string Description { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>Price in euros. Stored in the DB as integer cents (PriceCents).</summary>
     public decimal Price { get; set; }

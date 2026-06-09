@@ -13,7 +13,7 @@ public static class DatabaseInitializer
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS Products (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Description TEXT NOT NULL,
+                Name TEXT NOT NULL,
                 PriceCents INTEGER NOT NULL,
                 Available INTEGER NOT NULL DEFAULT 1,
                 Color TEXT,
