@@ -115,6 +115,39 @@ public class SqliteProductServiceTests : IDisposable
         Assert.Equal("B", all[2].Name);
     }
 
+    [Fact]
+    public void UpdateAvailability_PersistsNewValue()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });
+        int id = _sut.GetAll()[0].Id;
+
+        _sut.UpdateAvailability(id, false);
+
+        Assert.False(_sut.GetAll()[0].Available);
+    }
+
+    [Fact]
+    public void GetUsageCount_ZeroForUnusedProduct()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m });
+        int id = _sut.GetAll()[0].Id;
+
+        Assert.Equal(0, _sut.GetUsageCount(id));
+    }
+
+    [Fact]
+    public void GetUsageCount_CountsReferencingOrderPositions()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m });
+        int id = _sut.GetAll()[0].Id;
+
+        var orders = new SqliteOrderService(_connectionString);
+        orders.PlaceOrder(new[] { new OrderPosition { ProductId = id, Amount = 2, UnitPrice = 3.50m } });
+        orders.PlaceOrder(new[] { new OrderPosition { ProductId = id, Amount = 1, UnitPrice = 3.50m } });
+
+        Assert.Equal(2, _sut.GetUsageCount(id));
+    }
+
     public void Dispose()
     {
         _keepAlive.Dispose();
