@@ -12,6 +12,7 @@
     <UserControl.Resources>
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLength"/>
         <helper:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Validation: keep the field in place, show errors manually below -->
@@ -149,7 +150,16 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Border x:Name="Swatch" Grid.Column="0" Width="14" Height="14" CornerRadius="4"
-                                            Background="{Binding ColorBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            Background="{Binding ColorBrush}" BorderThickness="1"
+                                            Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <Border.BorderBrush>
+                                            <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                                <Binding Path="ColorBrush"/>
+                                                <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                            </MultiBinding>
+                                        </Border.BorderBrush>
+                                    </Border>
                                     <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Description}"
                                                FontSize="16" FontWeight="SemiBold" Foreground="#222222"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>

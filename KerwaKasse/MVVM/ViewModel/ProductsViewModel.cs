@@ -92,6 +92,10 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
+        /// <summary>Swatch border preferences (persisted): whether to tint the border and how much to darken it.</summary>
+        public double BorderDarkenFactor { get; private set; }
+        public bool UseColoredBorder { get; private set; }
+
         // ── Commands ─────────────────────────────────────────────
         public RelayCommand AddProductCommand { get; }
         public RelayCommand SaveDetailCommand { get; }
@@ -109,7 +113,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _settings = settings;
             _dialogService = dialogService;
 
-            SidePanelWidth = _settings.Get("productsSidePanelWidth", 440.0);
+            LoadPreferences();
 
             AddProductCommand = new RelayCommand(_ => BeginAddProduct());
             SaveDetailCommand = new RelayCommand(_ => SaveDetail(),
@@ -120,6 +124,20 @@ namespace KerwaKasse.MVVM.ViewModel
             MoveSelectedDownCommand = new RelayCommand(_ => MoveSelected(1), _ => CanMoveSelected(1));
 
             LoadData();
+        }
+
+        // ── Preferences ──────────────────────────────────────────
+
+        private void LoadPreferences()
+        {
+            bool needsSave = false;
+            needsSave |= _settings.SetIfAbsent("productsSwatchUseColoredBorder", true);
+            needsSave |= _settings.SetIfAbsent("productsSwatchBorderDarkenFactor", 0.7);
+            if (needsSave) _settings.Save();
+
+            SidePanelWidth = _settings.Get("productsSidePanelWidth", 440.0);
+            UseColoredBorder = _settings.Get("productsSwatchUseColoredBorder", true);
+            BorderDarkenFactor = _settings.Get("productsSwatchBorderDarkenFactor", 0.7);
         }
 
         // ── Data loading ─────────────────────────────────────────
