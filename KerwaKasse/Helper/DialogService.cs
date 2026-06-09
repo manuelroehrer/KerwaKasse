@@ -1,5 +1,8 @@
 using Microsoft.Win32;
+using ModernWpf.Controls;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace KerwaKasse.Helper
 {
@@ -25,6 +28,20 @@ namespace KerwaKasse.Helper
             };
 
             return dialog.ShowDialog() == true ? dialog.FileName : null;
+        }
+
+        public async Task<bool> ShowConfirmationAsync(string title, string message)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 440 },
+                PrimaryButtonText = "Ja",
+                CloseButtonText = "Abbrechen",
+                DefaultButton = ContentDialogButton.Close
+            };
+
+            return await dialog.ShowAsync() == ContentDialogResult.Primary;
         }
     }
 }
