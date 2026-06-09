@@ -160,7 +160,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public string UnsavedChipText => IsNew ? "Nicht gespeichert" : "Geändert";
 
         // ── Validation ──────────────────────────────────────────
-        public const int MaxNameLength = 40;
+        public const int MaxNameLength = 30;
 
         /// <summary>
         /// True when the data is invalid (used by SaveDetailCommand CanExecute).

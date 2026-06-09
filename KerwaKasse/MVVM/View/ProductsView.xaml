@@ -315,7 +315,7 @@
                                                         ValidatesOnDataErrors=True}"
                                          IsEnabled="{Binding DetailPanel.NameUnlocked}"
                                          Style="{StaticResource ValidatedTextBox}"
-                                         FontSize="16" Margin="0,0,8,0" MaxLength="40"/>
+                                         FontSize="16" Margin="0,0,8,0" MaxLength="30"/>
                                 <Button Grid.Column="1"
                                         Visibility="{Binding DetailPanel.UnlockButtonVisible,
                                                              Converter={StaticResource BoolToVisibility}}"
@@ -346,7 +346,7 @@
                                                                 Converter={StaticResource BoolToVisibility}}"/>
                                 <TextBlock FontSize="12" Foreground="#A0A0A0" HorizontalAlignment="Right"
                                            Text="{Binding DetailPanel.Name.Length, FallbackValue=0,
-                                                          StringFormat={}{0} / 40}"/>
+                                                          StringFormat={}{0} / 30}"/>
                             </Grid>
                             <!-- Warning banner: only when an existing name is unlocked -->
                             <Border CornerRadius="6" Background="#FFF8E7" BorderBrush="#F0C24B" BorderThickness="1"
