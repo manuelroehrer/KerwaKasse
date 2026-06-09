@@ -24,8 +24,8 @@ public class OrderPanelViewModelTests
 
         _productService.GetAvailable().Returns(new List<Product>
         {
-            new() { Id = 1, Description = "Bratwurst", Price = 3.50m, Available = true, SortOrder = 1 },
-            new() { Id = 2, Description = "Bier", Price = 2.80m, Available = true, SortOrder = 2 }
+            new() { Id = 1, Name = "Bratwurst", Price = 3.50m, Available = true, SortOrder = 1 },
+            new() { Id = 2, Name = "Bier", Price = 2.80m, Available = true, SortOrder = 2 }
         });
 
         _settings.Get("orderPanelCardScaleFactor", 1.0).Returns(1.0);
@@ -40,7 +40,7 @@ public class OrderPanelViewModelTests
     public void Constructor_LoadsAvailableProducts()
     {
         Assert.Equal(2, _sut.Products.Count);
-        Assert.Equal("Bratwurst", _sut.Products[0].Description);
+        Assert.Equal("Bratwurst", _sut.Products[0].Name);
     }
 
     [Fact]
@@ -120,7 +120,6 @@ public class OrderPanelViewModelTests
         Assert.Equal(1, positions[0].ProductId);
         Assert.Equal(2, positions[0].Amount);
         Assert.Equal(3.50m, positions[0].UnitPrice);
-        Assert.Equal("Bratwurst", positions[0].ProductDescription);
     }
 
     [Fact]

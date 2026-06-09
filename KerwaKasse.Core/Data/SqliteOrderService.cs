@@ -28,7 +28,7 @@ public class SqliteOrderService : IOrderService
         using var transaction = connection.BeginTransaction();
 
         var orderId = connection.ExecuteScalar<int>(
-            """INSERT INTO "Order" (OrderTime) VALUES (@Now); SELECT last_insert_rowid();""",
+            """INSERT INTO Orders (OrderTime) VALUES (@Now); SELECT last_insert_rowid();""",
             new { Now = DateTime.Now.ToString(SqliteDateFormat) },
             transaction);
 
@@ -36,16 +36,15 @@ public class SqliteOrderService : IOrderService
         {
             connection.Execute(
                 """
-                INSERT INTO OrderPosition (OrderId, ProductId, Amount, UnitPrice, ProductDescription)
-                VALUES (@OrderId, @ProductId, @Amount, @UnitPrice, @ProductDescription)
+                INSERT INTO OrderPositions (OrderId, ProductId, Amount, UnitPriceCents)
+                VALUES (@OrderId, @ProductId, @Amount, @UnitPriceCents)
                 """,
                 new
                 {
                     OrderId = orderId,
                     pos.ProductId,
                     pos.Amount,
-                    pos.UnitPrice,
-                    pos.ProductDescription
+                    UnitPriceCents = ToCents(pos.UnitPrice)
                 },
                 transaction);
         }
@@ -62,9 +61,11 @@ public class SqliteOrderService : IOrderService
 
         var rows = connection.Query<OrderPositionRow>(
             """
-            SELECT o.Id AS OrderId, o.OrderTime, op.ProductId, op.Amount, op.UnitPrice, op.ProductDescription
-            FROM "Order" o
-            INNER JOIN OrderPosition op ON o.Id = op.OrderId
+            SELECT o.Id AS OrderId, o.OrderTime, op.ProductId, op.Amount, op.UnitPriceCents,
+                   COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName
+            FROM Orders o
+            INNER JOIN OrderPositions op ON o.Id = op.OrderId
+            LEFT JOIN Products p ON p.Id = op.ProductId
             WHERE o.OrderTime BETWEEN @DayStart AND @DayEnd
             ORDER BY o.Id
             """,
@@ -88,9 +89,9 @@ public class SqliteOrderService : IOrderService
             {
                 OrderId = row.OrderId,
                 ProductId = row.ProductId,
-                ProductDescription = row.ProductDescription,
+                ProductName = row.ProductName,
                 Amount = row.Amount,
-                UnitPrice = row.UnitPrice
+                UnitPrice = row.UnitPriceCents / 100m
             });
         }
 
@@ -107,7 +108,7 @@ public class SqliteOrderService : IOrderService
         {
             connection.Execute(
                 """
-                UPDATE OrderPosition SET Amount = @Amount
+                UPDATE OrderPositions SET Amount = @Amount
                 WHERE OrderId = @OrderId AND ProductId = @ProductId
                 """,
                 new { pos.Amount, pos.OrderId, pos.ProductId },
@@ -121,23 +122,33 @@ public class SqliteOrderService : IOrderService
     {
         using var connection = new SqliteConnection(_connectionString);
 
-        return connection.Query<SalesFigure>(
+        return connection.Query<SalesFigureRow>(
             """
             SELECT
                 op.ProductId,
-                op.ProductDescription AS ProductDescription,
+                COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName,
                 p.Color AS ProductColor,
                 SUM(op.Amount) AS TotalAmount,
-                SUM(op.Amount * op.UnitPrice) AS TotalRevenue
-            FROM OrderPosition op
-            INNER JOIN "Order" o ON o.Id = op.OrderId
-            LEFT JOIN Product p ON p.Id = op.ProductId
+                SUM(op.Amount * op.UnitPriceCents) AS TotalRevenueCents
+            FROM OrderPositions op
+            INNER JOIN Orders o ON o.Id = op.OrderId
+            LEFT JOIN Products p ON p.Id = op.ProductId
             WHERE o.OrderTime BETWEEN @From AND @To
-            GROUP BY op.ProductId, op.ProductDescription
+            GROUP BY op.ProductId
             ORDER BY TotalAmount DESC
             """,
-            new { From = from.ToString(SqliteDateFormat), To = to.ToString(SqliteDateFormat) }).ToList();
+            new { From = from.ToString(SqliteDateFormat), To = to.ToString(SqliteDateFormat) })
+            .Select(r => new SalesFigure
+            {
+                ProductId = r.ProductId,
+                ProductName = r.ProductName,
+                ProductColor = r.ProductColor,
+                TotalAmount = r.TotalAmount,
+                TotalRevenue = r.TotalRevenueCents / 100m
+            }).ToList();
     }
+
+    private static long ToCents(decimal price) => (long)Math.Round(price * 100m, MidpointRounding.AwayFromZero);
 
     private class OrderPositionRow
     {
@@ -145,7 +156,16 @@ public class SqliteOrderService : IOrderService
         public string OrderTime { get; set; } = "";
         public int ProductId { get; set; }
         public int Amount { get; set; }
-        public decimal UnitPrice { get; set; }
-        public string ProductDescription { get; set; } = "";
+        public long UnitPriceCents { get; set; }
+        public string ProductName { get; set; } = "";
+    }
+
+    private class SalesFigureRow
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = "";
+        public string? ProductColor { get; set; }
+        public int TotalAmount { get; set; }
+        public long TotalRevenueCents { get; set; }
     }
 }

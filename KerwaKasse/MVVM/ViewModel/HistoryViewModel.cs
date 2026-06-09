@@ -1,4 +1,4 @@
-﻿using KerwaKasse.Core.Models;
+using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 using KerwaKasse.MVVM.Model;
@@ -76,8 +76,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     OrderId = order.OrderID,
                     ProductId = op.Product.ProductID,
                     Amount = op.Amount,
-                    UnitPrice = op.Product.Price,
-                    ProductDescription = op.Product.Description
+                    UnitPrice = op.Product.Price
                 }).ToList()
             };
             _orderService.UpdateOrderPositions(coreOrder);
@@ -102,7 +101,7 @@ namespace KerwaKasse.MVVM.ViewModel
                             Product = new ProductModel
                             {
                                 ProductID = p.ProductId,
-                                Description = p.ProductDescription,
+                                Name = p.ProductName,
                                 Price = p.UnitPrice
                             }
                         }).ToList()

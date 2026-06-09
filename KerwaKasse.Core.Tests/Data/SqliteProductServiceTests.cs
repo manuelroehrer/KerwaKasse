@@ -22,13 +22,13 @@ public class SqliteProductServiceTests : IDisposable
     [Fact]
     public void Add_And_GetAll_RoundTrip()
     {
-        var product = new Product { Description = "Bratwurst", Price = 3.50m, Available = true, Color = "#FF0000" };
+        var product = new Product { Name = "Bratwurst", Price = 3.50m, Available = true, Color = "#FF0000" };
 
         _sut.Add(product);
 
         var all = _sut.GetAll();
         Assert.Single(all);
-        Assert.Equal("Bratwurst", all[0].Description);
+        Assert.Equal("Bratwurst", all[0].Name);
         Assert.Equal(3.50m, all[0].Price);
         Assert.True(all[0].Available);
         Assert.Equal("#FF0000", all[0].Color);
@@ -37,18 +37,18 @@ public class SqliteProductServiceTests : IDisposable
     [Fact]
     public void GetAvailable_FiltersUnavailableProducts()
     {
-        _sut.Add(new Product { Description = "Bratwurst", Price = 3.50m, Available = true });
-        _sut.Add(new Product { Description = "Pommes", Price = 2.50m, Available = false });
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });
+        _sut.Add(new Product { Name = "Pommes", Price = 2.50m, Available = false });
 
         var available = _sut.GetAvailable();
         Assert.Single(available);
-        Assert.Equal("Bratwurst", available[0].Description);
+        Assert.Equal("Bratwurst", available[0].Name);
     }
 
     [Fact]
     public void Update_ChangesProductFields()
     {
-        _sut.Add(new Product { Description = "Bratwurst", Price = 3.50m, Available = true });
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });
         var product = _sut.GetAll()[0];
 
         product.Price = 4.00m;
@@ -61,23 +61,23 @@ public class SqliteProductServiceTests : IDisposable
     }
 
     [Fact]
-    public void Update_ChangesDescription()
+    public void Update_ChangesName()
     {
-        _sut.Add(new Product { Description = "Bratwurst", Price = 3.50m, Available = true });
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });
         var product = _sut.GetAll()[0];
 
-        product.Description = "Currywurst";
+        product.Name = "Currywurst";
         _sut.Update(product);
 
         var updated = _sut.GetAll()[0];
-        Assert.Equal("Currywurst", updated.Description);
+        Assert.Equal("Currywurst", updated.Name);
     }
 
     [Fact]
     public void Add_AutoAssignsSortOrder()
     {
-        _sut.Add(new Product { Description = "Bratwurst", Price = 3.50m });
-        _sut.Add(new Product { Description = "Pommes", Price = 2.50m });
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m });
+        _sut.Add(new Product { Name = "Pommes", Price = 2.50m });
 
         var all = _sut.GetAll();
         Assert.Equal(1, all[0].SortOrder);
@@ -87,8 +87,8 @@ public class SqliteProductServiceTests : IDisposable
     [Fact]
     public void UpdateSortOrder_ReordersProducts()
     {
-        _sut.Add(new Product { Description = "A", Price = 1m });
-        _sut.Add(new Product { Description = "B", Price = 2m });
+        _sut.Add(new Product { Name = "A", Price = 1m });
+        _sut.Add(new Product { Name = "B", Price = 2m });
         var all = _sut.GetAll();
 
         // Swap order
@@ -97,22 +97,55 @@ public class SqliteProductServiceTests : IDisposable
         _sut.UpdateSortOrder(all);
 
         var reordered = _sut.GetAll();
-        Assert.Equal("B", reordered[0].Description); // SortOrder 1
-        Assert.Equal("A", reordered[1].Description); // SortOrder 2
+        Assert.Equal("B", reordered[0].Name); // SortOrder 1
+        Assert.Equal("A", reordered[1].Name); // SortOrder 2
     }
 
     [Fact]
     public void GetAll_ReturnsOrderedBySortOrder()
     {
-        _sut.Add(new Product { Description = "C", Price = 1m });
-        _sut.Add(new Product { Description = "A", Price = 2m });
-        _sut.Add(new Product { Description = "B", Price = 3m });
+        _sut.Add(new Product { Name = "C", Price = 1m });
+        _sut.Add(new Product { Name = "A", Price = 2m });
+        _sut.Add(new Product { Name = "B", Price = 3m });
 
         var all = _sut.GetAll();
         // Should be ordered by SortOrder (1, 2, 3) which is insertion order
-        Assert.Equal("C", all[0].Description);
-        Assert.Equal("A", all[1].Description);
-        Assert.Equal("B", all[2].Description);
+        Assert.Equal("C", all[0].Name);
+        Assert.Equal("A", all[1].Name);
+        Assert.Equal("B", all[2].Name);
+    }
+
+    [Fact]
+    public void UpdateAvailability_PersistsNewValue()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });
+        int id = _sut.GetAll()[0].Id;
+
+        _sut.UpdateAvailability(id, false);
+
+        Assert.False(_sut.GetAll()[0].Available);
+    }
+
+    [Fact]
+    public void GetUsageCount_ZeroForUnusedProduct()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m });
+        int id = _sut.GetAll()[0].Id;
+
+        Assert.Equal(0, _sut.GetUsageCount(id));
+    }
+
+    [Fact]
+    public void GetUsageCount_CountsReferencingOrderPositions()
+    {
+        _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m });
+        int id = _sut.GetAll()[0].Id;
+
+        var orders = new SqliteOrderService(_connectionString);
+        orders.PlaceOrder(new[] { new OrderPosition { ProductId = id, Amount = 2, UnitPrice = 3.50m } });
+        orders.PlaceOrder(new[] { new OrderPosition { ProductId = id, Amount = 1, UnitPrice = 3.50m } });
+
+        Assert.Equal(2, _sut.GetUsageCount(id));
     }
 
     public void Dispose()

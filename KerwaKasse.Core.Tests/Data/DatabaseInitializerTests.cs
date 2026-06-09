@@ -29,9 +29,9 @@ public class DatabaseInitializerTests : IDisposable
         while (reader.Read())
             tables.Add(reader.GetString(0));
 
-        Assert.Contains("Product", tables);
-        Assert.Contains("Order", tables);
-        Assert.Contains("OrderPosition", tables);
+        Assert.Contains("Products", tables);
+        Assert.Contains("Orders", tables);
+        Assert.Contains("OrderPositions", tables);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class DatabaseInitializerTests : IDisposable
         DatabaseInitializer.Initialize(_connectionString); // should not throw
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Product'";
+        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Products'";
         var count = (long)cmd.ExecuteScalar()!;
 
         Assert.Equal(1, count);

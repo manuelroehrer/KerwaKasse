@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +21,7 @@ namespace KerwaKasse.MVVM.Model
         }
 
         private string description;
-        public string Description
+        public string Name
         {
             get { return description; }
             set
@@ -110,17 +110,6 @@ namespace KerwaKasse.MVVM.Model
             }
         }
 
-        private string imgPath;
-        public string ImgPath
-        {
-            get { return imgPath; }
-            set
-            {
-                imgPath = value;
-                OnPropertyChanged();
-            }
-        }
-
         private static Brush ConvertFromString(string color)
         {
             Brush brush = (Brush)new BrushConverter().ConvertFrom(color);
@@ -129,7 +118,7 @@ namespace KerwaKasse.MVVM.Model
 
         public override string ToString()
         {
-            return PositionNumber + ". " + Description;
+            return PositionNumber + ". " + Name;
         }
     }
 }

@@ -149,11 +149,10 @@ namespace KerwaKasse.MVVM.ViewModel
             Products = coreProducts.Select(p => new ProductModel
             {
                 ProductID = p.Id,
-                Description = p.Description,
+                Name = p.Name,
                 Price = p.Price,
                 Available = p.Available,
                 ColorAsString = p.Color,
-                ImgPath = p.ImagePath,
                 PositionNumber = p.SortOrder
             }).OrderBy(o => o.PositionNumber).ToList();
         }
@@ -175,8 +174,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 {
                     ProductId = op.Product.ProductID,
                     Amount = op.Amount,
-                    UnitPrice = op.Product.Price,
-                    ProductDescription = op.Product.Description
+                    UnitPrice = op.Product.Price
                 });
                 _orderService.PlaceOrder(positions);
                 Notification();

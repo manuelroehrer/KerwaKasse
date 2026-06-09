@@ -7,7 +7,7 @@ public class EditOrderDialogViewModelTests
 {
     private OrderModel CreateTestOrder()
     {
-        var product = new ProductModel { ProductID = 1, Description = "Bratwurst", Price = 3.50m };
+        var product = new ProductModel { ProductID = 1, Name = "Bratwurst", Price = 3.50m };
         return new OrderModel
         {
             OrderID = 42,

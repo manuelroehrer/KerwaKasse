@@ -11,30 +11,28 @@ public static class DatabaseInitializer
 
         using var command = connection.CreateCommand();
         command.CommandText = """
-            CREATE TABLE IF NOT EXISTS Product (
+            CREATE TABLE IF NOT EXISTS Products (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Description TEXT NOT NULL,
-                Price REAL NOT NULL,
+                Name TEXT NOT NULL,
+                PriceCents INTEGER NOT NULL,
                 Available INTEGER NOT NULL DEFAULT 1,
                 Color TEXT,
-                ImagePath TEXT,
                 SortOrder INTEGER NOT NULL DEFAULT 0
             );
 
-            CREATE TABLE IF NOT EXISTS "Order" (
+            CREATE TABLE IF NOT EXISTS Orders (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 OrderTime TEXT NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS OrderPosition (
+            CREATE TABLE IF NOT EXISTS OrderPositions (
                 OrderId INTEGER NOT NULL,
                 ProductId INTEGER NOT NULL,
                 Amount INTEGER NOT NULL,
-                UnitPrice REAL NOT NULL,
-                ProductDescription TEXT NOT NULL DEFAULT '',
+                UnitPriceCents INTEGER NOT NULL,
                 PRIMARY KEY (OrderId, ProductId),
-                FOREIGN KEY (OrderId) REFERENCES "Order"(Id),
-                FOREIGN KEY (ProductId) REFERENCES Product(Id)
+                FOREIGN KEY (OrderId) REFERENCES Orders(Id),
+                FOREIGN KEY (ProductId) REFERENCES Products(Id)
             );
             """;
         command.ExecuteNonQuery();
