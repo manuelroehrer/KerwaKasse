@@ -237,20 +237,35 @@
             </Border.Effect>
             <DockPanel>
 
-                <!-- Header with divider -->
+                <!-- Header with divider + unsaved-state chip -->
                 <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="18,15">
-                    <TextBlock FontSize="20" FontWeight="SemiBold">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Produkt bearbeiten"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAddingNew}" Value="True">
-                                        <Setter Property="Text" Value="Neues Produkt anlegen"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Produkt bearbeiten"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAddingNew}" Value="True">
+                                            <Setter Property="Text" Value="Neues Produkt anlegen"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Border Grid.Column="1" VerticalAlignment="Center"
+                                Background="#FFF4DE" CornerRadius="10" Padding="9,3"
+                                Visibility="{Binding DetailPanel.HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#D69E2E" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding DetailPanel.UnsavedChipText}" FontSize="12.5" FontWeight="SemiBold"
+                                           Foreground="#8A6D17" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Border>
 
                 <!-- Footer with divider + offset background (rounded bottom corners) -->

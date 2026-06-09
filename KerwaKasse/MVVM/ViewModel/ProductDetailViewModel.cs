@@ -39,6 +39,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasErrors));
                 OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -87,6 +88,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasErrors));
                 OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -110,6 +112,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 _colorAsString = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -124,6 +127,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(AvailabilityText));
                 OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -137,6 +141,12 @@ namespace KerwaKasse.MVVM.ViewModel
             _priceText != _origPriceText ||
             _available != _origAvailable ||
             !SameColor(_colorAsString, _origColor);
+
+        /// <summary>True while the panel holds unsaved work: a new product, or edits to an existing one.</summary>
+        public bool HasUnsavedChanges => IsNew || IsDirty;
+
+        /// <summary>Caption for the unsaved-state chip in the panel header.</summary>
+        public string UnsavedChipText => IsNew ? "Nicht gespeichert" : "Geändert";
 
         // ── Validation ──────────────────────────────────────────
         public const int MaxDescriptionLength = 40;
