@@ -71,13 +71,13 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding Available}" Value="False">
-                                <Setter TargetName="Row" Property="Background" Value="#FAFBFC"/>
+                                <Setter TargetName="Row" Property="Background" Value="#E9EBEE"/>
                             </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="#F4F7FA"/>
+                                <Setter TargetName="Row" Property="Background" Value="#E2ECF7"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="#EAF1F7"/>
+                                <Setter TargetName="Row" Property="Background" Value="#CFE0F2"/>
                                 <Setter TargetName="Accent" Property="Background" Value="#0A2433"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
