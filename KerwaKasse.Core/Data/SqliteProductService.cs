@@ -52,6 +52,14 @@ public class SqliteProductService : IProductService
             new { product.Id, product.Description, PriceCents = ToCents(product.Price), product.Available, product.Color, product.SortOrder });
     }
 
+    public void UpdateAvailability(int productId, bool available)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Execute(
+            "UPDATE Products SET Available = @available WHERE Id = @productId",
+            new { available, productId });
+    }
+
     public void UpdateSortOrder(IEnumerable<Product> products)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -67,6 +75,14 @@ public class SqliteProductService : IProductService
         }
 
         transaction.Commit();
+    }
+
+    public int GetUsageCount(int productId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return connection.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM OrderPositions WHERE ProductId = @productId",
+            new { productId });
     }
 
     private static long ToCents(decimal price) => (long)Math.Round(price * 100m, MidpointRounding.AwayFromZero);
