@@ -1,3 +1,5 @@
+using KerwaKasse.MVVM.View;
+using KerwaKasse.MVVM.ViewModel;
 using Microsoft.Win32;
 using ModernWpf.Controls;
 using System.Threading.Tasks;
@@ -42,6 +44,12 @@ namespace KerwaKasse.Helper
             };
 
             return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        }
+
+        public async Task ShowMenuManagementAsync(MenuManagementViewModel viewModel)
+        {
+            var dialog = new MenuManagementDialog { DataContext = viewModel };
+            await dialog.ShowAsync();
         }
     }
 }
