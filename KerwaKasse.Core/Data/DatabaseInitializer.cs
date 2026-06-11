@@ -34,6 +34,19 @@ public static class DatabaseInitializer
                 FOREIGN KEY (OrderId) REFERENCES Orders(Id),
                 FOREIGN KEY (ProductId) REFERENCES Products(Id)
             );
+
+            CREATE TABLE IF NOT EXISTS Menus (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS MenuProducts (
+                MenuId INTEGER NOT NULL,
+                ProductId INTEGER NOT NULL,
+                PRIMARY KEY (MenuId, ProductId),
+                FOREIGN KEY (MenuId) REFERENCES Menus(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE
+            );
             """;
         command.ExecuteNonQuery();
     }
