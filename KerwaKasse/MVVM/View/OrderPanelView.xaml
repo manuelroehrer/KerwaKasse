@@ -71,12 +71,16 @@
                                             <Border x:Name="Overlay" Background="Transparent" CornerRadius="5"/>
 
                                             <!-- Content -->
-                                            <StackPanel VerticalAlignment="Center" Margin="15,21,14,8">
+                                            <StackPanel VerticalAlignment="Center" Margin="15,19,14,6">
                                                 <TextBlock Text="{Binding Name}"
                                                            Foreground="#1A1A1A"
                                                            FontWeight="SemiBold"
                                                            TextWrapping="Wrap"
-                                                           FontSize="20"/>
+                                                           FontSize="20"
+                                                           MaxHeight="54"
+                                                           helper:AutoFitTextBlock.Enabled="True"
+                                                           helper:AutoFitTextBlock.MaxFontSize="20"
+                                                           helper:AutoFitTextBlock.MinFontSize="11"/>
                                                 <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
                                                            Foreground="#606060"
                                                            Margin="0,3,0,0"
