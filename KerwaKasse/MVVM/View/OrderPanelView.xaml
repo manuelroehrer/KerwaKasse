@@ -12,6 +12,8 @@
     <UserControl.Resources>
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
         <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+
+        <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </UserControl.Resources>
 
     <Grid x:Name="MainGrid">
@@ -83,7 +85,8 @@
                                                            helper:AutoFitTextBlock.MinFontSize="11"/>
                                                 <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
                                                            Foreground="#606060"
-                                                           Margin="0,3,0,0"
+                                                           FontFamily="{StaticResource PriceFont}"
+                                                           Margin="0,4,0,0"
                                                            FontSize="13"/>
                                             </StackPanel>
                                         </Grid>
