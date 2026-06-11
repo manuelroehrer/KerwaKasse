@@ -12,6 +12,7 @@ public class MainWindowViewModelTests
     private readonly IProductService _productService;
     private readonly IOrderService _orderService;
     private readonly ISettingsService _settings;
+    private readonly IMenuService _menuService;
     private readonly MainWindowViewModel _sut;
 
     public MainWindowViewModelTests()
@@ -20,13 +21,15 @@ public class MainWindowViewModelTests
         _productService = Substitute.For<IProductService>();
         _orderService = Substitute.For<IOrderService>();
         _settings = Substitute.For<ISettingsService>();
+        _menuService = Substitute.For<IMenuService>();
 
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
         _orderService.GetOrdersByDate(Arg.Any<DateTime>()).Returns(new List<Order>());
         _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>()).Returns(new List<SalesFigure>());
+        _menuService.GetAll().Returns(new List<Menu>());
 
-        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db");
+        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService);
     }
 
     [Fact]
