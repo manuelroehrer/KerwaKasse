@@ -11,22 +11,37 @@ public class MenuManagementViewModelTests
     /// <summary>In-memory IMenuService so the view model's batched edits can be verified end to end.</summary>
     private sealed class FakeMenuService : IMenuService
     {
-        private readonly Dictionary<int, string> _menus = new();
+        private readonly Dictionary<int, Menu> _menus = new();
         private readonly Dictionary<int, HashSet<int>> _products = new();
         private int _nextId = 1;
 
         public List<Menu> GetAll() =>
-            _menus.OrderBy(kvp => kvp.Key)
-                  .Select(kvp => new Menu { Id = kvp.Key, Name = kvp.Value })
+            _menus.Values
+                  .OrderBy(m => m.SortOrder).ThenBy(m => m.Name)
+                  .Select(m => new Menu { Id = m.Id, Name = m.Name, SortOrder = m.SortOrder })
                   .ToList();
 
         public List<int> GetProductIds(int menuId) =>
             _products.TryGetValue(menuId, out var ids) ? ids.ToList() : new List<int>();
 
-        public int Add(string name) { int id = _nextId++; _menus[id] = name; return id; }
-        public void Rename(int menuId, string newName) => _menus[menuId] = newName;
+        public int Add(string name)
+        {
+            int id = _nextId++;
+            int sort = _menus.Count == 0 ? 1 : _menus.Values.Max(m => m.SortOrder) + 1;
+            _menus[id] = new Menu { Id = id, Name = name, SortOrder = sort };
+            return id;
+        }
+
+        public void Rename(int menuId, string newName) => _menus[menuId].Name = newName;
         public void Delete(int menuId) { _menus.Remove(menuId); _products.Remove(menuId); }
         public void SetProducts(int menuId, IEnumerable<int> productIds) => _products[menuId] = productIds.ToHashSet();
+
+        public void UpdateSortOrder(IEnumerable<Menu> menus)
+        {
+            foreach (var m in menus)
+                if (_menus.TryGetValue(m.Id, out var existing)) existing.SortOrder = m.SortOrder;
+        }
+
         public void ApplyMenu(int menuId) { }
     }
 
@@ -151,5 +166,72 @@ public class MenuManagementViewModelTests
 
         Assert.Empty(service.GetAll());
         Assert.Null(sut.SelectedMenu);
+    }
+
+    [Fact]
+    public void AddMenu_AppendsAtEndNotAlphabetically()
+    {
+        var sut = CreateSut(out _);
+
+        sut.AddMenuCommand.Execute(null); sut.MenuName = "Zebra"; sut.SaveCommand.Execute(null);
+        sut.AddMenuCommand.Execute(null); sut.MenuName = "Apfel"; sut.SaveCommand.Execute(null);
+
+        Assert.Equal(new[] { "Zebra", "Apfel" }, sut.Menus.Select(m => m.Name));
+    }
+
+    [Fact]
+    public void MoveMenuDown_ReordersAndPersists()
+    {
+        var sut = CreateSut(out var service);
+        foreach (var name in new[] { "A", "B", "C" })
+        {
+            sut.AddMenuCommand.Execute(null);
+            sut.MenuName = name;
+            sut.SaveCommand.Execute(null);
+        }
+
+        sut.SelectedMenu = sut.Menus.First(m => m.Name == "A");
+        sut.MoveMenuDownCommand.Execute(null);
+
+        Assert.Equal(new[] { "B", "A", "C" }, sut.Menus.Select(m => m.Name));
+        Assert.Equal(new[] { "B", "A", "C" }, service.GetAll().Select(m => m.Name));
+    }
+
+    [Fact]
+    public void MoveMenu_CanExecute_RespectsBoundaries()
+    {
+        var sut = CreateSut(out _);
+        sut.AddMenuCommand.Execute(null);
+        sut.AddMenuCommand.Execute(null);
+
+        sut.SelectedMenu = sut.Menus.First();   // top item
+
+        Assert.False(sut.MoveMenuUpCommand.CanExecute(null));
+        Assert.True(sut.MoveMenuDownCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SelectedMenu_CanBeCleared()
+    {
+        var sut = CreateSut(out _);
+        sut.AddMenuCommand.Execute(null);
+        Assert.True(sut.HasMenuSelected);
+
+        sut.SelectedMenu = null;
+
+        Assert.False(sut.HasMenuSelected);
+    }
+
+    [Fact]
+    public void SelectedMenuPositionText_ReflectsPosition()
+    {
+        var sut = CreateSut(out _);
+        sut.AddMenuCommand.Execute(null);
+        sut.AddMenuCommand.Execute(null);
+        sut.AddMenuCommand.Execute(null);
+
+        sut.SelectedMenu = sut.Menus[1];
+
+        Assert.Equal("2 / 3", sut.SelectedMenuPositionText);
     }
 }

@@ -10,5 +10,6 @@ public interface IMenuService
     void Rename(int menuId, string newName);
     void Delete(int menuId);
     void SetProducts(int menuId, IEnumerable<int> productIds);
+    void UpdateSortOrder(IEnumerable<Menu> menus);
     void ApplyMenu(int menuId);
 }

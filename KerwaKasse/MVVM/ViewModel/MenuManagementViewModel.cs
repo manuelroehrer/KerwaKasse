@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 
@@ -102,6 +103,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 _selectedMenu = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasMenuSelected));
+                OnPropertyChanged(nameof(SelectedMenuPositionText));
 
                 _suppressNameEdit = true;
                 MenuName = value?.Name ?? string.Empty;
@@ -115,6 +117,17 @@ namespace KerwaKasse.MVVM.ViewModel
 
         /// <summary>True while at least one Speisekarte exists (drives the sidebar empty state).</summary>
         public bool HasMenus => Menus.Count > 0;
+
+        /// <summary>"X / N" position of the selected card within the list (shown next to the move buttons).</summary>
+        public string SelectedMenuPositionText
+        {
+            get
+            {
+                if (_selectedMenu == null) return string.Empty;
+                int idx = Menus.IndexOf(_selectedMenu);
+                return idx >= 0 ? $"{idx + 1} / {Menus.Count}" : string.Empty;
+            }
+        }
 
         // ── Name (edit buffer; applied on Save) ──────────────────
         private string _menuName = string.Empty;
@@ -172,6 +185,8 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DeleteMenuCommand { get; }
         public RelayCommand SaveCommand { get; }
         public RelayCommand DiscardCommand { get; }
+        public RelayCommand MoveMenuUpCommand { get; }
+        public RelayCommand MoveMenuDownCommand { get; }
 
         public MenuManagementViewModel(IMenuService menuService,
             IEnumerable<(int Id, string Name)> allProducts)
@@ -186,8 +201,30 @@ namespace KerwaKasse.MVVM.ViewModel
                 _ => SelectedMenu != null && HasUnsavedChanges && !HasNameError);
             DiscardCommand = new RelayCommand(_ => Discard(),
                 _ => SelectedMenu != null && HasUnsavedChanges);
+            MoveMenuUpCommand = new RelayCommand(_ => MoveMenu(-1), _ => CanMoveMenu(-1));
+            MoveMenuDownCommand = new RelayCommand(_ => MoveMenu(1), _ => CanMoveMenu(1));
 
             LoadMenus();
+        }
+
+        // ── Manual ordering ──────────────────────────────────────
+
+        private bool CanMoveMenu(int direction)
+        {
+            if (_selectedMenu == null) return false;
+            int target = Menus.IndexOf(_selectedMenu) + direction;
+            return target >= 0 && target < Menus.Count;
+        }
+
+        /// <summary>Moves the selected card one step and persists the new order. Collection.Move keeps
+        /// the selection on the same item, so the product view is not reloaded.</summary>
+        private void MoveMenu(int direction)
+        {
+            if (!CanMoveMenu(direction)) return;
+            int idx = Menus.IndexOf(_selectedMenu);
+            Menus.Move(idx, idx + direction);
+            _menuService.UpdateSortOrder(Menus.Select((m, i) => new Menu { Id = m.Id, SortOrder = i + 1 }));
+            OnPropertyChanged(nameof(SelectedMenuPositionText));
         }
 
         private void LoadMenus()

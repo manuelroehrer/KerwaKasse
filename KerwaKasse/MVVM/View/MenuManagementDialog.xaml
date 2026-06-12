@@ -90,6 +90,22 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Reorder buttons: subtle outline; hidden (not greyed) at the list boundary so the
+             non-working direction simply disappears. -->
+        <Style x:Key="MoveButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#3A4750"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Visibility" Value="Hidden"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </ui:ContentDialog.Resources>
 
     <Grid Width="700" Height="700">
@@ -99,7 +115,9 @@
         </Grid.RowDefinitions>
 
         <!-- ═══ Header ═══════════════════════════════════════════════ -->
-        <Border Grid.Row="0" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="22,8,22,16">
+        <!-- Clicking the header (empty area / title, not the close button) clears the selection. -->
+        <Border Grid.Row="0" Background="Transparent" MouseLeftButtonDown="DeselectArea_MouseDown"
+                BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="22,8,22,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -143,12 +161,13 @@
                     </Border>
 
                     <Grid>
-                        <!-- Speisekarten list -->
+                        <!-- Speisekarten list (clicking empty space clears the selection) -->
                         <ListBox ItemsSource="{Binding Menus}"
                                  SelectedItem="{Binding SelectedMenu}"
                                  ItemContainerStyle="{StaticResource MenuListItemStyle}"
                                  Background="Transparent" BorderThickness="0" Padding="0,8"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 MouseLeftButtonDown="SidebarList_MouseDown"
                                  Visibility="{Binding HasMenus, Converter={StaticResource BoolToVisibility}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -286,10 +305,34 @@
                                    Visibility="{Binding (Validation.HasError), ElementName=NameBox, Converter={StaticResource BoolToVisibility}}"/>
                     </StackPanel>
 
-                    <Border DockPanel.Dock="Top" Height="1" Background="#EDEFF2" Margin="0,16,0,0"/>
+                    <!-- Reorder the selected card (option C: in the right panel, like the products view) -->
+                    <StackPanel DockPanel.Dock="Top" Margin="26,16,26,0">
+                        <TextBlock Text="REIHENFOLGE" Style="{StaticResource SectionLabel}"/>
+                        <Grid Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource MoveButton}" Command="{Binding MoveMenuUpCommand}"
+                                        Padding="16,0" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                   VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                        <TextBlock Text="Nach oben" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MoveButton}" Command="{Binding MoveMenuDownCommand}" Padding="16,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                   VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                        <TextBlock Text="Nach unten" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="{Binding SelectedMenuPositionText}" FontSize="14" Foreground="#8A8F96"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
 
                     <TextBlock DockPanel.Dock="Top" Text="PRODUKTE ZUORDNEN" Style="{StaticResource SectionLabel}"
-                               Margin="26,18,26,0"/>
+                               Margin="26,16,26,0"/>
 
                     <!-- Search (manual placeholder so it stays vertically centered) -->
                     <Grid DockPanel.Dock="Top" Margin="26,8,26,0">

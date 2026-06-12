@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
 using ModernWpf.Controls.Primitives;
@@ -25,5 +27,23 @@ namespace KerwaKasse.MVVM.View
 
         private void CancelDelete_Click(object sender, RoutedEventArgs e)
             => (FlyoutService.GetFlyout(DeleteButton) as FlyoutBase)?.Hide();
+
+        // Clicking the header clears the current selection (back to the "no card selected" state).
+        private void DeselectArea_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MenuManagementViewModel vm)
+                vm.SelectedMenu = null;
+        }
+
+        // Clicking empty space in the sidebar list (not a row) also clears the selection.
+        private void SidebarList_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBox list && e.OriginalSource is DependencyObject source
+                && ItemsControl.ContainerFromElement(list, source) == null
+                && DataContext is MenuManagementViewModel vm)
+            {
+                vm.SelectedMenu = null;
+            }
+        }
     }
 }
