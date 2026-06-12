@@ -47,6 +47,23 @@ public class DatabaseInitializerTests : IDisposable
         Assert.Equal(1, count);
     }
 
+    [Fact]
+    public void Initialize_AddsMissingMenuSortOrderColumn()
+    {
+        // Simulate a database whose Menus table predates the SortOrder column.
+        using (var setup = _connection.CreateCommand())
+        {
+            setup.CommandText = "CREATE TABLE Menus (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL);";
+            setup.ExecuteNonQuery();
+        }
+
+        DatabaseInitializer.Initialize(_connectionString);
+
+        using var check = _connection.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Menus') WHERE name = 'SortOrder';";
+        Assert.Equal(1L, (long)check.ExecuteScalar()!);
+    }
+
     public void Dispose()
     {
         _connection.Dispose();

@@ -93,6 +93,30 @@ public class SqliteMenuServiceTests : IDisposable
         Assert.False(byId[p3]);
     }
 
+    [Fact]
+    public void Add_AppendsInInsertionOrder()
+    {
+        _sut.Add("Zebra");
+        _sut.Add("Apfel");
+
+        Assert.Equal(new[] { "Zebra", "Apfel" }, _sut.GetAll().Select(m => m.Name));
+    }
+
+    [Fact]
+    public void UpdateSortOrder_ReordersMenus()
+    {
+        int zebra = _sut.Add("Zebra");
+        int apfel = _sut.Add("Apfel");
+
+        _sut.UpdateSortOrder(new[]
+        {
+            new Menu { Id = apfel, SortOrder = 1 },
+            new Menu { Id = zebra, SortOrder = 2 },
+        });
+
+        Assert.Equal(new[] { "Apfel", "Zebra" }, _sut.GetAll().Select(m => m.Name));
+    }
+
     /// <summary>Adds three available products and returns their generated ids in insertion order.</summary>
     private (int p1, int p2, int p3) AddThreeProducts()
     {

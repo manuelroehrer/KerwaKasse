@@ -17,7 +17,7 @@ public class SqliteMenuService : IMenuService
     public List<Menu> GetAll()
     {
         using var connection = new SqliteConnection(_connectionString);
-        return connection.Query<Menu>("SELECT Id, Name FROM Menus ORDER BY Name").ToList();
+        return connection.Query<Menu>("SELECT Id, Name, SortOrder FROM Menus ORDER BY SortOrder, Name").ToList();
     }
 
     public List<int> GetProductIds(int menuId)
@@ -32,7 +32,9 @@ public class SqliteMenuService : IMenuService
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
-        connection.Execute("INSERT INTO Menus (Name) VALUES (@name)", new { name });
+        connection.Execute(
+            "INSERT INTO Menus (Name, SortOrder) VALUES (@name, (SELECT COALESCE(MAX(SortOrder), 0) + 1 FROM Menus))",
+            new { name });
         return (int)connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
     }
 
@@ -65,6 +67,20 @@ public class SqliteMenuService : IMenuService
             connection.Execute(
                 "INSERT INTO MenuProducts (MenuId, ProductId) VALUES (@menuId, @productId)",
                 new { menuId, productId }, transaction);
+        }
+        transaction.Commit();
+    }
+
+    public void UpdateSortOrder(IEnumerable<Menu> menus)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        foreach (var menu in menus)
+        {
+            connection.Execute(
+                "UPDATE Menus SET SortOrder = @SortOrder WHERE Id = @Id",
+                new { menu.SortOrder, menu.Id }, transaction);
         }
         transaction.Commit();
     }
