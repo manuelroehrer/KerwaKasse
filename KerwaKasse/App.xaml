@@ -14,6 +14,10 @@
                 <ui:ThemeResources RequestedTheme="Light" AccentColor ="#0A2433" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
+            <!-- Shared layers glyph (Speisekarten icon), used by the management dialog header and the
+                 products-view dropdown. Defined once here so it is not duplicated per view. -->
+            <Geometry x:Key="LayersIcon">M9,1 L17,5 L9,9 L1,5 Z M1,9 L9,13 L17,9 M1,13 L9,17 L17,13</Geometry>
+
             <!-- Rebuild of the ModernWpf AccentButton. Reason for the rebuild: the original looks
                  poor when disabled with a dark AccentColor and white content – ModernWpf bakes in a
                  grey disabled background that cannot be overridden from outside, leaving white text

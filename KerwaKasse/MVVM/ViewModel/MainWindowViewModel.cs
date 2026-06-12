@@ -17,6 +17,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IProductService _productService;
         private readonly IOrderService _orderService;
         private readonly ISettingsService _settingsService;
+        private readonly IMenuService _menuService;
 
         private object currentView;
         public object CurrentView
@@ -29,17 +30,18 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath)
+        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService)
         {
             _dialogService = dialogService;
             _productService = productService;
             _orderService = orderService;
             _settingsService = settingsService;
+            _menuService = menuService;
 
             DatabaseVM = new DatabaseViewModel(dialogService, dbFilePath);
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
-            ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _settingsService, _dialogService));
+            ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));
             HistoryViewCommand = new RelayCommand(o => CurrentView = new HistoryViewModel(_orderService));
             StatisticsViewCommand = new RelayCommand(o => CurrentView = new StatisticsViewModel(_orderService));
             DatabaseViewCommand = new RelayCommand(o => CurrentView = DatabaseVM);

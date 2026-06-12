@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Windows.Data;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
@@ -16,11 +19,31 @@ namespace KerwaKasse.MVVM.ViewModel
     public class ProductsViewModel : PropertyChangedBase
     {
         private readonly IProductService _productService;
+        private readonly IMenuService _menuService;
         private readonly ISettingsService _settings;
         private readonly IDialogService _dialogService;
 
         // ── Product list ─────────────────────────────────────────
         public ObservableCollection<ProductListItemViewModel> Products { get; } = new();
+
+        // ── Product search (filters the list above) ──────────────
+        private ICollectionView _productsView;
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                _searchText = value;
+                OnPropertyChanged();
+                _productsView?.Refresh();
+            }
+        }
+
+        private bool ProductFilter(object item) =>
+            item is ProductListItemViewModel p &&
+            (string.IsNullOrWhiteSpace(_searchText) ||
+             p.Name.Contains(_searchText.Trim(), StringComparison.OrdinalIgnoreCase));
 
         private ProductListItemViewModel _selectedProduct;
         private bool _suppressSelectionChange;
@@ -96,6 +119,47 @@ namespace KerwaKasse.MVVM.ViewModel
         public double BorderDarkenFactor { get; private set; }
         public bool UseColoredBorder { get; private set; }
 
+        // ── Menus / Speisekarten ─────────────────────────────────
+        private List<Menu> _menus = new();
+        public List<Menu> Menus
+        {
+            get => _menus;
+            private set
+            {
+                _menus = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private Menu _selectedMenu;
+        public Menu SelectedMenu
+        {
+            get => _selectedMenu;
+            set
+            {
+                _selectedMenu = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasActiveMenu));
+                OnPropertyChanged(nameof(ActiveMenuText));
+                RefreshActiveMenuFlags();
+            }
+        }
+
+        /// <summary>Menu entries shown in the ProductsView dropdown (name + active marker).</summary>
+        public ObservableCollection<MenuOptionViewModel> MenuOptions { get; } = new();
+
+        /// <summary>True while a Speisekarte exactly matches the current availabilities.</summary>
+        public bool HasActiveMenu => _selectedMenu != null;
+
+        /// <summary>Name of the active Speisekarte, or null when none matches.</summary>
+        public string ActiveMenuText => _selectedMenu?.Name;
+
+        private void RefreshActiveMenuFlags()
+        {
+            foreach (var o in MenuOptions)
+                o.IsActive = _selectedMenu != null && o.Menu.Id == _selectedMenu.Id;
+        }
+
         // ── Commands ─────────────────────────────────────────────
         public RelayCommand AddProductCommand { get; }
         public RelayCommand SaveDetailCommand { get; }
@@ -103,15 +167,22 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand ToggleNameLockCommand { get; }
         public RelayCommand MoveSelectedUpCommand { get; }
         public RelayCommand MoveSelectedDownCommand { get; }
+        public RelayCommand ApplyMenuCommand { get; }
+        public RelayCommand OpenMenuManagementCommand { get; }
 
         public ProductsViewModel(
             IProductService productService,
+            IMenuService menuService,
             ISettingsService settings,
             IDialogService dialogService)
         {
             _productService = productService;
+            _menuService = menuService;
             _settings = settings;
             _dialogService = dialogService;
+
+            _productsView = CollectionViewSource.GetDefaultView(Products);
+            _productsView.Filter = ProductFilter;
 
             LoadPreferences();
 
@@ -122,7 +193,10 @@ namespace KerwaKasse.MVVM.ViewModel
             ToggleNameLockCommand = new RelayCommand(_ => ToggleNameLock(), _ => DetailPanel is { IsNew: false });
             MoveSelectedUpCommand = new RelayCommand(_ => MoveSelected(-1), _ => CanMoveSelected(-1));
             MoveSelectedDownCommand = new RelayCommand(_ => MoveSelected(1), _ => CanMoveSelected(1));
+            ApplyMenuCommand = new RelayCommand(o => ApplyMenu(o as Menu), o => (o as Menu) != null || SelectedMenu != null);
+            OpenMenuManagementCommand = new RelayCommand(_ => OpenMenuManagement());
 
+            LoadMenus();
             LoadData();
         }
 
@@ -158,6 +232,7 @@ namespace KerwaKasse.MVVM.ViewModel
             if (selected != null)
                 SelectedProduct = Products.FirstOrDefault(p => p.ProductId == selected.ProductId);
 
+            DetectActiveMenu();
             OnPropertyChanged(nameof(CurrentPositionText));
         }
 
@@ -167,6 +242,23 @@ namespace KerwaKasse.MVVM.ViewModel
 
             if (DetailPanel != null && DetailPanel.ProductId == productId)
                 DetailPanel.AcceptPersistedAvailability(available);
+
+            DetectActiveMenu();
+        }
+
+        public void LoadMenus()
+        {
+            var menus = _menuService.GetAll();
+            int? previousId = SelectedMenu?.Id;
+            Menus = menus;
+
+            MenuOptions.Clear();
+            foreach (var m in menus)
+                MenuOptions.Add(new MenuOptionViewModel(m, previousId == m.Id));
+
+            SelectedMenu = previousId.HasValue
+                ? menus.FirstOrDefault(m => m.Id == previousId.Value)
+                : null;
         }
 
         // ── Selection ────────────────────────────────────────────
@@ -326,6 +418,59 @@ namespace KerwaKasse.MVVM.ViewModel
         {
             _settings.Set("productsSidePanelWidth", actualWidth);
             _settings.Save();
+        }
+
+        // ── Menu management (ContentDialog) ──────────────────────
+
+        private async void OpenMenuManagement()
+        {
+            var products = Products.Select(p => (p.ProductId, p.Name));
+            var menuVm = new MenuManagementViewModel(_menuService, products);
+            await _dialogService.ShowMenuManagementAsync(menuVm);
+
+            // Menu definitions may have changed → refresh menu list + active-menu detection.
+            LoadMenus();
+            LoadData();
+        }
+
+        // ── Apply Speisekarte ────────────────────────────────────
+
+        private async void ApplyMenu(Menu menu)
+        {
+            menu ??= SelectedMenu;
+            if (menu == null) return;
+
+            string msg = $"Nur Produkte, die in der Speisekarte \"{menu.Name}\" enthalten sind, " +
+                         "werden auf verfügbar gesetzt, alle anderen auf nicht verfügbar.";
+
+            if (!await _dialogService.ShowConfirmationAsync("Speisekarte anwenden?", msg)) return;
+
+            _menuService.ApplyMenu(menu.Id);
+            LoadData();
+        }
+
+        // ── Active menu detection ────────────────────────────────
+
+        /// <summary>Selects the menu whose product set exactly matches the currently available
+        /// products, or clears the selection when no menu matches.</summary>
+        private void DetectActiveMenu()
+        {
+            var availableIds = Products
+                .Where(p => p.Available)
+                .Select(p => p.ProductId)
+                .ToHashSet();
+
+            foreach (var menu in Menus)
+            {
+                var menuProductIds = _menuService.GetProductIds(menu.Id).ToHashSet();
+                if (availableIds.SetEquals(menuProductIds))
+                {
+                    SelectedMenu = menu;
+                    return;
+                }
+            }
+
+            SelectedMenu = null;
         }
     }
 }

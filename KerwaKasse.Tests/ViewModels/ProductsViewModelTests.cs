@@ -1,3 +1,4 @@
+using System.Windows.Data;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
@@ -9,6 +10,7 @@ namespace KerwaKasse.Tests.ViewModels;
 public class ProductsViewModelTests
 {
     private readonly IProductService _productService;
+    private readonly IMenuService _menuService;
     private readonly ISettingsService _settings;
     private readonly IDialogService _dialogService;
     private readonly ProductsViewModel _sut;
@@ -16,6 +18,7 @@ public class ProductsViewModelTests
     public ProductsViewModelTests()
     {
         _productService = Substitute.For<IProductService>();
+        _menuService = Substitute.For<IMenuService>();
         _settings = Substitute.For<ISettingsService>();
         _dialogService = Substitute.For<IDialogService>();
 
@@ -25,8 +28,9 @@ public class ProductsViewModelTests
             new() { Id = 1, Name = "Bratwurst", Price = 3.50m, Available = true, Color = "#FF0000", SortOrder = 1 },
             new() { Id = 2, Name = "Bier", Price = 2.80m, Available = false, Color = "#00FF00", SortOrder = 2 }
         });
+        _menuService.GetAll().Returns(new List<Menu>());
 
-        _sut = new ProductsViewModel(_productService, _settings, _dialogService);
+        _sut = new ProductsViewModel(_productService, _menuService, _settings, _dialogService);
     }
 
     [Fact]
@@ -154,5 +158,69 @@ public class ProductsViewModelTests
 
         _sut.SelectedProduct = _sut.Products[1];
         Assert.Equal("2 / 2", _sut.CurrentPositionText);
+    }
+
+    // ── Speisekarten (menu) ──────────────────────────────────
+
+    [Fact]
+    public void ApplyMenuCommand_WhenConfirmed_AppliesMenu()
+    {
+        _dialogService.ShowConfirmationAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        _sut.ApplyMenuCommand.Execute(new Menu { Id = 7, Name = "Freitag" });
+
+        _menuService.Received(1).ApplyMenu(7);
+    }
+
+    [Fact]
+    public void ApplyMenuCommand_WhenCancelled_DoesNotApply()
+    {
+        _dialogService.ShowConfirmationAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+
+        _sut.ApplyMenuCommand.Execute(new Menu { Id = 7, Name = "Freitag" });
+
+        _menuService.DidNotReceive().ApplyMenu(Arg.Any<int>());
+    }
+
+    [Fact]
+    public void DetectActiveMenu_WhenAvailabilityMatchesMenu_SelectsIt()
+    {
+        // Available products are {1} (Bratwurst); menu 10 contains exactly {1}.
+        _menuService.GetAll().Returns(new List<Menu> { new() { Id = 10, Name = "Grill" } });
+        _menuService.GetProductIds(10).Returns(new List<int> { 1 });
+
+        var sut = new ProductsViewModel(_productService, _menuService, _settings, _dialogService);
+
+        Assert.NotNull(sut.SelectedMenu);
+        Assert.Equal(10, sut.SelectedMenu!.Id);
+        Assert.True(sut.HasActiveMenu);
+        Assert.Equal("Grill", sut.ActiveMenuText);
+        Assert.True(sut.MenuOptions.Single().IsActive);
+    }
+
+    [Fact]
+    public void DetectActiveMenu_WhenNoMenuMatches_SelectsNone()
+    {
+        _menuService.GetAll().Returns(new List<Menu> { new() { Id = 10, Name = "Grill" } });
+        _menuService.GetProductIds(10).Returns(new List<int> { 1, 2 }); // available is only {1}
+
+        var sut = new ProductsViewModel(_productService, _menuService, _settings, _dialogService);
+
+        Assert.Null(sut.SelectedMenu);
+        Assert.False(sut.HasActiveMenu);
+    }
+
+    [Fact]
+    public void SearchText_FiltersTheProductList()
+    {
+        var view = CollectionViewSource.GetDefaultView(_sut.Products);
+
+        _sut.SearchText = "Bratwurst";
+        var visible = view.Cast<ProductListItemViewModel>().ToList();
+        Assert.Single(visible);
+        Assert.Equal("Bratwurst", visible[0].Name);
+
+        _sut.SearchText = "";
+        Assert.Equal(2, view.Cast<ProductListItemViewModel>().Count());
     }
 }
