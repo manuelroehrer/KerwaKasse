@@ -120,7 +120,7 @@
              Hidden (not Collapsed) keeps the sibling button in place. -->
         <Style x:Key="MoveButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D5DAE0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="#3A4750"/>
             <Setter Property="Padding" Value="14,9"/>
