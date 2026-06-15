@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,6 +15,25 @@ namespace KerwaKasse.MVVM.View
         public MenuManagementDialog()
         {
             InitializeComponent();
+
+            // ModernWpf renders the dialog card to fit the window, but our content has a
+            // fixed target height (700). On short screens that overflows and the bottom
+            // buttons get clipped, so cap the content to the available window height and
+            // let the inner lists shrink. Recomputed on resize (overlay follows the window).
+            Loaded += (_, _) => AdjustContentHeight();
+            SizeChanged += (_, _) => AdjustContentHeight();
+        }
+
+        // Cap the content height to the host window so it shrinks on small monitors.
+        // The fixed Height=700 still governs whenever the window is tall enough.
+        private void AdjustContentHeight()
+        {
+            double available = Application.Current?.MainWindow?.ActualHeight
+                               ?? SystemParameters.WorkArea.Height;
+
+            // Subtract window chrome plus a little breathing room around the card;
+            // never collapse below a usable minimum.
+            RootGrid.MaxHeight = Math.Max(360, available - 72);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();

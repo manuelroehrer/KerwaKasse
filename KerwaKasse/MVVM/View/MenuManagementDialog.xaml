@@ -108,7 +108,10 @@
         </Style>
     </ui:ContentDialog.Resources>
 
-    <Grid Width="700" Height="700">
+    <!-- Height is the comfortable target on large screens; MaxHeight is capped in
+         code-behind to the host window so the content shrinks (sidebar list / product
+         list give up space first) instead of being clipped on small monitors. -->
+    <Grid x:Name="RootGrid" Width="700" Height="700">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -251,6 +254,14 @@
                         </Grid>
                     </Border>
 
+                    <!-- Everything above the footer scrolls together once the dialog is squeezed
+                         too short to show it all. The inner panel's Height tracks the viewport, so on
+                         normal/large windows nothing scrolls here (the search stays put and the
+                         product list keeps its own inner scroll); MinHeight only forces the outer
+                         scrollbar when the window gets very small. -->
+                    <ScrollViewer x:Name="DetailScroller" VerticalScrollBarVisibility="Auto">
+                    <DockPanel MinHeight="400" Height="{Binding ViewportHeight, ElementName=DetailScroller}">
+
                     <!-- Name -->
                     <StackPanel DockPanel.Dock="Top" Margin="26,22,26,0">
                         <!-- The chip is taller than the label; negative vertical margins keep it from
@@ -368,6 +379,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </ScrollViewer>
+                    </DockPanel>
                     </ScrollViewer>
                 </DockPanel>
             </Grid>
