@@ -107,6 +107,27 @@
             </ItemsControl>
         </ScrollViewer>
 
+        <!-- Empty state: no products available to order -->
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="320">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Products.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="48" Foreground="#C0C0C0"
+                       HorizontalAlignment="Center" Margin="0,0,0,14"/>
+            <TextBlock Text="Keine Produkte verfügbar" FontSize="18" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            <TextBlock Text="Im Bereich „Produkte“ können Sie Produkte anlegen und verfügbar schalten."
+                       FontSize="14" Foreground="#909090" HorizontalAlignment="Center" Margin="0,8,0,0"
+                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"/>
+        </StackPanel>
+
         <!-- Success notification toast -->
         <Grid Grid.Column="0" VerticalAlignment="Bottom" HorizontalAlignment="Center"
               Margin="0,0,0,16" Panel.ZIndex="10">

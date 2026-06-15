@@ -330,7 +330,8 @@
                     </Grid>
                 </Border>
 
-                <!-- Product rows -->
+                <!-- Product rows (empty-state overlays the list area; the header row above stays) -->
+                <Grid>
                 <ListBox ItemsSource="{Binding Products}"
                          SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
                          ItemContainerStyle="{StaticResource ProductRowStyle}"
@@ -395,6 +396,28 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+
+                <!-- Empty state: no products exist yet -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="300">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Products.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="46" Foreground="#C0C0C0"
+                               HorizontalAlignment="Center" Margin="0,0,0,14"/>
+                    <TextBlock Text="Noch keine Produkte" FontSize="18" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Legen Sie rechts über „Neues Produkt“ Ihr erstes Produkt an."
+                               FontSize="14" Foreground="#909090" HorizontalAlignment="Center" Margin="0,8,0,0"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="260"/>
+                </StackPanel>
+                </Grid>
             </DockPanel>
         </Border>
 

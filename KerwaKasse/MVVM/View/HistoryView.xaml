@@ -21,6 +21,24 @@
                     <DatePicker IsTodayHighlighted="True" SelectedDate="{Binding Date}" DisplayDate="{Binding Date}" SelectedDateFormat="Long"/>
                 </StackPanel>
 
+                <!-- Empty state: no orders recorded for the selected day -->
+                <StackPanel DockPanel.Dock="Top" Margin="10,28,0,0" HorizontalAlignment="Left" MaxWidth="460">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Orders.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="44" Foreground="#C0C0C0" Margin="0,0,0,12"/>
+                    <TextBlock Text="Keine Verkäufe an diesem Tag" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Für den ausgewählten Tag wurden keine Verkäufe erfasst."
+                               FontSize="14" Foreground="#909090" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
                 <ItemsControl ItemsSource="{Binding Path=Orders}" x:Name="OrderControl" VerticalAlignment="Stretch" HorizontalAlignment="Left" Width="600">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
