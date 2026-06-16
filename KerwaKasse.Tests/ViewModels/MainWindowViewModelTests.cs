@@ -72,20 +72,20 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DatabaseViewCommand_SetsDatabaseViewModel()
+    public void InfoViewCommand_SetsInfoViewModel()
     {
-        _sut.DatabaseViewCommand.Execute(null);
+        _sut.InfoViewCommand.Execute(null);
 
-        Assert.IsType<DatabaseViewModel>(_sut.CurrentView);
+        Assert.IsType<InfoViewModel>(_sut.CurrentView);
     }
 
     [Fact]
-    public void DatabaseVM_IsSameInstanceOnRepeatedNavigation()
+    public void InfoVM_IsSameInstanceOnRepeatedNavigation()
     {
-        _sut.DatabaseViewCommand.Execute(null);
+        _sut.InfoViewCommand.Execute(null);
         var first = _sut.CurrentView;
         _sut.OrderPanelViewCommand.Execute(null);
-        _sut.DatabaseViewCommand.Execute(null);
+        _sut.InfoViewCommand.Execute(null);
 
         Assert.Same(first, _sut.CurrentView);
     }

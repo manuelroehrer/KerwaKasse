@@ -8,7 +8,7 @@
     <AssemblyName>KerwaKasse</AssemblyName>
     <ApplicationIcon>Assets\kerwakasse-logo.ico</ApplicationIcon>
     <Product>KerwaKasse</Product>
-    <Copyright>Copyright © 2026</Copyright>
+    <Copyright>© $([System.DateTime]::Now.Year) Manuel Röhrer</Copyright>
     <Authors>Manuel Röhrer</Authors>
     <AssemblyVersion>2.4.0</AssemblyVersion>
     <FileVersion>2.4.0</FileVersion>

@@ -39,8 +39,8 @@
         <DataTemplate DataType="{x:Type vm:StatisticsViewModel}">
             <view:StatisticsView/>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DatabaseViewModel}">
-            <view:DatabaseView/>
+        <DataTemplate DataType="{x:Type vm:InfoViewModel}">
+            <view:InfoView/>
         </DataTemplate>
     </Window.Resources>
     
@@ -255,9 +255,9 @@
                         </RadioButton.ToolTip>
                     </RadioButton>
 
-                    <!-- Datenbank -->
-                    <RadioButton DockPanel.Dock="Top" Style="{StaticResource NavigationButtonTheme}"
-                             Command="{Binding DatabaseViewCommand}"
+                    <!-- Info (am unteren Rand angepinnt) -->
+                    <RadioButton DockPanel.Dock="Bottom" Style="{StaticResource NavigationButtonTheme}"
+                             Command="{Binding InfoViewCommand}"
                              Click="NavButton_Click">
                         <RadioButton.Content>
                             <Grid>
@@ -265,14 +265,14 @@
                                     <ColumnDefinition Width="60"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                            Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <TextBlock Text="Datenbank" FontSize="16" Grid.Column="1"
+                                <TextBlock Text="Info" FontSize="16" Grid.Column="1"
                                            VerticalAlignment="Center" Foreground="White" Margin="4,0,0,0"/>
                             </Grid>
                         </RadioButton.Content>
                         <RadioButton.ToolTip>
-                            <ToolTip Content="Datenbank" Style="{StaticResource NavigationToolTipTheme}"/>
+                            <ToolTip Content="Info" Style="{StaticResource NavigationToolTipTheme}"/>
                         </RadioButton.ToolTip>
                     </RadioButton>
                 </DockPanel>
