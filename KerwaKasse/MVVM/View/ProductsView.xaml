@@ -63,7 +63,7 @@
                                     BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
                             <!-- Accent ring while open: overlaid so its thickness never shifts the content. -->
                             <Border x:Name="accent" CornerRadius="{DynamicResource ControlCornerRadius}"
-                                    Background="Transparent" BorderBrush="#0A2433" BorderThickness="1.5"
+                                    Background="Transparent" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5"
                                     Visibility="Collapsed" IsHitTestVisible="False"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
                                               HorizontalAlignment="Stretch"
@@ -83,7 +83,7 @@
             <Style.Triggers>
                 <DataTrigger Binding="{Binding HasActiveMenu}" Value="True">
                     <Setter Property="Background" Value="#E4EAF1"/>
-                    <Setter Property="Foreground" Value="#0A2433"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -155,7 +155,7 @@
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Row" Property="Background" Value="#CFE0F2"/>
-                                <Setter TargetName="Accent" Property="Background" Value="#0A2433"/>
+                                <Setter TargetName="Accent" Property="Background" Value="{DynamicResource AppAccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -250,7 +250,7 @@
                                         <TextBlock Text="SPEISEKARTE" FontSize="11.5" FontWeight="SemiBold" Foreground="#8A8F96"/>
                                         <TextBlock Margin="0,4,0,0" FontSize="14"
                                                    Visibility="{Binding HasActiveMenu, Converter={StaticResource BoolToVisibility}}">
-                                            <Run Text="Aktiv: " Foreground="#8A8F96"/><Run Text="{Binding ActiveMenuText, Mode=OneWay}" FontWeight="SemiBold" Foreground="#0A2433"/>
+                                            <Run Text="Aktiv: " Foreground="#8A8F96"/><Run Text="{Binding ActiveMenuText, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}"/>
                                         </TextBlock>
                                         <TextBlock Text="Keine Speisekarte aktiv" Margin="0,4,0,0" FontSize="14" Foreground="#8A8F96"
                                                    Visibility="{Binding HasActiveMenu, Converter={StaticResource InverseBoolToVisibility}}"/>

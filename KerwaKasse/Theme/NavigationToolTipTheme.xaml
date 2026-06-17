@@ -5,7 +5,7 @@
         <Setter Property="Placement" Value="Right"/>
         <Setter Property="Height" Value="32"/>
         <Setter Property="Margin" Value="20,0,0,0"/>
-        <Setter Property="Background" Value="#0A2433"/>
+        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
         <Setter Property="BorderBrush" Value="#1AFFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="White"/>

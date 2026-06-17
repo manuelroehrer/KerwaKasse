@@ -30,9 +30,12 @@
             <TextBlock Text="Info" Foreground="Black" FontSize="30" Margin="0,0,0,20"/>
 
             <!-- Header: app identity + version -->
-            <StackPanel Margin="0,0,0,18">
-                <TextBlock Text="KerwaKasse" Foreground="Black" FontSize="24" FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding Version}" Foreground="#707070" FontSize="15" Margin="0,2,0,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                <Image Source="/Assets/KerwaKasse.png" Width="48" Height="48" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="KerwaKasse" Foreground="Black" FontSize="24" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Version}" Foreground="#707070" FontSize="15" Margin="0,2,0,0"/>
+                </StackPanel>
             </StackPanel>
 
             <!-- Über die App -->

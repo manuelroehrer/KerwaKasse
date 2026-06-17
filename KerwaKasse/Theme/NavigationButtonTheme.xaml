@@ -28,10 +28,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#0E2D3C"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource AppNavHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#26FFFFFF"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource AppNavSelectedBrush}"/>
                                 <Setter TargetName="ActiveIndicator" Property="Background" Value="White"/>
                             </Trigger>
                             <MultiTrigger>

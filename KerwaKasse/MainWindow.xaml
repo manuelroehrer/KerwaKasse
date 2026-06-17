@@ -8,11 +8,11 @@
         xmlns:vm="clr-namespace:KerwaKasse.MVVM.ViewModel"
         xmlns:view="clr-namespace:KerwaKasse.MVVM.View"
         ui:WindowHelper.UseModernWindowStyle="True"
-        ui:TitleBar.Background="#06141E"
+        ui:TitleBar.Background="#0C1C2E"
         ui:TitleBar.Foreground="White"
-        ui:TitleBar.InactiveBackground="#06141E"
+        ui:TitleBar.InactiveBackground="#0C1C2E"
         ui:TitleBar.InactiveForeground="#80FFFFFF"
-        mc:Ignorable="d" Background="#F3F3F3"
+        mc:Ignorable="d" Background="{DynamicResource AppBackgroundBrush}"
         Title="KerwaKasse" Height="700" Width="1000">
 
     <ui:TitleBar.ButtonStyle>
@@ -52,7 +52,7 @@
         <Grid   x:Name="nav_pnl"
                     HorizontalAlignment="Left"
                     Width="60"
-                    Background="#0A2433">
+                    Background="{DynamicResource AppSidebarBrush}">
 
             <Grid.Effect>
                 <DropShadowEffect x:Name="NavShadow" ShadowDepth="0" Direction="0" BlurRadius="12" Opacity="0.12" Color="Black"/>

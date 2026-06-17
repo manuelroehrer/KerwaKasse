@@ -127,7 +127,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Path Grid.Column="0" Data="{StaticResource LayersIcon}" Stroke="#0A2433"
+                <Path Grid.Column="0" Data="{StaticResource LayersIcon}" Stroke="{DynamicResource AppAccentBrush}"
                       StrokeThickness="1.5" StrokeLineJoin="Round" Width="22" Height="22"
                       Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1" Text="Speisekarten verwalten" FontSize="21" FontWeight="SemiBold"
@@ -188,9 +188,9 @@
                                     </Grid>
                                     <DataTemplate.Triggers>
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-                                            <Setter TargetName="NameTb" Property="Foreground" Value="#0A2433"/>
+                                            <Setter TargetName="NameTb" Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
                                             <Setter TargetName="NameTb" Property="FontWeight" Value="SemiBold"/>
-                                            <Setter TargetName="CountTb" Property="Foreground" Value="#0A2433"/>
+                                            <Setter TargetName="CountTb" Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
                                             <Setter TargetName="CountTb" Property="FontWeight" Value="SemiBold"/>
                                         </DataTrigger>
                                     </DataTemplate.Triggers>
