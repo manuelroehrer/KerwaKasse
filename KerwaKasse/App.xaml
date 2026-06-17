@@ -11,7 +11,7 @@
                 <ResourceDictionary Source="Theme/NavigationToolTipTheme.xaml"/>
                 <ui:ThemeResources />
                 <ui:XamlControlsResources />
-                <ui:ThemeResources RequestedTheme="Light" AccentColor="#0A2433" />
+                <ui:ThemeResources RequestedTheme="Light" AccentColor="#1B4068" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <!-- Shared layers glyph (Speisekarten icon), used by the management dialog header and the
@@ -24,14 +24,14 @@
             <SolidColorBrush x:Key="AppAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
 
             <!-- Sidebar (navigation panel) brush. -->
-            <SolidColorBrush x:Key="AppSidebarBrush" Color="#0A2433"/>
+            <SolidColorBrush x:Key="AppSidebarBrush" Color="#14304F"/>
 
             <!-- Sidebar nav-button states (hover background and the selected-item overlay). -->
-            <SolidColorBrush x:Key="AppNavHoverBrush" Color="#0E2D3C"/>
+            <SolidColorBrush x:Key="AppNavHoverBrush" Color="#173757"/>
             <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#26FFFFFF"/>
 
             <!-- Window/content background (the light grey behind the views). -->
-            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F3F3"/>
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#EEEEEE"/>
 
             <!-- Rebuild of the ModernWpf AccentButton. Reason for the rebuild: the original looks
                  poor when disabled with a dark AccentColor and white content – ModernWpf bakes in a
