@@ -6,7 +6,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>KerwaKasse</RootNamespace>
     <AssemblyName>KerwaKasse</AssemblyName>
-    <ApplicationIcon>Assets\kerwakasse-logo.ico</ApplicationIcon>
+    <ApplicationIcon>KerwaKasse.ico</ApplicationIcon>
     <Product>KerwaKasse</Product>
     <Copyright>© $([System.DateTime]::Now.Year) Manuel Röhrer</Copyright>
     <Authors>Manuel Röhrer</Authors>
@@ -18,6 +18,10 @@
   <ItemGroup>
     <Resource Include="Assets\*.png" />
     <Resource Include="Assets\*.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="KerwaKasse.ico" />
   </ItemGroup>
 
   <ItemGroup>
