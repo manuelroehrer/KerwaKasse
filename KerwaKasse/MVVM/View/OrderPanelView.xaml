@@ -197,7 +197,7 @@
                                     </Trigger>
                                     <Trigger Property="IsPressed" Value="True">
                                         <Setter TargetName="BtnBg" Property="Background" Value="#14000000"/>
-                                        <Setter TargetName="AdjustIcon" Property="Foreground" Value="#0A2433"/>
+                                        <Setter TargetName="AdjustIcon" Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -216,7 +216,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Gesamt" FontWeight="Medium" FontSize="22" Foreground="#616161" VerticalAlignment="Center" Margin="0,0,0,2"/>
                             <TextBlock Grid.Column="1" Text="{Binding Total, StringFormat={}{0:C}}"
-                                       FontWeight="Bold" FontSize="32" Foreground="#0A2433" VerticalAlignment="Center"/>
+                                       FontWeight="Bold" FontSize="32" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <!-- Action buttons -->
                         <Grid Height="52">
