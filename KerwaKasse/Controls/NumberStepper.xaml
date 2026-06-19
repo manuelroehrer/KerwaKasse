@@ -29,13 +29,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#EAECEF"/>
+                                <Setter TargetName="bd" Property="Background" Value="#E4E4E4"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#DCDFE3"/>
+                                <Setter TargetName="bd" Property="Background" Value="#D2D2D2"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="glyph" Property="Foreground" Value="#B4B9BF"/>
+                                <Setter TargetName="bd" Property="Background" Value="#DADADA"/>
+                                <Setter TargetName="glyph" Property="Foreground" Value="#969696"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -54,13 +55,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#EAECEF"/>
+                                <Setter TargetName="bd" Property="Background" Value="#E4E4E4"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#DCDFE3"/>
+                                <Setter TargetName="bd" Property="Background" Value="#D2D2D2"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="glyph" Property="Foreground" Value="#B4B9BF"/>
+                                <Setter TargetName="bd" Property="Background" Value="#DADADA"/>
+                                <Setter TargetName="glyph" Property="Foreground" Value="#969696"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
