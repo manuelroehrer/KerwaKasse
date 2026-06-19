@@ -42,14 +42,23 @@ namespace KerwaKasse.Controls
         {
             if (IsEnabled)
             {
-                BgBorder.ClearValue(BackgroundProperty);
-                FrameBorder.ClearValue(Border.BorderBrushProperty);
+                BgBorder.ClearValue(Border.BackgroundProperty);
+                ClearFrameSegmentBorders();
             }
             else
             {
                 BgBorder.Background = DisabledBackground;
-                FrameBorder.BorderBrush = DisabledBorder;
+                LeftFrameSegment.BorderBrush = DisabledBorder;
+                MiddleFrameSegment.BorderBrush = DisabledBorder;
+                RightFrameSegment.BorderBrush = DisabledBorder;
             }
+        }
+
+        private void ClearFrameSegmentBorders()
+        {
+            LeftFrameSegment.ClearValue(Border.BorderBrushProperty);
+            MiddleFrameSegment.ClearValue(Border.BorderBrushProperty);
+            RightFrameSegment.ClearValue(Border.BorderBrushProperty);
         }
 
         public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(

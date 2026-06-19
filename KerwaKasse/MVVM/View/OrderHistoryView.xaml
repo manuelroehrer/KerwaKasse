@@ -579,7 +579,7 @@
 
                                                                         <!-- Reusable touch stepper -->
                                                                         <ctrl:NumberStepper Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                            Width="120" Minimum="1" Maximum="100"
+                                                                                            Width="126" Minimum="1" Maximum="100"
                                                                                             Value="{Binding Amount, Mode=TwoWay}"
                                                                                             IsEnabled="{Binding IsActive}"/>
 

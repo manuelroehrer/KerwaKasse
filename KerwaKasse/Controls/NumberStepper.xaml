@@ -5,15 +5,18 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ui="http://schemas.modernwpf.com/2019"
              mc:Ignorable="d" x:Name="Root" Focusable="False"
-             d:DesignHeight="32" d:DesignWidth="120">
+             SnapsToDevicePixels="True" UseLayoutRounding="True"
+             d:DesignHeight="32" d:DesignWidth="126">
     <UserControl.Resources>
-        <!-- Base for a +/- side button: flat, ModernWpf-like hover/pressed fill, greyed glyph when
-             disabled. Not focusable, so the focus ring only reacts to the number field. The bg sits
-             inside the frame (which is drawn on top), so a hover fill can never cover the border. -->
+        <SolidColorBrush x:Key="StepDisabledAccentBackgroundBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+
+        <!-- Base for a +/- side button: accent-filled, ModernWpf-like hover/pressed fill, greyed
+             when disabled. Not focusable, so the focus ring only reacts to the number field. The bg
+             is inset by 1px on the outer edges so the segmented frame can stay visible. -->
         <Style x:Key="StepSideButtonBase" TargetType="Button">
             <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#1B1E24"/>
+            <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentButtonForeground}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
@@ -22,21 +25,22 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3,0,0,3">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3,0,0,3"
+                                Margin="1,1,0,1">
                             <TextBlock x:Name="glyph" Text="&#xE738;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        Foreground="{TemplateBinding Foreground}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#E4E4E4"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#D2D2D2"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="bd" Property="Background" Value="#DADADA"/>
-                                <Setter TargetName="glyph" Property="Foreground" Value="#969696"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource StepDisabledAccentBackgroundBrush}"/>
+                                <Setter TargetName="glyph" Property="Opacity" Value="0.55"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -48,21 +52,22 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="0,3,3,0">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="0,3,3,0"
+                                Margin="0,1,1,1">
                             <TextBlock x:Name="glyph" Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        Foreground="{TemplateBinding Foreground}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#E4E4E4"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#D2D2D2"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="bd" Property="Background" Value="#DADADA"/>
-                                <Setter TargetName="glyph" Property="Foreground" Value="#969696"/>
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource StepDisabledAccentBackgroundBrush}"/>
+                                <Setter TargetName="glyph" Property="Opacity" Value="0.55"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -123,9 +128,9 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="34"/>
+                    <ColumnDefinition Width="38"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="34"/>
+                    <ColumnDefinition Width="38"/>
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="MinusButton" Grid.Column="0" Style="{StaticResource MinusButton}" Click="Minus_Click"/>
@@ -141,39 +146,110 @@
             </Grid>
         </Border>
 
-        <!-- Frame drawn ON TOP of the content so a button hover fill can never hide it. -->
-        <Border x:Name="FrameBorder" CornerRadius="4" BorderThickness="1" IsHitTestVisible="False">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
-                    <Style.Triggers>
-                        <!-- The disabled border colour is applied in code-behind. -->
-                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
-                            <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrushPointerOver}"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-        </Border>
+        <!-- Segmented frame drawn ON TOP of the content: accent-coloured over enabled accent
+             buttons, normal text-control chrome over the number field and disabled buttons. -->
+        <Grid IsHitTestVisible="False">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="38"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="38"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- State overlay: accent while the number field is focused, red on a validation error.
-             Same bounds as the frame (fills the fixed-height grid), so it never overflows. -->
-        <Border CornerRadius="4" BorderThickness="2" IsHitTestVisible="False">
-            <Border.Style>
-                <Style TargetType="Border">
+            <Border x:Name="LeftFrameSegment" Grid.Column="0" CornerRadius="4,0,0,4" BorderThickness="1,1,0,1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrushPointerOver}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsEnabled, ElementName=MinusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackground}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=MinusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsPressed, ElementName=MinusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+
+            <Border x:Name="MiddleFrameSegment" Grid.Column="1" BorderThickness="0,1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrushPointerOver}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+
+            <Border x:Name="RightFrameSegment" Grid.Column="2" CornerRadius="0,4,4,0" BorderThickness="0,1,1,1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrushPointerOver}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsEnabled, ElementName=PlusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackground}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=PlusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackgroundPointerOver}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsPressed, ElementName=PlusButton}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBackgroundPressed}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+        </Grid>
+
+        <!-- State overlay uses the same segmented geometry as the normal frame, so focus and
+             validation borders end exactly where the button/text segments end. -->
+        <Grid IsHitTestVisible="False">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="38"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="38"/>
+            </Grid.ColumnDefinitions>
+            <Grid.Style>
+                <Style TargetType="Grid">
                     <Setter Property="Visibility" Value="Collapsed"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=ValueBox}" Value="True">
                             <Setter Property="Visibility" Value="Visible"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding (Validation.HasError), ElementName=ValueBox}" Value="True">
                             <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Grid.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+                    <Setter Property="SnapsToDevicePixels" Value="True"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding (Validation.HasError), ElementName=ValueBox}" Value="True">
                             <Setter Property="BorderBrush" Value="#E53935"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </Border.Style>
-        </Border>
+            </Grid.Resources>
+
+            <Border Grid.Column="0" CornerRadius="4,0,0,4" BorderThickness="2,2,0,2"/>
+            <Border Grid.Column="1" BorderThickness="0,2"/>
+            <Border Grid.Column="2" CornerRadius="0,4,4,0" BorderThickness="0,2,2,2"/>
+        </Grid>
     </Grid>
 </UserControl>
