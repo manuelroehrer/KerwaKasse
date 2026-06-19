@@ -1,0 +1,177 @@
+<UserControl x:Class="KerwaKasse.Controls.NumberStepper"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d" x:Name="Root" Focusable="False"
+             d:DesignHeight="32" d:DesignWidth="120">
+    <UserControl.Resources>
+        <!-- Base for a +/- side button: flat, ModernWpf-like hover/pressed fill, greyed glyph when
+             disabled. Not focusable, so the focus ring only reacts to the number field. The bg sits
+             inside the frame (which is drawn on top), so a hover fill can never cover the border. -->
+        <Style x:Key="StepSideButtonBase" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#1B1E24"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="MinusButton" TargetType="Button" BasedOn="{StaticResource StepSideButtonBase}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3,0,0,3">
+                            <TextBlock x:Name="glyph" Text="&#xE738;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#EAECEF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#DCDFE3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="glyph" Property="Foreground" Value="#B4B9BF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlusButton" TargetType="Button" BasedOn="{StaticResource StepSideButtonBase}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="0,3,3,0">
+                            <TextBlock x:Name="glyph" Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#EAECEF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#DCDFE3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="glyph" Property="Foreground" Value="#B4B9BF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chrome-free, centred number field. Own style (not the implicit ModernWpf one) so the
+             disabled foreground stays clearly readable instead of fading out. -->
+        <Style x:Key="ValueTextBox" TargetType="TextBox">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#1B1E24"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="MaxLength" Value="4"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- Suppress the default red validation adorner around the textbox; the control's own
+                 state overlay shows the error frame instead. -->
+            <Setter Property="Validation.ErrorTemplate">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <AdornedElementPlaceholder/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#B4B9BF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Fixed height so the frame and the state overlay below share the exact same bounds (an
+         unsized overlay previously stretched and drew out of bounds). -->
+    <Grid Height="36">
+        <!-- Background fill (white, or grey when disabled). -->
+        <Border x:Name="BgBorder" CornerRadius="4">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <!-- White when enabled; the disabled grey is applied in code-behind. -->
+                    <Setter Property="Background" Value="White"/>
+                </Style>
+            </Border.Style>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="34"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="34"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="MinusButton" Grid.Column="0" Style="{StaticResource MinusButton}" Click="Minus_Click"/>
+
+                <!-- Dividers between the three segments. -->
+                <Border Grid.Column="1" BorderBrush="#DADDE1" BorderThickness="1,0">
+                    <TextBox x:Name="ValueBox" Style="{StaticResource ValueTextBox}"
+                             PreviewTextInput="ValueBox_PreviewTextInput"
+                             Text="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}"/>
+                </Border>
+
+                <Button x:Name="PlusButton" Grid.Column="2" Style="{StaticResource PlusButton}" Click="Plus_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Frame drawn ON TOP of the content so a button hover fill can never hide it. -->
+        <Border x:Name="FrameBorder" CornerRadius="4" BorderThickness="1" IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                    <Style.Triggers>
+                        <!-- The disabled border colour is applied in code-behind. -->
+                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrushPointerOver}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+
+        <!-- State overlay: accent while the number field is focused, red on a validation error.
+             Same bounds as the frame (fills the fixed-height grid), so it never overflows. -->
+        <Border CornerRadius="4" BorderThickness="2" IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=ValueBox}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding (Validation.HasError), ElementName=ValueBox}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Setter Property="BorderBrush" Value="#E53935"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+    </Grid>
+</UserControl>
