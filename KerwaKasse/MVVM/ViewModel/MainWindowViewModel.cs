@@ -7,7 +7,7 @@ namespace KerwaKasse.MVVM.ViewModel
     {
         public RelayCommand OrderPanelViewCommand { get; set; }
         public RelayCommand ProductsViewCommand { get; set; }
-        public RelayCommand HistoryViewCommand { get; set; }
+        public RelayCommand OrderHistoryViewCommand { get; set; }
         public RelayCommand StatisticsViewCommand { get; set; }
         public RelayCommand InfoViewCommand { get; set; }
 
@@ -42,7 +42,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));
-            HistoryViewCommand = new RelayCommand(o => CurrentView = new HistoryViewModel(_orderService));
+            OrderHistoryViewCommand = new RelayCommand(o => CurrentView = new OrderHistoryViewModel(_orderService, _productService));
             StatisticsViewCommand = new RelayCommand(o => CurrentView = new StatisticsViewModel(_orderService));
             InfoViewCommand = new RelayCommand(o => CurrentView = InfoVM);
 

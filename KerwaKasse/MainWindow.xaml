@@ -33,8 +33,8 @@
         <DataTemplate DataType="{x:Type vm:ProductsViewModel}">
             <view:ProductsView/>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
-            <view:HistoryView/>
+        <DataTemplate DataType="{x:Type vm:OrderHistoryViewModel}">
+            <view:OrderHistoryView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:StatisticsViewModel}">
             <view:StatisticsView/>
@@ -215,7 +215,7 @@
 
                     <!-- Verlauf -->
                     <RadioButton DockPanel.Dock="Top" Style="{StaticResource NavigationButtonTheme}"
-                             Command="{Binding HistoryViewCommand}"
+                             Command="{Binding OrderHistoryViewCommand}"
                              Click="NavButton_Click">
                         <RadioButton.Content>
                             <Grid>
