@@ -118,6 +118,59 @@ public class SqliteOrderService : IOrderService
         transaction.Commit();
     }
 
+    public void ReplaceOrderPositions(Order order)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        // Full replace: drop the order's current positions and re-insert the desired set. This
+        // covers added, removed and amount-changed positions uniformly. The (OrderId, ProductId)
+        // primary key means each product may appear at most once per order; the caller is expected
+        // to keep products unique.
+        connection.Execute(
+            "DELETE FROM OrderPositions WHERE OrderId = @Id",
+            new { order.Id },
+            transaction);
+
+        foreach (var pos in order.Positions)
+        {
+            connection.Execute(
+                """
+                INSERT INTO OrderPositions (OrderId, ProductId, Amount, UnitPriceCents)
+                VALUES (@OrderId, @ProductId, @Amount, @UnitPriceCents)
+                """,
+                new
+                {
+                    OrderId = order.Id,
+                    pos.ProductId,
+                    pos.Amount,
+                    UnitPriceCents = ToCents(pos.UnitPrice)
+                },
+                transaction);
+        }
+
+        transaction.Commit();
+    }
+
+    public void DeleteOrder(int orderId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        connection.Execute(
+            "DELETE FROM OrderPositions WHERE OrderId = @orderId",
+            new { orderId },
+            transaction);
+        connection.Execute(
+            "DELETE FROM Orders WHERE Id = @orderId",
+            new { orderId },
+            transaction);
+
+        transaction.Commit();
+    }
+
     public List<SalesFigure> GetSalesFigures(DateTime from, DateTime to)
     {
         using var connection = new SqliteConnection(_connectionString);
