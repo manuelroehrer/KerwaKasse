@@ -21,6 +21,46 @@
             <Setter Property="Foreground" Value="#8A8F96"/>
         </Style>
 
+        <!-- Inline add row: behaves like the next possible edit-position rather than a footer action. -->
+        <Style x:Key="AddPositionInlineButton" TargetType="Button">
+            <Setter Property="Background" Value="#FBFCFD"/>
+            <Setter Property="BorderBrush" Value="#C9D1DA"/>
+            <Setter Property="Foreground" Value="#4B5563"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Rectangle x:Name="shape" RadiusX="5" RadiusY="5"
+                                       Fill="{TemplateBinding Background}"
+                                       Stroke="{TemplateBinding BorderBrush}"
+                                       StrokeThickness="1"
+                                       StrokeDashArray="3 3"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="shape" Property="Fill" Value="#F3F6FA"/>
+                                <Setter TargetName="shape" Property="Stroke" Value="#AEB8C4"/>
+                                <Setter Property="Foreground" Value="#374151"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="shape" Property="Fill" Value="#EDF1F6"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="shape" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Foreground" Value="#9AA0A6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Solid red button (delete confirmation in the flyout). -->
         <Style x:Key="DangerButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -503,103 +543,105 @@
                                             <TextBlock Grid.Column="3" Text="GESAMT" Style="{StaticResource CaptionText}" HorizontalAlignment="Right" Margin="0,0,10,0"/>
                                         </Grid>
 
-                                        <Button DockPanel.Dock="Bottom" Command="{Binding AddPositionCommand}" HorizontalAlignment="Left"
-                                                Margin="0,18,0,2" Height="40" Padding="16,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <TextBlock Text="Position hinzufügen" FontSize="15" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-
                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <ItemsControl ItemsSource="{Binding EditPositions}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border x:Name="rowBorder" CornerRadius="4" Margin="0,3" Padding="8,5" BorderThickness="1">
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="Transparent"/>
-                                                                    <Setter Property="BorderBrush" Value="Transparent"/>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="64"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <!-- Content (dimmed when removed; the restore button stays bright) -->
-                                                                <Grid x:Name="contentArea" Grid.Column="0">
+                                            <StackPanel>
+                                                <ItemsControl ItemsSource="{Binding EditPositions}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border x:Name="rowBorder" CornerRadius="4" Margin="0,3" Padding="8,5" BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="Transparent"/>
+                                                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <Grid>
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="132"/>
-                                                                        <ColumnDefinition Width="90"/>
-                                                                        <ColumnDefinition Width="90"/>
+                                                                        <ColumnDefinition Width="64"/>
                                                                     </Grid.ColumnDefinitions>
 
-                                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                        <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                                                                Background="{Binding ColorBrush}" BorderBrush="#22000000" BorderThickness="1"/>
-                                                                        <TextBlock x:Name="nameText" Text="{Binding ProductName}" FontSize="16"
-                                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                    </StackPanel>
+                                                                    <!-- Content (dimmed when removed; the restore button stays bright) -->
+                                                                    <Grid x:Name="contentArea" Grid.Column="0">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="132"/>
+                                                                            <ColumnDefinition Width="90"/>
+                                                                            <ColumnDefinition Width="90"/>
+                                                                        </Grid.ColumnDefinitions>
 
-                                                                    <!-- Reusable touch stepper -->
-                                                                    <ctrl:NumberStepper Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                        Width="120" Minimum="1" Maximum="100"
-                                                                                        Value="{Binding Amount, Mode=TwoWay}"
-                                                                                        IsEnabled="{Binding IsActive}"/>
+                                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                            <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
+                                                                                    Background="{Binding ColorBrush}" BorderBrush="#22000000" BorderThickness="1"/>
+                                                                            <TextBlock x:Name="nameText" Text="{Binding ProductName}" FontSize="16"
+                                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                        </StackPanel>
 
-                                                                    <TextBlock x:Name="editUnit" Grid.Column="2" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
-                                                                               FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
-                                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                                                    <TextBlock x:Name="editLineTotal" Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
-                                                                               FontFamily="{StaticResource PriceFont}" FontSize="15"
-                                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                        <!-- Reusable touch stepper -->
+                                                                        <ctrl:NumberStepper Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                            Width="120" Minimum="1" Maximum="100"
+                                                                                            Value="{Binding Amount, Mode=TwoWay}"
+                                                                                            IsEnabled="{Binding IsActive}"/>
+
+                                                                        <TextBlock x:Name="editUnit" Grid.Column="2" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
+                                                                                   FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
+                                                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                        <TextBlock x:Name="editLineTotal" Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
+                                                                                   FontFamily="{StaticResource PriceFont}" FontSize="15"
+                                                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                    </Grid>
+
+                                                                    <!-- Remove / restore (own cell so it is never dimmed with the row) -->
+                                                                    <Grid Grid.Column="1">
+                                                                        <Button Style="{StaticResource RemoveIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                                                ToolTip="Position entfernen"
+                                                                                Visibility="{Binding IsRemoved, Converter={StaticResource InvBoolToVis}}"
+                                                                                Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding}">
+                                                                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="#C0392B"/>
+                                                                        </Button>
+                                                                        <Button Style="{StaticResource RestoreIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                                                ToolTip="Position wiederherstellen"
+                                                                                Visibility="{Binding IsRemoved, Converter={StaticResource BoolToVis}}"
+                                                                                Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding}">
+                                                                            <TextBlock Text="&#xE10E;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#3A7D44"/>
+                                                                        </Button>
+                                                                    </Grid>
                                                                 </Grid>
-
-                                                                <!-- Remove / restore (own cell so it is never dimmed with the row) -->
-                                                                <Grid Grid.Column="1">
-                                                                    <Button Style="{StaticResource RemoveIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
-                                                                            ToolTip="Position entfernen"
-                                                                            Visibility="{Binding IsRemoved, Converter={StaticResource InvBoolToVis}}"
-                                                                            Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                            CommandParameter="{Binding}">
-                                                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#C0392B"/>
-                                                                    </Button>
-                                                                    <Button Style="{StaticResource RestoreIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
-                                                                            ToolTip="Position wiederherstellen"
-                                                                            Visibility="{Binding IsRemoved, Converter={StaticResource BoolToVis}}"
-                                                                            Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                            CommandParameter="{Binding}">
-                                                                        <TextBlock Text="&#xE10E;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#3A7D44"/>
-                                                                    </Button>
-                                                                </Grid>
-                                                            </Grid>
-                                                        </Border>
-                                                        <DataTemplate.Triggers>
-                                                            <DataTrigger Binding="{Binding IsNew}" Value="True">
-                                                                <Setter TargetName="rowBorder" Property="Background" Value="#EAF7EE"/>
-                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="#BFE3CB"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding IsAmountChanged}" Value="True">
-                                                                <Setter TargetName="rowBorder" Property="Background" Value="#FFF7E6"/>
-                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="#F0DDA8"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding IsRemoved}" Value="True">
-                                                                <Setter TargetName="rowBorder" Property="Background" Value="#F4F4F4"/>
-                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="Transparent"/>
-                                                                <!-- Dim only swatch/name/prices; the stepper keeps its own (grey) disabled look. -->
-                                                                <Setter TargetName="swatch" Property="Opacity" Value="0.4"/>
-                                                                <Setter TargetName="nameText" Property="Opacity" Value="0.5"/>
-                                                                <Setter TargetName="nameText" Property="TextDecorations" Value="Strikethrough"/>
-                                                                <Setter TargetName="editUnit" Property="Opacity" Value="0.5"/>
-                                                                <Setter TargetName="editLineTotal" Property="Opacity" Value="0.5"/>
-                                                            </DataTrigger>
-                                                        </DataTemplate.Triggers>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                                            </Border>
+                                                            <DataTemplate.Triggers>
+                                                                <DataTrigger Binding="{Binding IsNew}" Value="True">
+                                                                    <Setter TargetName="rowBorder" Property="Background" Value="#EAF7EE"/>
+                                                                    <Setter TargetName="rowBorder" Property="BorderBrush" Value="#BFE3CB"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsAmountChanged}" Value="True">
+                                                                    <Setter TargetName="rowBorder" Property="Background" Value="#FFF7E6"/>
+                                                                    <Setter TargetName="rowBorder" Property="BorderBrush" Value="#F0DDA8"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                                    <Setter TargetName="rowBorder" Property="Background" Value="#F4F4F4"/>
+                                                                    <Setter TargetName="rowBorder" Property="BorderBrush" Value="Transparent"/>
+                                                                    <!-- Dim only swatch/name/prices; the stepper keeps its own (grey) disabled look. -->
+                                                                    <Setter TargetName="swatch" Property="Opacity" Value="0.4"/>
+                                                                    <Setter TargetName="nameText" Property="Opacity" Value="0.5"/>
+                                                                    <Setter TargetName="nameText" Property="TextDecorations" Value="Strikethrough"/>
+                                                                    <Setter TargetName="editUnit" Property="Opacity" Value="0.5"/>
+                                                                    <Setter TargetName="editLineTotal" Property="Opacity" Value="0.5"/>
+                                                                </DataTrigger>
+                                                            </DataTemplate.Triggers>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Button Command="{Binding AddPositionCommand}" Style="{StaticResource AddPositionInlineButton}"
+                                                        HorizontalAlignment="Left" Margin="0,11,0,2" Height="42" Padding="16,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                        <TextBlock Text="Position nachtragen" FontSize="15" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
                                         </ScrollViewer>
                                     </DockPanel>
                                 </Grid>
