@@ -1,0 +1,613 @@
+<UserControl x:Class="KerwaKasse.MVVM.View.OrderHistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
+             xmlns:helper="clr-namespace:KerwaKasse.Helper"
+             xmlns:ctrl="clr-namespace:KerwaKasse.Controls"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1200">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <helper:InverseBoolToVisibilityConverter x:Key="InvBoolToVis"/>
+
+        <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
+
+        <Style x:Key="CaptionText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#8A8F96"/>
+        </Style>
+
+        <!-- Solid red button (delete confirmation in the flyout). -->
+        <Style x:Key="DangerButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#C0392B"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#A93226"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#922B21"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Outlined red delete button (read trigger that opens the confirm flyout). -->
+        <Style x:Key="DeleteOutlineButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E3B5B0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#C0392B"/>
+            <Setter Property="Width" Value="150"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+
+        <!-- Icon button to remove a position (red hover). -->
+        <Style x:Key="RemoveIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F1E1E1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon button to restore a removed position (green hover); never dimmed. -->
+        <Style x:Key="RestoreIconButton" TargetType="Button" BasedOn="{StaticResource RemoveIconButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#DDEEDF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sale row in the table presentation: adjoining rows with a bottom divider; selection adds
+             a left accent bar (matches the products view). -->
+        <Style x:Key="SaleTableRowStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row" Background="Transparent" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Border x:Name="Accent" Width="3" HorizontalAlignment="Left" Background="Transparent"/>
+                                <ContentPresenter/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="#E2ECF7"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="#CFE0F2"/>
+                                <Setter TargetName="Accent" Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Verlauf" Foreground="Black" FontSize="30" FontWeight="SemiBold" Margin="4,0,0,20"/>
+
+        <ScrollViewer x:Name="OuterScroll" Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <Grid MinWidth="946" Width="{Binding ActualWidth, ElementName=OuterScroll}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <!-- Width is set in code-behind so the detail panel (col 2) regains its width first
+                         when the window grows; the list only widens once the panel is back to full. -->
+                    <ColumnDefinition x:Name="MasterColumn" Width="360" MinWidth="360" MaxWidth="560"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*" MinWidth="570"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Day picker (own row so list/panel tops line up) -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="6,0,0,14">
+                    <TextBlock Text="Tag:" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <DatePicker IsTodayHighlighted="True" SelectedDate="{Binding Date}"
+                                DisplayDate="{Binding Date}" SelectedDateFormat="Long" Width="240" FontSize="15"/>
+                </StackPanel>
+
+                <!--// Master: sales table //-->
+                <Grid Grid.Row="1" Grid.Column="0">
+                    <Border CornerRadius="8" Background="White" BorderBrush="#E0E3E7" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Opacity="0.07" Color="Black"/>
+                        </Border.Effect>
+                        <DockPanel>
+                            <!-- Column header row -->
+                            <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="0,14">
+                                <Grid Margin="18,0,28,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="68"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="88"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="ZEIT" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="ARTIKEL" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="SUMME" Style="{StaticResource CaptionText}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Rows; the empty-state overlays the row area (header stays visible). -->
+                            <Grid>
+                                <ListBox x:Name="OrderTable" ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectedOrder}"
+                                         ItemContainerStyle="{StaticResource SaleTableRowStyle}"
+                                         Background="Transparent" BorderThickness="0" Padding="0,0,0,2"
+                                         HorizontalContentAlignment="Stretch"
+                                         PreviewMouseLeftButtonDown="HistoryList_MouseDown"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="52" Margin="18,0,28,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="68"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="88"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding OrderTime, StringFormat='{}{0:HH:mm}'}"
+                                                           FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding ShortDescription}" Foreground="#6B7178"
+                                                           FontSize="15" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Total, StringFormat={}{0:C}}"
+                                                           FontFamily="{StaticResource PriceFont}" FontSize="16" FontWeight="SemiBold"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Empty state -->
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="300" Margin="20,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Orders.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="44" Foreground="#C8C8C8"
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    <TextBlock Text="Keine Einträge an diesem Tag" FontSize="17" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" TextAlignment="Center"/>
+                                    <TextBlock Text="Für den ausgewählten Tag wurden noch keine Eingaben erfasst."
+                                               FontSize="14" Foreground="#909090" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
+                <!--// Detail area: background catcher (deselect) + fixed-width card as siblings //-->
+                <Grid x:Name="DetailArea" Grid.Row="1" Grid.Column="2">
+                    <Border Background="Transparent" MouseLeftButtonDown="DetailBackground_MouseDown"/>
+
+                    <!-- Width tracks the column but is capped at 720 (typical) and only shrinks to the
+                         column's min before the outer horizontal scrollbar kicks in. Left-aligned,
+                         so on wide screens the empty space to the right stays clickable to deselect. -->
+                    <Border x:Name="DetailCard" Width="{Binding ActualWidth, ElementName=DetailArea}" MaxWidth="720" MinWidth="570"
+                            MaxHeight="{Binding ActualHeight, ElementName=DetailArea}" MinHeight="480"
+                            HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="True" FocusVisualStyle="{x:Null}"
+                            MouseLeftButtonDown="DetailCard_MouseDown"
+                            CornerRadius="8" Background="White" BorderBrush="#E0E3E7" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Opacity="0.07" Color="Black"/>
+                        </Border.Effect>
+
+                        <Grid>
+                            <!-- Placeholder -->
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="340"
+                                        Visibility="{Binding HasSelection, Converter={StaticResource InvBoolToVis}}">
+                                <TextBlock Text="&#xE7BF;" FontFamily="Segoe MDL2 Assets" FontSize="48" Foreground="#D0D0D0"
+                                           HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                <TextBlock Text="Kein Eintrag ausgewählt" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Wähle links einen Eintrag, um ihn anzusehen, zu bearbeiten oder zu löschen."
+                                           FontSize="14" Foreground="#909090" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Receipt (read + edit) -->
+                            <DockPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+
+                                <!-- Header: time + status chips (Geändert / error). Status lives here so
+                                     showing it never shifts the positions/total/footer below. -->
+                                <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="22,14">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Left: time + status chips (Geändert + a generic error chip) -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           Text="{Binding SelectedOrder.OrderTime, StringFormat='{}{0:HH:mm:ss} Uhr'}"/>
+                                                <Border Background="#FFF4DE" CornerRadius="10" Padding="10,3" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasChanges, Converter={StaticResource BoolToVis}}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="7" Height="7" Fill="#D69E2E" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="Geändert" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="#8A6D17" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Background="#FCE8E6" CornerRadius="10" Padding="10,3" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsEditing}" Value="True"/>
+                                                                        <Condition Binding="{Binding HasActivePositions}" Value="False"/>
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </MultiDataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsEditing}" Value="True"/>
+                                                                        <Condition Binding="{Binding HasInputError}" Value="True"/>
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="#C0392B"
+                                                                   VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                                        <TextBlock Text="Fehler" FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="#C0392B" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock FontSize="13" Foreground="#909090" Margin="0,3,0,0"
+                                                       Text="{Binding SelectedOrder.OrderPositions.Count, StringFormat='{}{0} Positionen'}"/>
+                                        </StackPanel>
+
+                                        <!-- Right: the concrete error message + how to resolve it -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <!-- No active position left -->
+                                            <StackPanel HorizontalAlignment="Right">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsEditing}" Value="True"/>
+                                                                    <Condition Binding="{Binding HasActivePositions}" Value="False"/>
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <TextBlock Text="Mindestens eine Position erforderlich." FontSize="13.5" FontWeight="SemiBold"
+                                                           Foreground="#C0392B" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="Zum Entfernen den ganzen Eintrag löschen." FontSize="12"
+                                                           HorizontalAlignment="Right" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                            <!-- Invalid amount entered (only shown when positions are otherwise fine) -->
+                                            <TextBlock Text="Ungültige Anzahl eingegeben." FontSize="13.5" FontWeight="SemiBold"
+                                                       Foreground="#C0392B" HorizontalAlignment="Right">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsEditing}" Value="True"/>
+                                                                    <Condition Binding="{Binding HasActivePositions}" Value="True"/>
+                                                                    <Condition Binding="{Binding HasInputError}" Value="True"/>
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Footer band (mode-specific actions, all buttons equal width) -->
+                                <Border DockPanel.Dock="Bottom" Background="#F7F8FA" CornerRadius="0,0,7,7"
+                                        BorderBrush="#EDEFF2" BorderThickness="0,1,0,0" Padding="22,12">
+                                    <Grid>
+                                        <!-- Read mode: Bearbeiten -->
+                                        <Button Command="{Binding BeginEditCommand}" HorizontalAlignment="Right" Width="150" Height="44" FontSize="16"
+                                                Style="{StaticResource CustomAccentButtonStyle}"
+                                                Visibility="{Binding IsEditing, Converter={StaticResource InvBoolToVis}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE104;" Foreground="White" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Bearbeiten" Foreground="White" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- Edit mode: Löschen | Abbrechen + Speichern -->
+                                        <Grid Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                                            <Button x:Name="DeleteButton" HorizontalAlignment="Left"
+                                                    Style="{StaticResource DeleteOutlineButton}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="Löschen" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <ui:FlyoutService.Flyout>
+                                                    <ui:Flyout Placement="Top">
+                                                        <StackPanel MaxWidth="260">
+                                                            <TextBlock Text="Den gesamten Eintrag wirklich löschen? Dies kann nicht rückgängig gemacht werden."
+                                                                       TextWrapping="Wrap" FontSize="14" Foreground="#1B1E24"/>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                                                                <Button Content="Abbrechen" Click="CancelDelete_Click" Padding="14,6" Margin="0,0,8,0"/>
+                                                                <Button Content="Löschen" Click="ConfirmDelete_Click" Style="{StaticResource DangerButton}"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </ui:Flyout>
+                                                </ui:FlyoutService.Flyout>
+                                            </Button>
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Command="{Binding CancelEditCommand}" Width="150" Height="44" FontSize="16" Margin="0,0,10,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                        <TextBlock Text="Abbrechen" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" Width="150" Height="44" FontSize="16"
+                                                        Style="{StaticResource CustomAccentButtonStyle}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE105;" Foreground="White" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                        <TextBlock Text="Speichern" Foreground="White" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Total (above the footer) -->
+                                <Border DockPanel.Dock="Bottom" Padding="22,12" BorderBrush="#EDEFF2" BorderThickness="0,1,0,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <TextBlock Text="Gesamt" FontWeight="SemiBold" FontSize="20" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                                        <TextBlock FontWeight="SemiBold" FontSize="20" FontFamily="{StaticResource PriceFont}" VerticalAlignment="Center"
+                                                   Text="{Binding SelectedOrder.Total, StringFormat={}{0:C}}"
+                                                   Visibility="{Binding IsEditing, Converter={StaticResource InvBoolToVis}}"/>
+                                        <TextBlock FontWeight="SemiBold" FontSize="20" FontFamily="{StaticResource PriceFont}" VerticalAlignment="Center"
+                                                   Text="{Binding EditTotal, StringFormat={}{0:C}}"
+                                                   Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Body: column headers + positions -->
+                                <Grid Margin="22,12,22,6">
+
+                                    <!-- ═══ Read-only ═══ (compact numeric columns flush right; the Gesamt
+                                         column lines up with the order total below) -->
+                                    <DockPanel Visibility="{Binding IsEditing, Converter={StaticResource InvBoolToVis}}">
+                                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="96"/>
+                                                <ColumnDefinition Width="96"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="NAME" Style="{StaticResource CaptionText}"/>
+                                            <TextBlock Grid.Column="1" Text="ANZAHL" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="EINZELPREIS" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Column="3" Text="GESAMT" Style="{StaticResource CaptionText}" HorizontalAlignment="Right" Margin="0,0,5,0"/>
+                                        </Grid>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding SelectedOrder.OrderPositions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="46">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="70"/>
+                                                                <ColumnDefinition Width="96"/>
+                                                                <ColumnDefinition Width="96"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Border Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
+                                                                        Background="{Binding Product.Color}" BorderBrush="#22000000" BorderThickness="1"/>
+                                                                <TextBlock Text="{Binding Product.Name}" FontSize="16" VerticalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Amount}" FontSize="16"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Product.Price, StringFormat={}{0:C}}"
+                                                                       FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
+                                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
+                                                                       FontFamily="{StaticResource PriceFont}" FontSize="15"
+                                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+
+                                    <!-- ═══ Edit ═══ -->
+                                    <DockPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="132"/>
+                                                <ColumnDefinition Width="90"/>
+                                                <ColumnDefinition Width="90"/>
+                                                <ColumnDefinition Width="64"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="NAME" Style="{StaticResource CaptionText}"/>
+                                            <TextBlock Grid.Column="1" Text="ANZAHL" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="EINZELPREIS" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Column="3" Text="GESAMT" Style="{StaticResource CaptionText}" HorizontalAlignment="Right" Margin="0,0,10,0"/>
+                                        </Grid>
+
+                                        <Button DockPanel.Dock="Bottom" Command="{Binding AddPositionCommand}" HorizontalAlignment="Left"
+                                                Margin="0,18,0,2" Height="40" Padding="16,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Position hinzufügen" FontSize="15" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding EditPositions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border x:Name="rowBorder" CornerRadius="4" Margin="0,3" Padding="8,5" BorderThickness="1">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="Transparent"/>
+                                                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="64"/>
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <!-- Content (dimmed when removed; the restore button stays bright) -->
+                                                                <Grid x:Name="contentArea" Grid.Column="0">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="132"/>
+                                                                        <ColumnDefinition Width="90"/>
+                                                                        <ColumnDefinition Width="90"/>
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                        <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
+                                                                                Background="{Binding ColorBrush}" BorderBrush="#22000000" BorderThickness="1"/>
+                                                                        <TextBlock x:Name="nameText" Text="{Binding ProductName}" FontSize="16"
+                                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+
+                                                                    <!-- Reusable touch stepper -->
+                                                                    <ctrl:NumberStepper Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                        Width="120" Minimum="1" Maximum="100"
+                                                                                        Value="{Binding Amount, Mode=TwoWay}"
+                                                                                        IsEnabled="{Binding IsActive}"/>
+
+                                                                    <TextBlock x:Name="editUnit" Grid.Column="2" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
+                                                                               FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
+                                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                    <TextBlock x:Name="editLineTotal" Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
+                                                                               FontFamily="{StaticResource PriceFont}" FontSize="15"
+                                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                </Grid>
+
+                                                                <!-- Remove / restore (own cell so it is never dimmed with the row) -->
+                                                                <Grid Grid.Column="1">
+                                                                    <Button Style="{StaticResource RemoveIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                                            ToolTip="Position entfernen"
+                                                                            Visibility="{Binding IsRemoved, Converter={StaticResource InvBoolToVis}}"
+                                                                            Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#C0392B"/>
+                                                                    </Button>
+                                                                    <Button Style="{StaticResource RestoreIconButton}" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                                            ToolTip="Position wiederherstellen"
+                                                                            Visibility="{Binding IsRemoved, Converter={StaticResource BoolToVis}}"
+                                                                            Command="{Binding DataContext.ToggleRemovePositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <TextBlock Text="&#xE10E;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#3A7D44"/>
+                                                                    </Button>
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+                                                        <DataTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsNew}" Value="True">
+                                                                <Setter TargetName="rowBorder" Property="Background" Value="#EAF7EE"/>
+                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="#BFE3CB"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsAmountChanged}" Value="True">
+                                                                <Setter TargetName="rowBorder" Property="Background" Value="#FFF7E6"/>
+                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="#F0DDA8"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsRemoved}" Value="True">
+                                                                <Setter TargetName="rowBorder" Property="Background" Value="#F4F4F4"/>
+                                                                <Setter TargetName="rowBorder" Property="BorderBrush" Value="Transparent"/>
+                                                                <!-- Dim only swatch/name/prices; the stepper keeps its own (grey) disabled look. -->
+                                                                <Setter TargetName="swatch" Property="Opacity" Value="0.4"/>
+                                                                <Setter TargetName="nameText" Property="Opacity" Value="0.5"/>
+                                                                <Setter TargetName="nameText" Property="TextDecorations" Value="Strikethrough"/>
+                                                                <Setter TargetName="editUnit" Property="Opacity" Value="0.5"/>
+                                                                <Setter TargetName="editLineTotal" Property="Opacity" Value="0.5"/>
+                                                            </DataTrigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Grid>
+                            </DockPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
