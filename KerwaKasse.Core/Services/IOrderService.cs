@@ -6,7 +6,6 @@ public interface IOrderService
 {
     void PlaceOrder(IEnumerable<OrderPosition> positions);
     List<Order> GetOrdersByDate(DateTime date);
-    void UpdateOrderPositions(Order order);
 
     /// <summary>Replaces all positions of an existing order with the given set, so positions can be
     /// added, removed or have their amount changed in one go. The order's positions are deleted and

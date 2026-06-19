@@ -98,26 +98,6 @@ public class SqliteOrderService : IOrderService
         return orders.Values.ToList();
     }
 
-    public void UpdateOrderPositions(Order order)
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-
-        foreach (var pos in order.Positions)
-        {
-            connection.Execute(
-                """
-                UPDATE OrderPositions SET Amount = @Amount
-                WHERE OrderId = @OrderId AND ProductId = @ProductId
-                """,
-                new { pos.Amount, pos.OrderId, pos.ProductId },
-                transaction);
-        }
-
-        transaction.Commit();
-    }
-
     public void ReplaceOrderPositions(Order order)
     {
         using var connection = new SqliteConnection(_connectionString);

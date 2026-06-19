@@ -111,23 +111,6 @@ public class SqliteOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public void UpdateOrderPositions_ChangesAmounts()
-    {
-        var product = AddTestProduct();
-        _sut.PlaceOrder(new[]
-        {
-            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price }
-        });
-
-        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
-        order.Positions[0].Amount = 5;
-        _sut.UpdateOrderPositions(order);
-
-        var updated = _sut.GetOrdersByDate(DateTime.Today)[0];
-        Assert.Equal(5, updated.Positions[0].Amount);
-    }
-
-    [Fact]
     public void GetSalesFigures_AggregatesCorrectly()
     {
         var p1 = AddTestProduct("Bratwurst", 3.50m);
