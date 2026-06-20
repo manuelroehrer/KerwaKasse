@@ -111,23 +111,6 @@ public class SqliteOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public void UpdateOrderPositions_ChangesAmounts()
-    {
-        var product = AddTestProduct();
-        _sut.PlaceOrder(new[]
-        {
-            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price }
-        });
-
-        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
-        order.Positions[0].Amount = 5;
-        _sut.UpdateOrderPositions(order);
-
-        var updated = _sut.GetOrdersByDate(DateTime.Today)[0];
-        Assert.Equal(5, updated.Positions[0].Amount);
-    }
-
-    [Fact]
     public void GetSalesFigures_AggregatesCorrectly()
     {
         var p1 = AddTestProduct("Bratwurst", 3.50m);
@@ -226,6 +209,85 @@ public class SqliteOrderServiceTests : IDisposable
         var row = Assert.Single(figures);
         Assert.Equal(3, row.TotalAmount);
         Assert.Equal(0.30m, row.TotalRevenue);
+    }
+
+    [Fact]
+    public void ReplaceOrderPositions_AddsRemovesAndChangesAmounts()
+    {
+        var p1 = AddTestProduct("Bratwurst", 3.50m);
+        var p2 = AddTestProduct("Bier", 2.80m);
+        var p3 = AddTestProduct("Brezel", 1.20m);
+
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = p1.Id, Amount = 2, UnitPrice = p1.Price },
+            new OrderPosition { ProductId = p2.Id, Amount = 1, UnitPrice = p2.Price }
+        });
+
+        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
+
+        // Change p1's amount, drop p2, add p3.
+        order.Positions = new List<OrderPosition>
+        {
+            new() { OrderId = order.Id, ProductId = p1.Id, Amount = 5, UnitPrice = p1.Price },
+            new() { OrderId = order.Id, ProductId = p3.Id, Amount = 3, UnitPrice = p3.Price }
+        };
+        _sut.ReplaceOrderPositions(order);
+
+        var updated = _sut.GetOrdersByDate(DateTime.Today)[0];
+        Assert.Equal(2, updated.Positions.Count);
+        Assert.Equal(5, updated.Positions.Single(p => p.ProductId == p1.Id).Amount);
+        Assert.DoesNotContain(updated.Positions, p => p.ProductId == p2.Id);
+        Assert.Equal(3, updated.Positions.Single(p => p.ProductId == p3.Id).Amount);
+    }
+
+    [Fact]
+    public void ReplaceOrderPositions_KeepsSnapshottedUnitPrice()
+    {
+        var product = AddTestProduct("Bratwurst", 3.50m);
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = 3.50m }
+        });
+
+        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
+        order.Positions[0].Amount = 4;
+        _sut.ReplaceOrderPositions(order);
+
+        var updated = _sut.GetOrdersByDate(DateTime.Today)[0];
+        Assert.Equal(3.50m, updated.Positions[0].UnitPrice);
+    }
+
+    [Fact]
+    public void DeleteOrder_RemovesOrderAndPositions()
+    {
+        var product = AddTestProduct();
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price }
+        });
+
+        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
+        _sut.DeleteOrder(order.Id);
+
+        Assert.Empty(_sut.GetOrdersByDate(DateTime.Today));
+        // The deleted order no longer contributes to the sales figures either.
+        Assert.Empty(_sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1)));
+    }
+
+    [Fact]
+    public void DeleteOrder_LeavesOtherOrdersUntouched()
+    {
+        var product = AddTestProduct();
+        _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price } });
+        _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 2, UnitPrice = product.Price } });
+
+        var orders = _sut.GetOrdersByDate(DateTime.Today);
+        _sut.DeleteOrder(orders[0].Id);
+
+        var remaining = _sut.GetOrdersByDate(DateTime.Today);
+        Assert.Single(remaining);
+        Assert.Equal(orders[1].Id, remaining[0].Id);
     }
 
     public void Dispose()

@@ -56,11 +56,11 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void HistoryViewCommand_SetsHistoryViewModel()
+    public void OrderHistoryViewCommand_SetsOrderHistoryViewModel()
     {
-        _sut.HistoryViewCommand.Execute(null);
+        _sut.OrderHistoryViewCommand.Execute(null);
 
-        Assert.IsType<HistoryViewModel>(_sut.CurrentView);
+        Assert.IsType<OrderHistoryViewModel>(_sut.CurrentView);
     }
 
     [Fact]

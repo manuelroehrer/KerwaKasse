@@ -1,0 +1,76 @@
+<ui:ContentDialog x:Class="KerwaKasse.MVVM.View.AddPositionDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
+             xmlns:helper="clr-namespace:KerwaKasse.Helper"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d"
+             Title="Produkt hinzufügen"
+             PrimaryButtonText="Hinzufügen"
+             CloseButtonText="Abbrechen"
+             DefaultButton="Primary"
+             IsPrimaryButtonEnabled="False">
+    <ui:ContentDialog.Resources>
+        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+        <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
+    </ui:ContentDialog.Resources>
+    <Grid Width="360">
+        <ListBox x:Name="ProductList" MaxHeight="400" BorderThickness="0" Background="Transparent"
+                 HorizontalContentAlignment="Stretch" Padding="0,0,18,0"
+                 SelectionChanged="ProductList_SelectionChanged"
+                 MouseDoubleClick="ProductList_MouseDoubleClick">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Margin" Value="0,2"/>
+                    <Setter Property="Padding" Value="12,9"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#E2E5EA"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#D7DEE8"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
+                                Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center">
+                            <Border.BorderBrush>
+                                <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                    <Binding Path="Color"/>
+                                    <Binding Path="BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
+                                    <Binding Path="UseColoredBorder" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
+                                </MultiBinding>
+                            </Border.BorderBrush>
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Price, StringFormat={}{0:C}}" FontSize="15"
+                                   FontFamily="{StaticResource PriceFont}"
+                                   Foreground="#707070" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</ui:ContentDialog>
