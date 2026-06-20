@@ -21,6 +21,64 @@
             <Setter Property="Foreground" Value="#8A8F96"/>
         </Style>
 
+        <!-- Compact search trigger: borderless until active; the search box expands inline to the
+             right so the table remains visually clean. -->
+        <Style x:Key="HistorySearchButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#4B5563"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#1F2937"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSearchActive}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SearchClearButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#8B929E"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
+                                <Setter Property="Foreground" Value="#4B5563"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Inline add row: behaves like the next possible edit-position rather than a footer action. -->
         <Style x:Key="AddPositionInlineButton" TargetType="Button">
             <Setter Property="Background" Value="#FBFCFD"/>
@@ -194,11 +252,46 @@
                     <ColumnDefinition Width="*" MinWidth="570"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Day picker (own row so list/panel tops line up) -->
-                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="6,0,0,14">
+                <!-- Day filter (own row so list/panel tops line up) -->
+                <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="6,0,0,14">
                     <TextBlock Text="Tag:" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <DatePicker IsTodayHighlighted="True" SelectedDate="{Binding Date}"
-                                DisplayDate="{Binding Date}" SelectedDateFormat="Long" Width="240" FontSize="15"/>
+                                DisplayDate="{Binding Date}" SelectedDateFormat="Long" Width="240"
+                                Height="34" FontSize="15"/>
+                    <Border Width="1" Background="#B8C0CA" Margin="24,5,10,5"/>
+                    <Button x:Name="SearchToggleButton" Style="{StaticResource HistorySearchButton}"
+                            ToolTipService.ToolTip="Suchen" Click="SearchToggle_Click">
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
+                    </Button>
+                    <Border x:Name="SearchHost" Width="0" ClipToBounds="True" VerticalAlignment="Center">
+                        <Grid Width="210" Height="34" Margin="8,0,0,0" HorizontalAlignment="Left">
+                            <TextBox x:Name="SearchBox"
+                                     Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="White" FontSize="15" Height="34"
+                                     VerticalContentAlignment="Center" Padding="36,0,36,0"
+                                     LostKeyboardFocus="SearchBox_LostKeyboardFocus"/>
+                            <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#8B929E"
+                                       IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="13,0,0,0"/>
+                            <TextBlock Text="Eintrag suchen ..." Foreground="#9AA0A6" FontSize="15" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" HorizontalAlignment="Left" Margin="38,0,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Button Style="{StaticResource SearchClearButton}" Click="SearchClear_Click"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0"
+                                    Visibility="{Binding IsSearchActive, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                            </Button>
+                        </Grid>
+                    </Border>
                 </StackPanel>
 
                 <!--// Master: sales table //-->
@@ -265,9 +358,9 @@
                                     </StackPanel.Style>
                                     <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="44" Foreground="#C8C8C8"
                                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                    <TextBlock Text="Keine Einträge an diesem Tag" FontSize="17" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding EmptyStateTitle}" FontSize="17" FontWeight="SemiBold"
                                                HorizontalAlignment="Center" TextAlignment="Center"/>
-                                    <TextBlock Text="Für den ausgewählten Tag wurden noch keine Eingaben erfasst."
+                                    <TextBlock Text="{Binding EmptyStateText}"
                                                FontSize="14" Foreground="#909090" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
                                 </StackPanel>
                             </Grid>

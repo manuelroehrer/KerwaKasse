@@ -8,6 +8,8 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace KerwaKasse.MVVM.View
 {
@@ -22,6 +24,8 @@ namespace KerwaKasse.MVVM.View
         private const double ColumnGap = 16;
         private const double MasterMinWidth = 360;
         private const double MasterMaxWidth = 560;
+        private const double SearchExpandedWidth = 218;
+        private const int SearchAnimationMilliseconds = 150;
 
         public OrderHistoryView()
         {
@@ -132,5 +136,69 @@ namespace KerwaKasse.MVVM.View
 
         private void CancelDelete_Click(object sender, RoutedEventArgs e)
             => (FlyoutService.GetFlyout(DeleteButton) as FlyoutBase)?.Hide();
+
+        private void SearchToggle_Click(object sender, RoutedEventArgs e)
+            => ExpandSearch();
+
+        private void SearchClear_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is OrderHistoryViewModel vm)
+                vm.SearchText = string.Empty;
+
+            CollapseSearch();
+            SearchToggleButton.Focus();
+        }
+
+        private void SearchBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (DataContext is OrderHistoryViewModel vm && vm.IsSearchActive)
+                return;
+
+            CollapseSearch();
+        }
+
+        private void ExpandSearch()
+        {
+            SearchToggleButton.Visibility = Visibility.Collapsed;
+            AnimateSearchWidth(SearchExpandedWidth);
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                SearchBox.Focus();
+                Keyboard.Focus(SearchBox);
+                SearchBox.SelectAll();
+            }), DispatcherPriority.Input);
+        }
+
+        private void CollapseSearch()
+        {
+            if (SearchHost.Width <= 0.5)
+            {
+                SearchToggleButton.Visibility = Visibility.Visible;
+                return;
+            }
+
+            AnimateSearchWidth(0);
+        }
+
+        private void AnimateSearchWidth(double targetWidth)
+        {
+            SearchHost.BeginAnimation(WidthProperty, null);
+            SearchHost.Width = SearchHost.ActualWidth;
+
+            var animation = new DoubleAnimation
+            {
+                To = targetWidth,
+                Duration = TimeSpan.FromMilliseconds(SearchAnimationMilliseconds),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                FillBehavior = FillBehavior.Stop
+            };
+            animation.Completed += (_, _) =>
+            {
+                SearchHost.Width = targetWidth;
+                if (targetWidth <= 0.5)
+                    SearchToggleButton.Visibility = Visibility.Visible;
+            };
+            SearchHost.BeginAnimation(WidthProperty, animation);
+        }
     }
 }

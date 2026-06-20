@@ -5,6 +5,7 @@ using KerwaKasse.MVVM.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 
 namespace KerwaKasse.MVVM.ViewModel
@@ -34,6 +35,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public Action<IReadOnlyList<ProductModel>, Action<ProductModel>> ShowAddPositionPicker { get; set; }
 
         private readonly List<ProductModel> _allProducts;
+        private readonly List<OrderModel> _ordersForSelectedDay = new();
 
         public OrderHistoryViewModel(IOrderService orderService, IProductService productService)
         {
@@ -75,12 +77,42 @@ namespace KerwaKasse.MVVM.ViewModel
 
         public ObservableCollection<OrderModel> Orders { get; }
 
+        private string searchText = string.Empty;
+        public string SearchText
+        {
+            get => searchText;
+            set
+            {
+                string newValue = value ?? string.Empty;
+                if (searchText == newValue)
+                    return;
+
+                searchText = newValue;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSearchActive));
+                ApplyOrderFilter();
+            }
+        }
+
+        public bool IsSearchActive => !string.IsNullOrWhiteSpace(SearchText);
+
+        public string EmptyStateTitle =>
+            IsSearchActive ? "Keine passenden Verkäufe" : "Keine Verkäufe an diesem Tag";
+
+        public string EmptyStateText =>
+            IsSearchActive
+                ? "Für den ausgewählten Tag passt kein Verkauf zu deiner Suche."
+                : "Für den ausgewählten Tag wurden noch keine Eingaben erfasst.";
+
         private OrderModel selectedOrder;
         public OrderModel SelectedOrder
         {
             get => selectedOrder;
             set
             {
+                if (ReferenceEquals(selectedOrder, value))
+                    return;
+
                 selectedOrder = value;
                 // Switching the selection always leaves edit mode (discarding unsaved edits).
                 IsEditing = false;
@@ -147,7 +179,7 @@ namespace KerwaKasse.MVVM.ViewModel
         {
             int? previouslySelectedId = SelectedOrder?.OrderID;
 
-            Orders.Clear();
+            _ordersForSelectedDay.Clear();
             var coreOrders = _orderService.GetOrdersByDate(Date);
 
             if (coreOrders != null)
@@ -156,14 +188,58 @@ namespace KerwaKasse.MVVM.ViewModel
                              .Select(MapToModel)
                              .OrderByDescending(o => o.OrderID))
                 {
-                    Orders.Add(om);
+                    _ordersForSelectedDay.Add(om);
                 }
             }
 
-            // Restore the previous selection if it still exists, otherwise clear the detail card.
-            SelectedOrder = previouslySelectedId.HasValue
-                ? Orders.FirstOrDefault(s => s.OrderID == previouslySelectedId.Value)
+            ApplyOrderFilter(previouslySelectedId);
+        }
+
+        private void ApplyOrderFilter(int? preferredSelectionId = null)
+        {
+            int? selectionId = preferredSelectionId ?? SelectedOrder?.OrderID;
+
+            Orders.Clear();
+            foreach (var order in _ordersForSelectedDay.Where(OrderMatchesSearch))
+                Orders.Add(order);
+
+            // Restore the previous selection if it is still visible, otherwise clear the detail card.
+            SelectedOrder = selectionId.HasValue
+                ? Orders.FirstOrDefault(s => s.OrderID == selectionId.Value)
                 : null;
+
+            OnPropertyChanged(nameof(EmptyStateTitle));
+            OnPropertyChanged(nameof(EmptyStateText));
+        }
+
+        private bool OrderMatchesSearch(OrderModel order)
+        {
+            string search = SearchText.Trim();
+            if (string.IsNullOrEmpty(search))
+                return true;
+
+            return order.OrderPositions.Any(position => PositionMatchesSearch(position, search))
+                   || PriceMatchesSearch(order.Total, search);
+        }
+
+        private static bool PositionMatchesSearch(OrderPositionModel position, string search)
+        {
+            return position.Product.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool PriceMatchesSearch(decimal price, string search)
+        {
+            var culture = CultureInfo.CurrentCulture;
+            string normalizedSearch = search
+                .Replace(culture.NumberFormat.CurrencySymbol, string.Empty)
+                .Trim();
+
+            bool exactPriceMatch = decimal.TryParse(search, NumberStyles.Currency, culture, out var parsedPrice)
+                                   || decimal.TryParse(normalizedSearch, NumberStyles.Number, culture, out parsedPrice);
+
+            return (exactPriceMatch && price == parsedPrice)
+                   || price.ToString("C", culture).Contains(search, StringComparison.OrdinalIgnoreCase)
+                   || price.ToString("N2", culture).Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase);
         }
 
         private OrderModel MapToModel(Order o)
