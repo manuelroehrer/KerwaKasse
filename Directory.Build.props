@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    NuGet audit suppression (applies to all projects in the solution).
+
+    CVE-2025-6965 / GHSA-2m69-gcr7-jv3q: the bundled native SQLite (SQLitePCLRaw.lib.e_sqlite3
+    2.1.11, pulled in transitively via Microsoft.Data.Sqlite) is older than SQLite 3.50.2 and is
+    flagged as vulnerable. Exploiting the flaw requires running attacker-controlled SQL against
+    the engine. KerwaKasse is a local single-user desktop app: all SQL is app-authored and the
+    database is never sourced from untrusted input, so there is no practical attack surface.
+
+    There is currently nothing to upgrade to - SQLitePCLRaw 2.1.11 is the last release of that
+    line and Microsoft.Data.Sqlite (10.0.9) still references it. Remove this suppression once
+    Microsoft.Data.Sqlite ships against SQLite >= 3.50.2.
+  -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+
+</Project>
