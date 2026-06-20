@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:KerwaKasse.MVVM.View"
+             xmlns:helper="clr-namespace:KerwaKasse.Helper"
              xmlns:ui="http://schemas.modernwpf.com/2019"
              mc:Ignorable="d"
              Title="Produkt hinzufügen"
@@ -12,6 +13,7 @@
              DefaultButton="Primary"
              IsPrimaryButtonEnabled="False">
     <ui:ContentDialog.Resources>
+        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </ui:ContentDialog.Resources>
     <Grid Width="360">
@@ -53,7 +55,15 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                Background="{Binding Color}" BorderBrush="#22000000" BorderThickness="1" VerticalAlignment="Center"/>
+                                Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center">
+                            <Border.BorderBrush>
+                                <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                    <Binding Path="Color"/>
+                                    <Binding Path="BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
+                                    <Binding Path="UseColoredBorder" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
+                                </MultiBinding>
+                            </Border.BorderBrush>
+                        </Border>
                         <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Grid.Column="2" Text="{Binding Price, StringFormat={}{0:C}}" FontSize="15"
                                    FontFamily="{StaticResource PriceFont}"

@@ -92,7 +92,7 @@ namespace KerwaKasse.MVVM.View
         // Opens the add-product dialog and reports the chosen product back to the view model.
         private async void ShowAddPositionPicker(IReadOnlyList<ProductModel> candidates, Action<ProductModel> onPicked)
         {
-            var dialog = new AddPositionDialog(candidates);
+            var dialog = new AddPositionDialog(candidates, _vm.BorderDarkenFactor, _vm.UseColoredBorder);
             var result = await dialog.ShowAsync();
 
             if ((result == ContentDialogResult.Primary || dialog.Confirmed) && dialog.SelectedProduct != null)
