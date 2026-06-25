@@ -48,6 +48,23 @@ public static class DatabaseInitializer
                 FOREIGN KEY (MenuId) REFERENCES Menus(Id) ON DELETE CASCADE,
                 FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS SavedAnalyses (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                AllProducts INTEGER NOT NULL DEFAULT 1,
+                FromTime TEXT,
+                ToTime TEXT,
+                SortOrder INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS SavedAnalysisProducts (
+                SavedAnalysisId INTEGER NOT NULL,
+                ProductId INTEGER NOT NULL,
+                PRIMARY KEY (SavedAnalysisId, ProductId),
+                FOREIGN KEY (SavedAnalysisId) REFERENCES SavedAnalyses(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE
+            );
             """;
         command.ExecuteNonQuery();
 
