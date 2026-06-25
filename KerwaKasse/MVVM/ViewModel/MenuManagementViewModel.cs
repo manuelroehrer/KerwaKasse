@@ -187,6 +187,8 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DiscardCommand { get; }
         public RelayCommand MoveMenuUpCommand { get; }
         public RelayCommand MoveMenuDownCommand { get; }
+        public RelayCommand SelectAllProductsCommand { get; }
+        public RelayCommand ClearProductsCommand { get; }
 
         public MenuManagementViewModel(IMenuService menuService,
             IEnumerable<(int Id, string Name)> allProducts)
@@ -203,6 +205,8 @@ namespace KerwaKasse.MVVM.ViewModel
                 _ => SelectedMenu != null && HasUnsavedChanges);
             MoveMenuUpCommand = new RelayCommand(_ => MoveMenu(-1), _ => CanMoveMenu(-1));
             MoveMenuDownCommand = new RelayCommand(_ => MoveMenu(1), _ => CanMoveMenu(1));
+            SelectAllProductsCommand = new RelayCommand(_ => SetAllProducts(true), _ => HasMenuSelected);
+            ClearProductsCommand = new RelayCommand(_ => SetAllProducts(false), _ => HasMenuSelected);
 
             LoadMenus();
         }
@@ -264,6 +268,11 @@ namespace KerwaKasse.MVVM.ViewModel
         }
 
         private void OnProductToggled() => RecomputeUnsaved();
+
+        private void SetAllProducts(bool included)
+        {
+            foreach (var p in AllMenuProducts) p.IsIncluded = included;
+        }
 
         /// <summary>Marks the buffer dirty when the name or the product selection differs from what is stored.</summary>
         private void RecomputeUnsaved()
