@@ -17,6 +17,7 @@
 
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <helper:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
 
         <!-- Small uppercase section caption. -->
         <Style x:Key="SectionLabel" TargetType="TextBlock">
@@ -403,9 +404,17 @@
                         <ItemsControl ItemsSource="{Binding FilteredMenuProducts}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsIncluded, Mode=TwoWay}"
+                                    <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay}"
                                               FontSize="15" Foreground="#1B1E24" VerticalContentAlignment="Center"
-                                              MinHeight="36" Margin="0,1" Padding="10,0,0,0"/>
+                                              MinHeight="36" Margin="0,1" Padding="10,0,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="12" Height="12" CornerRadius="3" BorderThickness="1"
+                                                    Background="{Binding ColorBrush}"
+                                                    BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"
+                                                    Margin="0,0,9,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

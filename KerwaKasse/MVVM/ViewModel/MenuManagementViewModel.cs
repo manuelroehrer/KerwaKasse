@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Media;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
@@ -50,6 +51,9 @@ namespace KerwaKasse.MVVM.ViewModel
         public int ProductId { get; }
         public string Name { get; }
 
+        /// <summary>The product's colour as a brush for the swatch (like the saved-analysis dialog).</summary>
+        public Brush ColorBrush { get; }
+
         private bool _isIncluded;
         public bool IsIncluded
         {
@@ -65,10 +69,11 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        public MenuProductItemViewModel(int productId, string name, bool isIncluded, Action onToggled)
+        public MenuProductItemViewModel(int productId, string name, string color, bool isIncluded, Action onToggled)
         {
             ProductId = productId;
             Name = name;
+            ColorBrush = ColorBorderHelper.ParseBrush(color);
             _isIncluded = isIncluded;
             _onToggled = onToggled;
         }
@@ -85,7 +90,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public const int MaxNameLength = 30;
 
         private readonly IMenuService _menuService;
-        private readonly IReadOnlyList<(int Id, string Name)> _allProducts;
+        private readonly IReadOnlyList<(int Id, string Name, string Color)> _allProducts;
         private HashSet<int> _originalIncludedIds = new();
 
         // Suppresses dirty tracking while the name field is filled programmatically.
@@ -191,7 +196,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand ClearProductsCommand { get; }
 
         public MenuManagementViewModel(IMenuService menuService,
-            IEnumerable<(int Id, string Name)> allProducts)
+            IEnumerable<(int Id, string Name, string Color)> allProducts)
         {
             _menuService = menuService;
             _allProducts = allProducts.ToList();
@@ -261,8 +266,8 @@ namespace KerwaKasse.MVVM.ViewModel
             var includedIds = _menuService.GetProductIds(SelectedMenu.Id).ToHashSet();
             _originalIncludedIds = new HashSet<int>(includedIds);
 
-            foreach (var (id, name) in _allProducts)
-                AllMenuProducts.Add(new MenuProductItemViewModel(id, name, includedIds.Contains(id), OnProductToggled));
+            foreach (var (id, name, color) in _allProducts)
+                AllMenuProducts.Add(new MenuProductItemViewModel(id, name, color, includedIds.Contains(id), OnProductToggled));
 
             UpdateFilteredProducts();
         }

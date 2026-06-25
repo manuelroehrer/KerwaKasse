@@ -413,7 +413,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private async void OpenMenuManagement()
         {
-            var products = Products.Select(p => (p.ProductId, p.Name));
+            var products = Products.Select(p => (p.ProductId, p.Name, p.ColorAsString));
             var menuVm = new MenuManagementViewModel(_menuService, products);
             await _dialogService.ShowMenuManagementAsync(menuVm);
 

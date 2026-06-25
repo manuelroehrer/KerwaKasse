@@ -48,7 +48,7 @@ public class MenuManagementViewModelTests
     private static MenuManagementViewModel CreateSut(out FakeMenuService service)
     {
         service = new FakeMenuService();
-        var products = new List<(int Id, string Name)> { (1, "Bratwurst"), (2, "Pommes"), (3, "Brezel") };
+        var products = new List<(int Id, string Name, string Color)> { (1, "Bratwurst", "#C0392B"), (2, "Pommes", "#F1C40F"), (3, "Brezel", "#A0522D") };
         return new MenuManagementViewModel(service, products);
     }
 
