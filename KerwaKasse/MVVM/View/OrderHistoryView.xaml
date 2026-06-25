@@ -12,7 +12,7 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <helper:InverseBoolToVisibilityConverter x:Key="InvBoolToVis"/>
-        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+        <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
 
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
 
@@ -602,15 +602,8 @@
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                                 <Border Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                                                        Background="{Binding Product.Color}" BorderThickness="1">
-                                                                    <Border.BorderBrush>
-                                                                        <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
-                                                                            <Binding Path="Product.Color"/>
-                                                                            <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                            <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                        </MultiBinding>
-                                                                    </Border.BorderBrush>
-                                                                </Border>
+                                                                        Background="{Binding Product.Color}" BorderThickness="1"
+                                                                        BorderBrush="{Binding Product.Color, Converter={StaticResource FixedColorBorder}}"/>
                                                                 <TextBlock Text="{Binding Product.Name}" FontSize="16" VerticalAlignment="Center"
                                                                            TextTrimming="CharacterEllipsis"/>
                                                             </StackPanel>
@@ -674,15 +667,8 @@
 
                                                                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                                             <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                                                                    Background="{Binding ColorBrush}" BorderThickness="1">
-                                                                                <Border.BorderBrush>
-                                                                                    <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
-                                                                                        <Binding Path="ColorBrush"/>
-                                                                                        <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                                        <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                                    </MultiBinding>
-                                                                                </Border.BorderBrush>
-                                                                            </Border>
+                                                                                    Background="{Binding ColorBrush}" BorderThickness="1"
+                                                                                    BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"/>
                                                                             <TextBlock x:Name="nameText" Text="{Binding ProductName}" FontSize="16"
                                                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                                         </StackPanel>

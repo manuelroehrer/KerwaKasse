@@ -13,7 +13,7 @@
              DefaultButton="Primary"
              IsPrimaryButtonEnabled="False">
     <ui:ContentDialog.Resources>
-        <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+        <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </ui:ContentDialog.Resources>
     <Grid Width="360">
@@ -55,15 +55,8 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center">
-                            <Border.BorderBrush>
-                                <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
-                                    <Binding Path="Color"/>
-                                    <Binding Path="BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
-                                    <Binding Path="UseColoredBorder" RelativeSource="{RelativeSource AncestorType=ui:ContentDialog}"/>
-                                </MultiBinding>
-                            </Border.BorderBrush>
-                        </Border>
+                                Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center"
+                                BorderBrush="{Binding Color, Converter={StaticResource FixedColorBorder}}"/>
                         <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Grid.Column="2" Text="{Binding Price, StringFormat={}{0:C}}" FontSize="15"
                                    FontFamily="{StaticResource PriceFont}"

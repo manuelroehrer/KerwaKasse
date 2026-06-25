@@ -10,17 +10,13 @@ public class OrderHistoryViewModelTests
 {
     private readonly IOrderService _orderService;
     private readonly IProductService _productService;
-    private readonly ISettingsService _settings;
 
     public OrderHistoryViewModelTests()
     {
         _orderService = Substitute.For<IOrderService>();
         _productService = Substitute.For<IProductService>();
-        _settings = Substitute.For<ISettingsService>();
 
         _orderService.GetOrdersByDate(Arg.Any<DateTime>()).Returns(new List<Order>());
-        _settings.Get("productsSwatchUseColoredBorder", true).Returns(true);
-        _settings.Get("productsSwatchBorderDarkenFactor", 0.7).Returns(0.7);
         _productService.GetAll().Returns(new List<Product>
         {
             new() { Id = 1, Name = "Bratwurst", Price = 3.50m },
@@ -29,7 +25,7 @@ public class OrderHistoryViewModelTests
         });
     }
 
-    private OrderHistoryViewModel CreateSut() => new(_orderService, _productService, _settings);
+    private OrderHistoryViewModel CreateSut() => new(_orderService, _productService);
 
     private void SetUpSingleOrder(int id = 1)
     {

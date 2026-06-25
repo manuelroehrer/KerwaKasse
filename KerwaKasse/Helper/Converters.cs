@@ -187,6 +187,25 @@ namespace KerwaKasse.Helper
     }
 
     /// <summary>
+    /// Border brush for a small colour swatch, fixed to the app default (coloured border on, darken
+    /// factor 0.7) via <see cref="ColorBorderHelper"/>. Unlike <see cref="BrushColoredBorderConverter"/>
+    /// it reads no settings, so views that always want the coloured swatch border need no settings
+    /// service. The bound value is the swatch fill (a Brush or a colour string).
+    /// </summary>
+    public class FixedColorBorderConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
+        {
+            Brush brush => ColorBorderHelper.Border(brush),
+            string color => ColorBorderHelper.Border(color),
+            _ => Brushes.Gray
+        };
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
     /// Returns Collapsed when the value is true, Visible when false.
     /// Inverse of the built-in BooleanToVisibilityConverter.
     /// </summary>

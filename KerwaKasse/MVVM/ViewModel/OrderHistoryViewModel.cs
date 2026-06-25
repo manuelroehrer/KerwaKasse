@@ -22,7 +22,6 @@ namespace KerwaKasse.MVVM.ViewModel
     {
         private readonly IOrderService _orderService;
         private readonly IProductService _productService;
-        private readonly ISettingsService _settings;
 
         public RelayCommand BeginEditCommand { get; }
         public RelayCommand CancelEditCommand { get; }
@@ -38,11 +37,10 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly List<ProductModel> _allProducts;
         private readonly List<OrderModel> _ordersForSelectedDay = new();
 
-        public OrderHistoryViewModel(IOrderService orderService, IProductService productService, ISettingsService settings)
+        public OrderHistoryViewModel(IOrderService orderService, IProductService productService)
         {
             _orderService = orderService;
             _productService = productService;
-            _settings = settings;
 
             _allProducts = _productService.GetAll()
                 .Select(p => new ProductModel { ProductID = p.Id, Name = p.Name, Price = p.Price, ColorAsString = p.Color })
@@ -62,25 +60,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     ToggleRemove(pos);
             });
 
-            LoadPreferences();
-
             Date = DateTime.Today;
-        }
-
-        public double BorderDarkenFactor { get; private set; }
-        public bool UseColoredBorder { get; private set; }
-
-        private void LoadPreferences()
-        {
-            bool needsSave = false;
-            // History swatches are rendered like the ProductsView swatches, so they intentionally
-            // reuse the same border settings instead of introducing separate history settings.
-            needsSave |= _settings.SetIfAbsent("productsSwatchUseColoredBorder", true);
-            needsSave |= _settings.SetIfAbsent("productsSwatchBorderDarkenFactor", 0.7);
-            if (needsSave) _settings.Save();
-
-            UseColoredBorder = _settings.Get("productsSwatchUseColoredBorder", true);
-            BorderDarkenFactor = _settings.Get("productsSwatchBorderDarkenFactor", 0.7);
         }
 
         private DateTime date;

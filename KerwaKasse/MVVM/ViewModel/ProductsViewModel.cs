@@ -115,10 +115,6 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        /// <summary>Swatch border preferences (persisted): whether to tint the border and how much to darken it.</summary>
-        public double BorderDarkenFactor { get; private set; }
-        public bool UseColoredBorder { get; private set; }
-
         // ── Menus / Speisekarten ─────────────────────────────────
         private List<Menu> _menus = new();
         public List<Menu> Menus
@@ -204,14 +200,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private void LoadPreferences()
         {
-            bool needsSave = false;
-            needsSave |= _settings.SetIfAbsent("productsSwatchUseColoredBorder", true);
-            needsSave |= _settings.SetIfAbsent("productsSwatchBorderDarkenFactor", 0.7);
-            if (needsSave) _settings.Save();
-
             SidePanelWidth = _settings.Get("productsSidePanelWidth", 440.0);
-            UseColoredBorder = _settings.Get("productsSwatchUseColoredBorder", true);
-            BorderDarkenFactor = _settings.Get("productsSwatchBorderDarkenFactor", 0.7);
         }
 
         // ── Data loading ─────────────────────────────────────────
