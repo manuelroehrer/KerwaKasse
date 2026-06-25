@@ -106,6 +106,31 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Subtle accent "link" button for Alle/Keine. -->
+        <Style x:Key="SmallActionButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#E2E5EA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </ui:ContentDialog.Resources>
 
     <!-- Height is the comfortable target on large screens; MaxHeight is capped in
@@ -337,13 +362,18 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                            <TextBlock Text="{Binding SelectedMenuPositionText}" FontSize="14" Foreground="#8A8F96"
+                            <TextBlock Text="{Binding SelectedMenuPositionText}" FontSize="12.5" Foreground="#8A8F96"
                                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
 
-                    <TextBlock DockPanel.Dock="Top" Text="PRODUKTE ZUORDNEN" Style="{StaticResource SectionLabel}"
-                               Margin="26,16,26,0"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="26,16,26,0">
+                        <Button DockPanel.Dock="Right" Command="{Binding ClearProductsCommand}" Content="Keine"
+                                Style="{StaticResource SmallActionButton}"/>
+                        <Button DockPanel.Dock="Right" Command="{Binding SelectAllProductsCommand}" Content="Alle"
+                                Style="{StaticResource SmallActionButton}" Margin="0,0,4,0"/>
+                        <TextBlock Text="PRODUKTE ZUORDNEN" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                    </DockPanel>
 
                     <!-- Search (manual placeholder so it stays vertically centered) -->
                     <Grid DockPanel.Dock="Top" Margin="26,8,26,0">

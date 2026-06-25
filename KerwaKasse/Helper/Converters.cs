@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -199,6 +200,54 @@ namespace KerwaKasse.Helper
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Corner radius for one segment of a <see cref="Controls.SegmentedControl"/> so that only the
+    /// outer corners are rounded: the first segment rounds its left side, the last its right side,
+    /// inner segments stay square (a single item rounds all four).
+    /// values[0] = the item, values[1] = the owning ItemsControl; ConverterParameter = radius (default 4).
+    /// </summary>
+    public class SegmentCornerRadiusConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            double r = 4;
+            if (parameter is string s && double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var p))
+                r = p;
+
+            if (values.Length < 2 || values[1] is not ItemsControl owner) return new CornerRadius(0);
+            int index = owner.Items.IndexOf(values[0]);
+            if (index < 0) return new CornerRadius(0);
+
+            bool first = index == 0;
+            bool last = index == owner.Items.Count - 1;
+            if (first && last) return new CornerRadius(r);
+            if (first) return new CornerRadius(r, 0, 0, r);
+            if (last) return new CornerRadius(0, r, r, 0);
+            return new CornerRadius(0);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Visible for every segment of a <see cref="Controls.SegmentedControl"/> except the last one —
+    /// used to draw the vertical divider between segments without a trailing line on the right edge.
+    /// values[0] = the item, values[1] = the owning ItemsControl.
+    /// </summary>
+    public class SegmentDividerVisibilityConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 2 || values[1] is not ItemsControl owner) return Visibility.Collapsed;
+            int index = owner.Items.IndexOf(values[0]);
+            return index >= 0 && index < owner.Items.Count - 1 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => throw new NotSupportedException();
     }
 }

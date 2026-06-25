@@ -13,6 +13,8 @@ public class MainWindowViewModelTests
     private readonly IOrderService _orderService;
     private readonly ISettingsService _settings;
     private readonly IMenuService _menuService;
+    private readonly IAnalyticsService _analyticsService;
+    private readonly ISavedAnalysisService _savedAnalysisService;
     private readonly MainWindowViewModel _sut;
 
     public MainWindowViewModelTests()
@@ -22,14 +24,19 @@ public class MainWindowViewModelTests
         _orderService = Substitute.For<IOrderService>();
         _settings = Substitute.For<ISettingsService>();
         _menuService = Substitute.For<IMenuService>();
+        _analyticsService = Substitute.For<IAnalyticsService>();
+        _savedAnalysisService = Substitute.For<ISavedAnalysisService>();
 
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
         _orderService.GetOrdersByDate(Arg.Any<DateTime>()).Returns(new List<Order>());
         _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>()).Returns(new List<SalesFigure>());
         _menuService.GetAll().Returns(new List<Menu>());
+        _savedAnalysisService.GetAll().Returns(new List<SavedAnalysis>());
+        _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+            .Returns(new List<SalesFigure>());
 
-        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService);
+        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService);
     }
 
     [Fact]
@@ -64,11 +71,11 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void StatisticsViewCommand_SetsStatisticsViewModel()
+    public void AnalysisViewCommand_SetsAnalysisViewModel()
     {
-        _sut.StatisticsViewCommand.Execute(null);
+        _sut.AnalysisViewCommand.Execute(null);
 
-        Assert.IsType<StatisticsViewModel>(_sut.CurrentView);
+        Assert.IsType<AnalysisViewModel>(_sut.CurrentView);
     }
 
     [Fact]

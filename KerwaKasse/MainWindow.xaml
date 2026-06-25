@@ -36,8 +36,8 @@
         <DataTemplate DataType="{x:Type vm:OrderHistoryViewModel}">
             <view:OrderHistoryView/>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:StatisticsViewModel}">
-            <view:StatisticsView/>
+        <DataTemplate DataType="{x:Type vm:AnalysisViewModel}">
+            <view:AnalysisView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:InfoViewModel}">
             <view:InfoView/>
@@ -236,7 +236,7 @@
 
                     <!-- Auswertung -->
                     <RadioButton DockPanel.Dock="Top" Style="{StaticResource NavigationButtonTheme}"
-                             Command="{Binding StatisticsViewCommand}"
+                             Command="{Binding AnalysisViewCommand}"
                              Click="NavButton_Click">
                         <RadioButton.Content>
                             <Grid>
@@ -244,7 +244,7 @@
                                     <ColumnDefinition Width="60"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                                <TextBlock Text="&#xEB05;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                            Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <TextBlock Text="Auswertung" FontSize="16" Grid.Column="1"
                                            VerticalAlignment="Center" Foreground="White" Margin="4,0,0,0"/>
