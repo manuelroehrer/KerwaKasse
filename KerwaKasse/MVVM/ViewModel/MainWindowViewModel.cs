@@ -32,7 +32,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService)
+        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService, IDatabaseBackupService backupService)
         {
             _dialogService = dialogService;
             _productService = productService;
@@ -42,7 +42,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _analyticsService = analyticsService;
             _savedAnalysisService = savedAnalysisService;
 
-            InfoVM = new InfoViewModel(dialogService, dbFilePath);
+            InfoVM = new InfoViewModel(dialogService, dbFilePath, backupService);
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));

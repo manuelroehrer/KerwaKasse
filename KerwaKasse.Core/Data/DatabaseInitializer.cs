@@ -9,6 +9,9 @@ public static class DatabaseInitializer
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
 
+        // If you add or remove user-data tables here, also update:
+        //   • DatabaseSummary (IDatabaseBackupService.cs)  — the record listing the counted tables
+        //   • DatabaseBackupService.GetSummary()           — the queries that produce those counts
         using var command = connection.CreateCommand();
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS Products (

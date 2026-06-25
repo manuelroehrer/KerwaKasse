@@ -27,9 +27,10 @@ namespace KerwaKasse
             var menuService = new SqliteMenuService(connectionString);
             var analyticsService = new SqliteAnalyticsService(connectionString);
             var savedAnalysisService = new SqliteSavedAnalysisService(connectionString);
+            var backupService = new DatabaseBackupService(connectionString, dbFilePath);
             _settingsService = settingsService;
 
-            DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService);
+            DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService);
             InitializeComponent();
             RestoreWindowState();
         }

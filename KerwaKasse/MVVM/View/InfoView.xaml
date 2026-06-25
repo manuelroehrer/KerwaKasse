@@ -66,18 +66,28 @@
                     <TextBlock Text="Datensicherung" Foreground="Black" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="#404040" FontSize="15" LineHeight="22"
                                Text="Erstellt eine Sicherungskopie der Datenbank. Es wird empfohlen, diese auf einem externen Speichermedium (z. B. USB-Stick) oder auf einem separaten Datenträger zu speichern."/>
-                    <Button Command="{Binding BackupCommand}" Style="{StaticResource AccentButtonStyle}"
-                            HorizontalAlignment="Left" Margin="0,16,0,0">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,15,0">
-                                    <Path Fill="White" Stretch="Uniform"
-                                          Data="M64 128C64 110.3 78.3 96 96 96L544 96C561.7 96 576 110.3 576 128L576 160C576 177.7 561.7 192 544 192L96 192C78.3 192 64 177.7 64 160L64 128zM96 240L544 240L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 240zM248 304C234.7 304 224 314.7 224 328C224 341.3 234.7 352 248 352L392 352C405.3 352 416 341.3 416 328C416 314.7 405.3 304 392 304L248 304z"/>
-                                </Viewbox>
-                                <Label Content="Backup erstellen" Foreground="White" FontSize="18" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button.Content>
-                    </Button>
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button Command="{Binding BackupCommand}" Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Left">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,15,0">
+                                        <Path Fill="White" Stretch="Uniform"
+                                              Data="M64 128C64 110.3 78.3 96 96 96L544 96C561.7 96 576 110.3 576 128L576 160C576 177.7 561.7 192 544 192L96 192C78.3 192 64 177.7 64 160L64 128zM96 240L544 240L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 240zM248 304C234.7 304 224 314.7 224 328C224 341.3 234.7 352 248 352L392 352C405.3 352 416 341.3 416 328C416 314.7 405.3 304 392 304L248 304z"/>
+                                    </Viewbox>
+                                    <Label Content="Backup erstellen" Foreground="White" FontSize="18" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                        <Button Command="{Binding RestoreCommand}" HorizontalAlignment="Left" Margin="10,0,0,0">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="&#xE8E5;" FontSize="16" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <Label Content="Wiederherstellen" FontSize="16" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
