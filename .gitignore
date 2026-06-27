@@ -366,3 +366,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# KerwaKasse installer build output (Inno Setup)
+installer/Output/
