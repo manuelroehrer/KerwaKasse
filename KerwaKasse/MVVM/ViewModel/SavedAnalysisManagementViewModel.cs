@@ -189,6 +189,9 @@ namespace KerwaKasse.MVVM.ViewModel
         {
             _suppress = true;
 
+            _productSearchText = string.Empty;
+            OnPropertyChanged(nameof(ProductSearchText));
+
             var a = _selected == null ? null : _all.FirstOrDefault(x => x.Id == _selected.Id);
 
             EditName = a?.Name ?? string.Empty;

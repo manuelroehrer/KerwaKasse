@@ -256,6 +256,9 @@ namespace KerwaKasse.MVVM.ViewModel
             AllMenuProducts.Clear();
             HasUnsavedChanges = false;
 
+            _searchText = string.Empty;
+            OnPropertyChanged(nameof(SearchText));
+
             if (SelectedMenu == null)
             {
                 _originalIncludedIds = new HashSet<int>();
