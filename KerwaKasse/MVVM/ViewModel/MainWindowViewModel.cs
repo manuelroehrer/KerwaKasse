@@ -1,5 +1,6 @@
 ﻿using KerwaKasse.Helper;
 using KerwaKasse.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.MVVM.ViewModel
 {
@@ -21,6 +22,10 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IAnalyticsService _analyticsService;
         private readonly ISavedAnalysisService _savedAnalysisService;
 
+        // Factory instead of individual loggers because the sub view models are created lazily on
+        // every navigation, each with its own logger category.
+        private readonly ILoggerFactory _loggerFactory;
+
         private object currentView;
         public object CurrentView
         {
@@ -32,7 +37,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService, IDatabaseBackupService backupService)
+        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService, IDatabaseBackupService backupService, ILoggerFactory loggerFactory)
         {
             _dialogService = dialogService;
             _productService = productService;
@@ -41,16 +46,20 @@ namespace KerwaKasse.MVVM.ViewModel
             _menuService = menuService;
             _analyticsService = analyticsService;
             _savedAnalysisService = savedAnalysisService;
+            _loggerFactory = loggerFactory;
 
-            InfoVM = new InfoViewModel(dialogService, dbFilePath, backupService);
+            InfoVM = new InfoViewModel(dialogService, dbFilePath, backupService, loggerFactory.CreateLogger<InfoViewModel>());
 
-            OrderPanelViewCommand = new RelayCommand(o => CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService));
+            OrderPanelViewCommand = new RelayCommand(o => CurrentView = CreateOrderPanelViewModel());
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));
             OrderHistoryViewCommand = new RelayCommand(o => CurrentView = new OrderHistoryViewModel(_orderService, _productService));
-            AnalysisViewCommand = new RelayCommand(o => CurrentView = new AnalysisViewModel(_analyticsService, _productService, _savedAnalysisService, _dialogService));
+            AnalysisViewCommand = new RelayCommand(o => CurrentView = new AnalysisViewModel(_analyticsService, _productService, _savedAnalysisService, _dialogService, _loggerFactory.CreateLogger<AnalysisViewModel>()));
             InfoViewCommand = new RelayCommand(o => CurrentView = InfoVM);
 
-            CurrentView = new OrderPanelViewModel(_productService, _orderService, _settingsService, _dialogService);
+            CurrentView = CreateOrderPanelViewModel();
         }
+
+        private OrderPanelViewModel CreateOrderPanelViewModel() =>
+            new(_productService, _orderService, _settingsService, _dialogService, _loggerFactory.CreateLogger<OrderPanelViewModel>());
     }
 }
