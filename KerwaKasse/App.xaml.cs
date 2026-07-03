@@ -28,16 +28,16 @@ namespace KerwaKasse
             string dbFilePath = Path.Combine(appDir, "kerwakasse.db");
             string connectionString = $"Data Source={dbFilePath}";
 
-            // Serilog writes to a daily rolling file; retainedFileCountLimit is null on purpose so
-            // last year's logs survive until the next Kerwa (the app runs only a few days per year).
-            // The invariant format provider keeps numbers deterministic (3.50 instead of 3,50)
-            // regardless of the machine's culture.
+            // Serilog writes to a daily rolling file, capped at roughly a year of files as a safety
+            // limit against unbounded growth; the daily files are small, so keeping that much history
+            // stays cheap. The invariant format provider keeps numbers deterministic (3.50 instead of
+            // 3,50) regardless of the machine's culture.
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File(
                     Path.Combine(appDir, "logs", "kerwakasse-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: null,
+                    retainedFileCountLimit: 365,
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}",
                     formatProvider: CultureInfo.InvariantCulture)
                 .CreateLogger();
