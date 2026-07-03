@@ -2,16 +2,19 @@ using Dapper;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.Core.Data;
 
 public class SqliteProductService : IProductService
 {
     private readonly string _connectionString;
+    private readonly ILogger<SqliteProductService> _logger;
 
-    public SqliteProductService(string connectionString)
+    public SqliteProductService(string connectionString, ILogger<SqliteProductService> logger)
     {
         _connectionString = connectionString;
+        _logger = logger;
     }
 
     public List<Product> GetAll()
@@ -33,12 +36,16 @@ public class SqliteProductService : IProductService
     public void Add(Product product)
     {
         using var connection = new SqliteConnection(_connectionString);
-        connection.Execute(
+        var productId = connection.ExecuteScalar<long>(
             """
             INSERT INTO Products (Name, PriceCents, Available, Color, SortOrder)
-            VALUES (@Name, @PriceCents, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1))
+            VALUES (@Name, @PriceCents, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1));
+            SELECT last_insert_rowid();
             """,
             new { product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color });
+
+        _logger.LogInformation("Product {ProductId} (\"{ProductName}\") created: price {Price:0.00} €, available: {Available}",
+            productId, product.Name, product.Price, product.Available);
     }
 
     public void Update(Product product)
@@ -50,6 +57,9 @@ public class SqliteProductService : IProductService
             WHERE Id = @Id
             """,
             new { product.Id, product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color, product.SortOrder });
+
+        _logger.LogInformation("Product {ProductId} (\"{ProductName}\") updated: price {Price:0.00} €, available: {Available}",
+            product.Id, product.Name, product.Price, product.Available);
     }
 
     public void UpdateAvailability(int productId, bool available)
@@ -58,15 +68,23 @@ public class SqliteProductService : IProductService
         connection.Execute(
             "UPDATE Products SET Available = @available WHERE Id = @productId",
             new { available, productId });
+
+        // The name is looked up purely for the log entry; the caller only knows the id.
+        var productName = connection.ExecuteScalar<string>(
+            "SELECT Name FROM Products WHERE Id = @productId", new { productId });
+        _logger.LogInformation("Product {ProductId} (\"{ProductName}\") availability changed: {Available}",
+            productId, productName, available);
     }
 
     public void UpdateSortOrder(IEnumerable<Product> products)
     {
+        var productList = products.ToList();
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         using var transaction = connection.BeginTransaction();
 
-        foreach (var product in products)
+        foreach (var product in productList)
         {
             connection.Execute(
                 "UPDATE Products SET SortOrder = @SortOrder WHERE Id = @Id",
@@ -75,6 +93,8 @@ public class SqliteProductService : IProductService
         }
 
         transaction.Commit();
+
+        _logger.LogInformation("Sort order of {ProductCount} products updated", productList.Count);
     }
 
     public int GetUsageCount(int productId)

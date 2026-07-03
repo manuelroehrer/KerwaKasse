@@ -1,11 +1,17 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Data;
 
 public static class DatabaseInitializer
 {
-    public static void Initialize(string connectionString)
+    // The logger is optional so throwaway schema builds (e.g. the in-memory reference database in
+    // DatabaseBackupService) and tests don't have to provide one.
+    public static void Initialize(string connectionString, ILogger? logger = null)
     {
+        logger ??= NullLogger.Instance;
+
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
 
@@ -71,12 +77,14 @@ public static class DatabaseInitializer
             """;
         command.ExecuteNonQuery();
 
-        EnsureMenuSortOrderColumn(connection);
+        EnsureMenuSortOrderColumn(connection, logger);
+
+        logger.LogDebug("Database schema verified/created");
     }
 
     /// <summary>Databases created before the Menus.SortOrder column existed don't get it from the
     /// CREATE TABLE above (that only runs for new tables); add it where it is still missing.</summary>
-    private static void EnsureMenuSortOrderColumn(SqliteConnection connection)
+    private static void EnsureMenuSortOrderColumn(SqliteConnection connection, ILogger logger)
     {
         using var check = connection.CreateCommand();
         check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Menus') WHERE name = 'SortOrder';";
@@ -85,5 +93,7 @@ public static class DatabaseInitializer
         using var alter = connection.CreateCommand();
         alter.CommandText = "ALTER TABLE Menus ADD COLUMN SortOrder INTEGER NOT NULL DEFAULT 0;";
         alter.ExecuteNonQuery();
+
+        logger.LogInformation("Migration applied: column SortOrder added to table Menus");
     }
 }

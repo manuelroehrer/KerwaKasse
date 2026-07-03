@@ -3,6 +3,7 @@ using Dapper;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.Core.Data;
 
@@ -15,14 +16,18 @@ public class SqliteOrderService : IOrderService
     private const string SqliteDateFormat = "yyyy-MM-dd HH:mm:ss";
 
     private readonly string _connectionString;
+    private readonly ILogger<SqliteOrderService> _logger;
 
-    public SqliteOrderService(string connectionString)
+    public SqliteOrderService(string connectionString, ILogger<SqliteOrderService> logger)
     {
         _connectionString = connectionString;
+        _logger = logger;
     }
 
     public void PlaceOrder(IEnumerable<OrderPosition> positions)
     {
+        var positionList = positions.ToList();
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         using var transaction = connection.BeginTransaction();
@@ -32,7 +37,7 @@ public class SqliteOrderService : IOrderService
             new { Now = DateTime.Now.ToString(SqliteDateFormat) },
             transaction);
 
-        foreach (var pos in positions)
+        foreach (var pos in positionList)
         {
             connection.Execute(
                 """
@@ -50,6 +55,9 @@ public class SqliteOrderService : IOrderService
         }
 
         transaction.Commit();
+
+        _logger.LogInformation("Order {OrderId} created: {PositionCount} positions, total {Total:0.00} €",
+            orderId, positionList.Count, positionList.Sum(p => p.Amount * p.UnitPrice));
     }
 
     public List<Order> GetOrdersByDate(DateTime date)
@@ -131,6 +139,9 @@ public class SqliteOrderService : IOrderService
         }
 
         transaction.Commit();
+
+        _logger.LogInformation("Order {OrderId} updated: now {PositionCount} positions, total {Total:0.00} €",
+            order.Id, order.Positions.Count, order.Positions.Sum(p => p.Amount * p.UnitPrice));
     }
 
     public void DeleteOrder(int orderId)
@@ -149,6 +160,8 @@ public class SqliteOrderService : IOrderService
             transaction);
 
         transaction.Commit();
+
+        _logger.LogInformation("Order {OrderId} deleted", orderId);
     }
 
     public List<SalesFigure> GetSalesFigures(DateTime from, DateTime to)

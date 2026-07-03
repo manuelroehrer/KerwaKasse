@@ -1,6 +1,7 @@
 using KerwaKasse.Core.Data;
 using KerwaKasse.Core.Models;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Tests.Data;
 
@@ -18,13 +19,13 @@ public class DatabaseBackupServiceTests : IDisposable
         _dbPath = Path.Combine(_dir, "kerwakasse.db");
         _connectionString = $"Data Source={_dbPath}";
         DatabaseInitializer.Initialize(_connectionString);
-        _sut = new DatabaseBackupService(_connectionString, _dbPath);
+        _sut = new DatabaseBackupService(_connectionString, _dbPath, NullLogger<DatabaseBackupService>.Instance);
     }
 
     [Fact]
     public void GetSummary_CountsRows()
     {
-        var products = new SqliteProductService(_connectionString);
+        var products = new SqliteProductService(_connectionString, NullLogger<SqliteProductService>.Instance);
         products.Add(new Product { Name = "Bratwurst", Price = 3m });
         products.Add(new Product { Name = "Pommes", Price = 2m });
 
@@ -124,18 +125,18 @@ public class DatabaseBackupServiceTests : IDisposable
     [Fact]
     public void Restore_ReplacesLiveDatabaseWithSourceContents()
     {
-        new SqliteProductService(_connectionString).Add(new Product { Name = "Original", Price = 1m });
+        new SqliteProductService(_connectionString, NullLogger<SqliteProductService>.Instance).Add(new Product { Name = "Original", Price = 1m });
 
         // A separate source database holding a different product.
         var sourcePath = Path.Combine(_dir, "source.db");
         var sourceConnectionString = $"Data Source={sourcePath}";
         DatabaseInitializer.Initialize(sourceConnectionString);
-        new SqliteProductService(sourceConnectionString).Add(new Product { Name = "Aus Backup", Price = 2m });
+        new SqliteProductService(sourceConnectionString, NullLogger<SqliteProductService>.Instance).Add(new Product { Name = "Aus Backup", Price = 2m });
         SqliteConnection.ClearAllPools();
 
         _sut.Restore(sourcePath);
 
-        var product = Assert.Single(new SqliteProductService(_connectionString).GetAll());
+        var product = Assert.Single(new SqliteProductService(_connectionString, NullLogger<SqliteProductService>.Instance).GetAll());
         Assert.Equal("Aus Backup", product.Name);
     }
 
