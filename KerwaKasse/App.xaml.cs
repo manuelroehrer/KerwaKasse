@@ -5,6 +5,7 @@ using System.Windows.Markup;
 using KerwaKasse.Core.Data;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
@@ -48,6 +49,8 @@ namespace KerwaKasse
             _logger.LogInformation("KerwaKasse {Version} started, database: {DbFilePath}",
                 version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "unknown", dbFilePath);
 
+            RegisterGlobalExceptionLogging();
+
             DatabaseInitializer.Initialize(connectionString, _loggerFactory.CreateLogger(typeof(DatabaseInitializer)));
 
             new MainWindow(_loggerFactory).Show();
@@ -60,6 +63,20 @@ namespace KerwaKasse
             _logger?.LogInformation("KerwaKasse exited (exit code {ExitCode})", e.ApplicationExitCode);
             Log.CloseAndFlush();
             base.OnExit(e);
+        }
+
+        // Crashes on the production laptop leave no trace otherwise; log them before the app dies.
+        private void RegisterGlobalExceptionLogging()
+        {
+            DispatcherUnhandledException += (_, args) =>
+                _logger.LogCritical(args.Exception, "Unhandled exception on UI thread");
+
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+                _logger.LogCritical(args.ExceptionObject as Exception,
+                    "Unhandled exception (AppDomain), terminating: {IsTerminating}", args.IsTerminating);
+
+            TaskScheduler.UnobservedTaskException += (_, args) =>
+                _logger.LogError(args.Exception, "Unobserved task exception");
         }
     }
 }
