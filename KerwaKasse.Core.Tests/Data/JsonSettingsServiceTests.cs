@@ -1,4 +1,5 @@
 using KerwaKasse.Core.Data;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Tests.Data;
 
@@ -16,7 +17,7 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Get_WithMissingFile_ReturnsDefault()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
 
         Assert.Equal(42.0, sut.Get("missing", 42.0));
     }
@@ -24,7 +25,7 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Set_And_Get_RoundTrip()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
 
         sut.Set("myKey", 123);
         Assert.Equal(123, sut.Get<int>("myKey"));
@@ -33,13 +34,13 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Save_And_Reload_PersistsValues()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
         sut.Set("name", "Bratwurst");
         sut.Set("price", 3.50);
         sut.Save();
 
         // New instance reads from disk
-        var sut2 = new JsonSettingsService(_filePath);
+        var sut2 = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
         Assert.Equal("Bratwurst", sut2.Get<string>("name"));
         Assert.Equal(3.50, sut2.Get<double>("price"));
     }
@@ -47,7 +48,7 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Save_CreatesDirectoryIfMissing()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
         sut.Set("key", "value");
         sut.Save();
 
@@ -58,7 +59,7 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Get_WithWrongType_ReturnsDefault()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
         sut.Set("key", "not a number");
 
         // Trying to read as int should return default
@@ -68,7 +69,7 @@ public class JsonSettingsServiceTests : IDisposable
     [Fact]
     public void Get_NonexistentKey_ReturnsDefault()
     {
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
 
         Assert.Null(sut.Get<string>("nope"));
         Assert.Equal(0, sut.Get<int>("nope"));
@@ -81,7 +82,7 @@ public class JsonSettingsServiceTests : IDisposable
         Directory.CreateDirectory(_tempDir);
         File.WriteAllText(_filePath, "{ this is not valid json !!!");
 
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
 
         // Should fall back to empty settings, not crash
         Assert.Equal(42, sut.Get("key", 42));
@@ -93,7 +94,7 @@ public class JsonSettingsServiceTests : IDisposable
         Directory.CreateDirectory(_tempDir);
         File.WriteAllText(_filePath, "");
 
-        var sut = new JsonSettingsService(_filePath);
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
 
         Assert.Equal("default", sut.Get("key", "default"));
     }

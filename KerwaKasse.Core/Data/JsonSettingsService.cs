@@ -1,16 +1,22 @@
 using System.Text.Json;
 using KerwaKasse.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.Core.Data;
 
 public class JsonSettingsService : ISettingsService
 {
     private readonly string _filePath;
+    private readonly ILogger<JsonSettingsService> _logger;
     private Dictionary<string, JsonElement> _settings = new();
 
-    public JsonSettingsService(string filePath)
+    // Keys whose value actually changed since the last Save, so the log can name what was written.
+    private readonly HashSet<string> _changedKeys = new();
+
+    public JsonSettingsService(string filePath, ILogger<JsonSettingsService> logger)
     {
         _filePath = filePath;
+        _logger = logger;
         Load();
     }
 
@@ -28,8 +34,9 @@ public class JsonSettingsService : ISettingsService
             _settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
                         ?? new Dictionary<string, JsonElement>();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Settings file {FilePath} could not be read, falling back to defaults", _filePath);
             _settings = new Dictionary<string, JsonElement>();
         }
     }
@@ -52,7 +59,14 @@ public class JsonSettingsService : ISettingsService
     public void Set<T>(string key, T value)
     {
         var json = JsonSerializer.Serialize(value);
-        _settings[key] = JsonDocument.Parse(json).RootElement.Clone();
+        var element = JsonDocument.Parse(json).RootElement.Clone();
+
+        // Setting the same value again is not a change; skip it so the change log stays accurate.
+        if (_settings.TryGetValue(key, out var existing) && existing.GetRawText() == element.GetRawText())
+            return;
+
+        _settings[key] = element;
+        _changedKeys.Add(key);
     }
 
     public bool SetIfAbsent<T>(string key, T value)
@@ -71,5 +85,11 @@ public class JsonSettingsService : ISettingsService
         if (dir != null && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
         File.WriteAllText(_filePath, json);
+
+        if (_changedKeys.Count > 0)
+            _logger.LogDebug("Settings saved, changed entries: {ChangedKeys}", string.Join(", ", _changedKeys));
+        else
+            _logger.LogDebug("Settings saved, no entries changed");
+        _changedKeys.Clear();
     }
 }
