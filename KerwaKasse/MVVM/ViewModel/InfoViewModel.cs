@@ -1,5 +1,6 @@
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,13 +23,15 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private readonly IDialogService _dialogService;
         private readonly IDatabaseBackupService _backupService;
+        private readonly ILogger<InfoViewModel> _logger;
         private readonly string _dbFilePath;
         private readonly string _dataFolder;
 
-        public InfoViewModel(IDialogService dialogService, string dbFilePath, IDatabaseBackupService backupService)
+        public InfoViewModel(IDialogService dialogService, string dbFilePath, IDatabaseBackupService backupService, ILogger<InfoViewModel> logger)
         {
             _dialogService = dialogService;
             _backupService = backupService;
+            _logger = logger;
             _dbFilePath = dbFilePath;
             _dataFolder = Path.GetDirectoryName(dbFilePath) ?? string.Empty;
 
@@ -59,10 +62,12 @@ namespace KerwaKasse.MVVM.ViewModel
                 try
                 {
                     File.Copy(_dbFilePath, filePath, true);
+                    _logger.LogInformation("Database backup created: {FilePath}", filePath);
                     _dialogService.ShowMessage("Backup erfolgreich erstellt.");
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Backup to {FilePath} failed", filePath);
                     _dialogService.ShowError("Backup fehlgeschlagen: " + ex.Message);
                 }
             }
@@ -106,6 +111,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Restore from {SourcePath} failed", sourcePath);
                 _dialogService.ShowError("Wiederherstellen fehlgeschlagen: " + ex.Message);
             }
         }
@@ -141,6 +147,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to open data folder {DataFolder}", _dataFolder);
                 _dialogService.ShowError("Datenordner konnte nicht geöffnet werden: " + ex.Message);
             }
         }

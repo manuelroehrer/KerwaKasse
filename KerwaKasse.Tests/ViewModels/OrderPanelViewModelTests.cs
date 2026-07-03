@@ -3,6 +3,7 @@ using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.ViewModel;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace KerwaKasse.Tests.ViewModels;
@@ -33,7 +34,7 @@ public class OrderPanelViewModelTests
         _settings.Get("orderPanelBorderDarkenFactor", 0.7).Returns(0.7);
         _settings.Get("orderPanelWidth", 350.0).Returns(350.0);
 
-        _sut = new OrderPanelViewModel(_productService, _orderService, _settings, _dialogService);
+        _sut = new OrderPanelViewModel(_productService, _orderService, _settings, _dialogService, NullLogger<OrderPanelViewModel>.Instance);
     }
 
     [Fact]

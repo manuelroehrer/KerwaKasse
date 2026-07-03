@@ -2,6 +2,7 @@ using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace KerwaKasse.Tests.ViewModels;
@@ -32,7 +33,7 @@ public class AnalysisViewModelTests
             .Returns(new List<TimeBucketSales>());
     }
 
-    private AnalysisViewModel CreateSut() => new(_analytics, _products, _saved, _dialog);
+    private AnalysisViewModel CreateSut() => new(_analytics, _products, _saved, _dialog, NullLogger<AnalysisViewModel>.Instance);
 
     private void WithFigures(params SalesFigure[] figures) =>
         _analytics.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
