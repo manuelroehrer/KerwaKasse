@@ -1,6 +1,7 @@
 using KerwaKasse.Core.Data;
 using KerwaKasse.Core.Models;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Tests.Data;
 
@@ -17,8 +18,8 @@ public class SqliteOrderServiceTests : IDisposable
         _keepAlive = new SqliteConnection(_connectionString);
         _keepAlive.Open();
         DatabaseInitializer.Initialize(_connectionString);
-        _sut = new SqliteOrderService(_connectionString);
-        _productService = new SqliteProductService(_connectionString);
+        _sut = new SqliteOrderService(_connectionString, NullLogger<SqliteOrderService>.Instance);
+        _productService = new SqliteProductService(_connectionString, NullLogger<SqliteProductService>.Instance);
     }
 
     private Product AddTestProduct(string desc = "Bratwurst", decimal price = 3.50m)

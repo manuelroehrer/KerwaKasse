@@ -3,6 +3,7 @@ using Dapper;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.Core.Data;
 
@@ -12,10 +13,12 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
     private const string SqliteDateFormat = "yyyy-MM-dd HH:mm:ss";
 
     private readonly string _connectionString;
+    private readonly ILogger<SqliteSavedAnalysisService> _logger;
 
-    public SqliteSavedAnalysisService(string connectionString)
+    public SqliteSavedAnalysisService(string connectionString, ILogger<SqliteSavedAnalysisService> logger)
     {
         _connectionString = connectionString;
+        _logger = logger;
     }
 
     public List<SavedAnalysis> GetAll()
@@ -57,6 +60,8 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         InsertProducts(connection, transaction, id, analysis);
 
         transaction.Commit();
+
+        _logger.LogInformation("Saved analysis {AnalysisId} (\"{AnalysisName}\") created", id, analysis.Name);
         return id;
     }
 
@@ -79,35 +84,48 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         InsertProducts(connection, transaction, analysis.Id, analysis);
 
         transaction.Commit();
+
+        _logger.LogInformation("Saved analysis {AnalysisId} (\"{AnalysisName}\") updated", analysis.Id, analysis.Name);
     }
 
     public void Rename(int id, string newName)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Execute("UPDATE SavedAnalyses SET Name = @newName WHERE Id = @id", new { id, newName });
+
+        _logger.LogInformation("Saved analysis {AnalysisId} renamed to \"{AnalysisName}\"", id, newName);
     }
 
     public void Delete(int id)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+        // The name is looked up purely for the log entry; the caller only knows the id.
+        var analysisName = connection.ExecuteScalar<string>(
+            "SELECT Name FROM SavedAnalyses WHERE Id = @id", new { id });
         using var transaction = connection.BeginTransaction();
         connection.Execute("DELETE FROM SavedAnalysisProducts WHERE SavedAnalysisId = @id", new { id }, transaction);
         connection.Execute("DELETE FROM SavedAnalyses WHERE Id = @id", new { id }, transaction);
         transaction.Commit();
+
+        _logger.LogInformation("Saved analysis {AnalysisId} (\"{AnalysisName}\") deleted", id, analysisName);
     }
 
     public void UpdateSortOrder(IEnumerable<SavedAnalysis> analyses)
     {
+        var analysisList = analyses.ToList();
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         using var transaction = connection.BeginTransaction();
-        foreach (var a in analyses)
+        foreach (var a in analysisList)
         {
             connection.Execute("UPDATE SavedAnalyses SET SortOrder = @SortOrder WHERE Id = @Id",
                 new { a.SortOrder, a.Id }, transaction);
         }
         transaction.Commit();
+
+        _logger.LogInformation("Sort order of {AnalysisCount} saved analyses updated", analysisList.Count);
     }
 
     private static void InsertProducts(SqliteConnection connection, SqliteTransaction transaction, int id, SavedAnalysis analysis)

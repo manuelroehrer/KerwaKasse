@@ -13,6 +13,7 @@ using KerwaKasse.MVVM.Model;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace KerwaKasse.MVVM.ViewModel
@@ -40,6 +41,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IProductService _productService;
         private readonly ISavedAnalysisService _savedAnalysisService;
         private readonly IDialogService _dialogService;
+        private readonly ILogger<AnalysisViewModel> _logger;
 
         private bool _suppressReload;
         private AnalysisTimeResolution _resolution = AnalysisTimeResolution.Hour;
@@ -53,12 +55,14 @@ namespace KerwaKasse.MVVM.ViewModel
             IAnalyticsService analytics,
             IProductService productService,
             ISavedAnalysisService savedAnalysisService,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            ILogger<AnalysisViewModel> logger)
         {
             _analytics = analytics;
             _productService = productService;
             _savedAnalysisService = savedAnalysisService;
             _dialogService = dialogService;
+            _logger = logger;
 
             TimeFrom_Values = new ObservableCollection<DateTime>();
             TimeTo_Values = new ObservableCollection<DateTime>();
@@ -547,6 +551,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to save analysis");
                 _dialogService.ShowError("Speichern fehlgeschlagen: " + ex.Message);
             }
         }
@@ -588,9 +593,12 @@ namespace KerwaKasse.MVVM.ViewModel
                 if (string.IsNullOrEmpty(path)) return;
 
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+
+                _logger.LogInformation("Analysis exported to CSV: {FilePath}", path);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "CSV export failed");
                 _dialogService.ShowError("Export fehlgeschlagen: " + ex.Message);
             }
         }

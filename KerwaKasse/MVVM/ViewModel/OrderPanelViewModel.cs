@@ -2,6 +2,7 @@ using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 using KerwaKasse.MVVM.Model;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,6 +21,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IOrderService _orderService;
         private readonly ISettingsService _settings;
         private readonly IDialogService _dialogService;
+        private readonly ILogger<OrderPanelViewModel> _logger;
 
         private List<ProductModel> products;
         public List<ProductModel> Products
@@ -81,12 +83,13 @@ namespace KerwaKasse.MVVM.ViewModel
             set { total = value; OnPropertyChanged(); }
         }
 
-        public OrderPanelViewModel(IProductService productService, IOrderService orderService, ISettingsService settings, IDialogService dialogService)
+        public OrderPanelViewModel(IProductService productService, IOrderService orderService, ISettingsService settings, IDialogService dialogService, ILogger<OrderPanelViewModel> logger)
         {
             _productService = productService;
             _orderService = orderService;
             _settings = settings;
             _dialogService = dialogService;
+            _logger = logger;
 
             AddOrderPositionCommand = new RelayCommand(o => AddOrderPosition(o as ProductModel));
             DiscardOrderCommand = new RelayCommand(o => DiscardOrder());
@@ -182,6 +185,8 @@ namespace KerwaKasse.MVVM.ViewModel
             }
             catch (Exception e)
             {
+                _logger.LogError(e, "Failed to place order ({PositionCount} positions, total {Total:0.00} €)",
+                    OrderPositions.Count, Total);
                 _dialogService.ShowError(e.Message);
             }
         }

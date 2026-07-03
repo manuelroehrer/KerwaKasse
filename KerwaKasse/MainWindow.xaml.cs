@@ -1,6 +1,7 @@
 ﻿using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
 using KerwaKasse.Core.Data;
+using Microsoft.Extensions.Logging;
 using System.Windows;
 using System.Windows.Input;
 using System;
@@ -13,24 +14,24 @@ namespace KerwaKasse
         private const string WindowStateSettingKey = "MainWindow.WindowState";
         private readonly JsonSettingsService _settingsService;
 
-        public MainWindow()
+        public MainWindow(ILoggerFactory loggerFactory)
         {
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
             string dbFilePath = Path.Combine(appDir, "kerwakasse.db");
             string settingsFilePath = Path.Combine(appDir, "settings.json");
             string connectionString = $"Data Source={dbFilePath}";
 
-            var productService = new SqliteProductService(connectionString);
-            var orderService = new SqliteOrderService(connectionString);
-            var settingsService = new JsonSettingsService(settingsFilePath);
+            var productService = new SqliteProductService(connectionString, loggerFactory.CreateLogger<SqliteProductService>());
+            var orderService = new SqliteOrderService(connectionString, loggerFactory.CreateLogger<SqliteOrderService>());
+            var settingsService = new JsonSettingsService(settingsFilePath, loggerFactory.CreateLogger<JsonSettingsService>());
             var dialogService = new DialogService();
-            var menuService = new SqliteMenuService(connectionString);
+            var menuService = new SqliteMenuService(connectionString, loggerFactory.CreateLogger<SqliteMenuService>());
             var analyticsService = new SqliteAnalyticsService(connectionString);
-            var savedAnalysisService = new SqliteSavedAnalysisService(connectionString);
-            var backupService = new DatabaseBackupService(connectionString, dbFilePath);
+            var savedAnalysisService = new SqliteSavedAnalysisService(connectionString, loggerFactory.CreateLogger<SqliteSavedAnalysisService>());
+            var backupService = new DatabaseBackupService(connectionString, dbFilePath, loggerFactory.CreateLogger<DatabaseBackupService>());
             _settingsService = settingsService;
 
-            DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService);
+            DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService, loggerFactory);
             InitializeComponent();
             RestoreWindowState();
         }

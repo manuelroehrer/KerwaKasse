@@ -1,6 +1,7 @@
 using Dapper;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace KerwaKasse.Core.Data;
 
@@ -8,11 +9,13 @@ public class DatabaseBackupService : IDatabaseBackupService
 {
     private readonly string _connectionString;
     private readonly string _dbFilePath;
+    private readonly ILogger<DatabaseBackupService> _logger;
 
-    public DatabaseBackupService(string connectionString, string dbFilePath)
+    public DatabaseBackupService(string connectionString, string dbFilePath, ILogger<DatabaseBackupService> logger)
     {
         _connectionString = connectionString;
         _dbFilePath = dbFilePath;
+        _logger = logger;
     }
 
     public DatabaseSummary GetSummary()
@@ -36,7 +39,10 @@ public class DatabaseBackupService : IDatabaseBackupService
             // Must look like a KerwaKasse database at all, not an arbitrary SQLite file: the two oldest,
             // always-present tables have to be there.
             if (!source.ContainsKey("Products") || !source.ContainsKey("Orders"))
+            {
+                _logger.LogWarning("File {FilePath} rejected: core tables (Products/Orders) missing", filePath);
                 return false;
+            }
 
             // Every table the file shares with the current schema has to carry all columns the app reads
             // and writes. Tables the file lacks entirely are fine — the migration on restore creates them.
@@ -46,13 +52,17 @@ public class DatabaseBackupService : IDatabaseBackupService
             foreach (var (table, expectedColumns) in GetExpectedSchema())
             {
                 if (source.TryGetValue(table, out var actualColumns) && !expectedColumns.IsSubsetOf(actualColumns))
+                {
+                    _logger.LogWarning("File {FilePath} rejected: table {Table} is missing expected columns", filePath, table);
                     return false;
+                }
             }
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "File {FilePath} rejected: not a readable SQLite database", filePath);
             return false;
         }
     }
@@ -101,6 +111,8 @@ public class DatabaseBackupService : IDatabaseBackupService
         }
 
         // The restored file may come from an older app version: create any missing tables/columns.
-        DatabaseInitializer.Initialize(_connectionString);
+        DatabaseInitializer.Initialize(_connectionString, _logger);
+
+        _logger.LogInformation("Database restored from {SourceFilePath}", sourceFilePath);
     }
 }

@@ -1,6 +1,7 @@
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using KerwaKasse.Core.Models;
 
@@ -38,7 +39,7 @@ public class MainWindowViewModelTests
         _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
             .Returns(new List<SalesFigure>());
 
-        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService);
+        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, NullLoggerFactory.Instance);
     }
 
     [Fact]

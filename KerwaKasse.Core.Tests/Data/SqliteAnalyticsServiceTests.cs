@@ -2,6 +2,7 @@ using KerwaKasse.Core.Data;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Tests.Data;
 
@@ -18,7 +19,7 @@ public class SqliteAnalyticsServiceTests : IDisposable
         _keepAlive.Open();
         DatabaseInitializer.Initialize(connectionString);
         _sut = new SqliteAnalyticsService(connectionString);
-        _products = new SqliteProductService(connectionString);
+        _products = new SqliteProductService(connectionString, NullLogger<SqliteProductService>.Instance);
     }
 
     private int AddProduct(string name, decimal price)

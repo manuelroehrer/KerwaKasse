@@ -1,8 +1,8 @@
-﻿<Application x:Class="KerwaKasse.App"
+﻿<!-- No StartupUri: MainWindow is created in App.OnStartup so the logger factory can be handed in. -->
+<Application x:Class="KerwaKasse.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:KerwaKasse"
-             StartupUri="MainWindow.xaml"
              xmlns:ui="http://schemas.modernwpf.com/2019">
     <Application.Resources>
         <ResourceDictionary>
