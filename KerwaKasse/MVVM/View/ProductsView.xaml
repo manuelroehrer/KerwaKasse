@@ -172,7 +172,8 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
             <ColumnDefinition Width="12"/>
-            <ColumnDefinition Width="{Binding SidePanelWidth, Converter={StaticResource DoubleToGridLength}, FallbackValue=440}"/>
+            <ColumnDefinition Width="{Binding SidePanelWidth, Converter={StaticResource DoubleToGridLength}, FallbackValue=440}"
+                              MinWidth="360" MaxWidth="600"/>
         </Grid.ColumnDefinitions>
 
         <!-- Header: title + product search + Speisekarten dropdown (top-right) -->
