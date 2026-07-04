@@ -388,11 +388,25 @@
                                     <Run Text="PRODUKTE" FontSize="12.5" FontWeight="SemiBold" Foreground="#8B929E"/><Run Text="   "/><Run Text="{Binding ProductSelectionSummary, Mode=OneWay}" FontSize="12.5" Foreground="#8B929E"/>
                                 </TextBlock>
                             </DockPanel>
+                            <!-- Search (manual placeholder so it stays vertically centered) -->
                             <Grid DockPanel.Dock="Top" Margin="24,8,24,0">
                                 <TextBox Text="{Binding ProductSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Height="38" VerticalContentAlignment="Center" Padding="36,0,10,0"/>
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#8B929E"
                                            IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="13,0,0,0"/>
+                                <TextBlock Text="Produkt suchen …" Foreground="#9AA0A6" FontSize="14" IsHitTestVisible="False"
+                                           VerticalAlignment="Center" HorizontalAlignment="Left" Margin="36,0,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ProductSearchText}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="24,12,18,6">
