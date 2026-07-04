@@ -81,6 +81,25 @@ public class DatabaseInitializerTests : IDisposable
     }
 
     [Fact]
+    public void Initialize_BackfillsNullProductColor()
+    {
+        // Simulates a row imported from outside the app (e.g. the MySQL migration tool), which the
+        // app itself never produces since it always assigns a colour on product creation.
+        DatabaseInitializer.Initialize(_connectionString);
+        using (var insert = _connection.CreateCommand())
+        {
+            insert.CommandText = "INSERT INTO Products (Name, PriceCents, Color) VALUES ('Kinderkrenfleisch', 100, NULL)";
+            insert.ExecuteNonQuery();
+        }
+
+        DatabaseInitializer.Initialize(_connectionString);
+
+        using var check = _connection.CreateCommand();
+        check.CommandText = "SELECT Color FROM Products WHERE Name = 'Kinderkrenfleisch'";
+        Assert.Equal(DatabaseInitializer.DefaultProductColor, (string)check.ExecuteScalar()!);
+    }
+
+    [Fact]
     public void Initialize_AddsMissingMenuSortOrderColumn()
     {
         // Simulate a database whose Menus table predates the SortOrder column.

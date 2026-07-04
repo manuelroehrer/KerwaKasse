@@ -6,6 +6,10 @@ namespace KerwaKasse.Core.Data;
 
 public static class DatabaseInitializer
 {
+    // Same LightGray used as the "no colour chosen" fallback throughout the app (ColorBorderHelper,
+    // ProductModel); stored in the 8-digit ARGB form the colour picker itself writes.
+    public const string DefaultProductColor = "#FFD3D3D3";
+
     // The logger is optional so throwaway schema builds (e.g. the in-memory reference database in
     // DatabaseBackupService) and tests don't have to provide one.
     public static void Initialize(string connectionString, ILogger? logger = null)
@@ -80,6 +84,7 @@ public static class DatabaseInitializer
         command.ExecuteNonQuery();
 
         EnsureMenuSortOrderColumn(connection, logger);
+        EnsureProductColorAssigned(connection, logger);
 
         logger.LogDebug("Database schema verified/created");
     }
@@ -117,5 +122,20 @@ public static class DatabaseInitializer
         alter.ExecuteNonQuery();
 
         logger.LogInformation("Migration applied: column SortOrder added to table Menus");
+    }
+
+    /// <summary>The app itself always assigns a colour on product creation (see
+    /// ProductsViewModel.BeginAddProduct), so a NULL Color can only come from data imported outside
+    /// the app (e.g. the MySQL migration tool, which allowed it). Backfill such rows with the
+    /// default colour so every view can rely on Products.Color always being set.</summary>
+    private static void EnsureProductColorAssigned(SqliteConnection connection, ILogger logger)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE Products SET Color = @default WHERE Color IS NULL";
+        command.Parameters.AddWithValue("@default", DefaultProductColor);
+        int affected = command.ExecuteNonQuery();
+
+        if (affected > 0)
+            logger.LogInformation("Migration applied: {ProductCount} product(s) without a colour assigned the default colour", affected);
     }
 }
