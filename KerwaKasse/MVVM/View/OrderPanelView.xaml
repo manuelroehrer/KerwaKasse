@@ -13,6 +13,10 @@
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
         <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
 
+        <!-- Captures this view's DataContext so the tiles' ScaleTransform (not in the visual tree,
+             so RelativeSource FindAncestor cannot reach the view model) can bind the scale factor. -->
+        <helper:BindingProxy x:Key="ViewModelProxy" Data="{Binding}"/>
+
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </UserControl.Resources>
 
@@ -41,8 +45,8 @@
                         <Button Command="{Binding Path=DataContext.AddOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}">
                             <Button.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding Path=DataContext.EffectiveScaleFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ScaleY="{Binding Path=DataContext.EffectiveScaleFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
+                                                ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
                             </Button.LayoutTransform>
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">

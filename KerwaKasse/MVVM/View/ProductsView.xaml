@@ -114,6 +114,30 @@
             </Setter>
         </Style>
 
+        <!-- Same look, but without the IsActive tint: the footer "manage" row binds against the
+             ProductsViewModel (which has no IsActive), so it must not carry that trigger. -->
+        <Style x:Key="MenuFooterButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="10,9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="7" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Subtle outline buttons for the reorder actions (white fill, thin border).
              When disabled (the top/bottom item) the button is hidden rather than greyed — a greyed
              default-button background would look more prominent than this subtle enabled style.
@@ -261,7 +285,7 @@
                                 <!-- Footer banner (manage) -->
                                 <Border DockPanel.Dock="Bottom" Background="#F7F8FA" CornerRadius="0,0,8,8"
                                         BorderBrush="#EDEFF2" BorderThickness="0,1,0,0" Padding="6">
-                                    <Button Style="{StaticResource MenuRowButton}" Click="ManageMenus_Click">
+                                    <Button Style="{StaticResource MenuFooterButton}" Click="ManageMenus_Click">
                                         <StackPanel Orientation="Horizontal">
                                             <Path Data="{StaticResource LayersIcon}" Stroke="#586070" StrokeThickness="1.4"
                                                   StrokeLineJoin="Round" Width="16" Height="16" Stretch="Uniform"
@@ -562,7 +586,7 @@
                             <!-- Error + character counter -->
                             <Grid Margin="0,5,0,0">
                                 <TextBlock FontSize="12" Foreground="#E53935"
-                                           Text="{Binding (Validation.Errors)[0].ErrorContent, ElementName=NameTextBox}"
+                                           Text="{Binding (Validation.Errors)/ErrorContent, ElementName=NameTextBox}"
                                            Visibility="{Binding (Validation.HasError), ElementName=NameTextBox,
                                                                 Converter={StaticResource BoolToVisibility}}"/>
                                 <TextBlock FontSize="12" Foreground="#A0A0A0" HorizontalAlignment="Right"
@@ -602,7 +626,7 @@
                                            VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0"/>
                             </Grid>
                             <TextBlock FontSize="12" Foreground="#E53935" Margin="0,5,0,0"
-                                       Text="{Binding (Validation.Errors)[0].ErrorContent, ElementName=PriceTextBox}"
+                                       Text="{Binding (Validation.Errors)/ErrorContent, ElementName=PriceTextBox}"
                                        Visibility="{Binding (Validation.HasError), ElementName=PriceTextBox,
                                                             Converter={StaticResource BoolToVisibility}}"/>
                         </StackPanel>
