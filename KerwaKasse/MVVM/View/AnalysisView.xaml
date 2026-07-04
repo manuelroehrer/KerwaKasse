@@ -429,7 +429,37 @@
                                 <ItemsControl ItemsSource="{Binding Breakdown}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9">
+                                            <!-- Transparent background so the whole row (not just its texts) hit-tests
+                                                 for the price-history tooltip. -->
+                                            <Border BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9"
+                                                    Background="Transparent"
+                                                    ToolTipService.IsEnabled="{Binding HasPriceDetails}"
+                                                    ToolTipService.InitialShowDelay="400">
+                                                <Border.ToolTip>
+                                                    <ToolTip>
+                                                        <!-- Shared size scope keeps the price column equally wide across
+                                                             all lines, so the right-aligned date ranges line up. -->
+                                                        <StackPanel Margin="4,3" Grid.IsSharedSizeScope="True">
+                                                            <TextBlock Text="{Binding PriceDetailsHeader}" FontSize="13"
+                                                                       FontWeight="SemiBold" Margin="0,0,0,7"/>
+                                                            <ItemsControl ItemsSource="{Binding PriceDetails}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Grid Margin="0,1">
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="Auto" SharedSizeGroup="PriceColumn"/>
+                                                                                <ColumnDefinition Width="*"/>
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock Text="{Binding Price}" FontFamily="Consolas"/>
+                                                                            <TextBlock Grid.Column="1" Text="{Binding Range}" FontFamily="Consolas"
+                                                                                       HorizontalAlignment="Right" Margin="18,0,0,0"/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </ToolTip>
+                                                </Border.ToolTip>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>

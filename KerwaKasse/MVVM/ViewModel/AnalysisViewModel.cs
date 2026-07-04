@@ -51,9 +51,10 @@ namespace KerwaKasse.MVVM.ViewModel
         private List<SavedAnalysis> _savedCache = new();
         private readonly Dictionary<int, HashSet<int>> _savedProductSets = new();
 
-        // Loaded figures, kept so re-sorting the table only rebuilds rows/pie without hitting the
-        // database again.
+        // Loaded figures plus their per-product price lines, kept so re-sorting the table only
+        // rebuilds rows/pie without hitting the database again.
         private List<SalesFigure> _currentFigures = new();
+        private Dictionary<int, IReadOnlyList<PriceDetailLine>> _priceDetailsByProduct = new();
         private string _sortColumn = "Amount";
         private bool _sortDescending = true;
 
@@ -421,6 +422,7 @@ namespace KerwaKasse.MVVM.ViewModel
             if (none)
             {
                 _currentFigures = new List<SalesFigure>();
+                _priceDetailsByProduct = new Dictionary<int, IReadOnlyList<PriceDetailLine>>();
                 Breakdown = new ObservableCollection<AnalysisSalesRow>();
                 TotalRevenue = 0m;
                 TotalAmount = 0;
@@ -434,6 +436,10 @@ namespace KerwaKasse.MVVM.ViewModel
             _currentFigures = _analytics.GetSalesFigures(from, to, ids)
                 .Where(f => f.TotalAmount > 0)
                 .ToList();
+
+            _priceDetailsByProduct = _analytics.GetPricePeriods(from, to, ids)
+                .GroupBy(p => p.ProductId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<PriceDetailLine>)g.Select(FormatPricePeriod).ToList());
 
             ApplyBreakdown();
 
@@ -462,12 +468,25 @@ namespace KerwaKasse.MVVM.ViewModel
                     Amount = f.TotalAmount,
                     Revenue = f.TotalRevenue,
                     ColorBrush = fill,
-                    ColorBorderBrush = ColorBorderHelper.Border(fill)
+                    ColorBorderBrush = ColorBorderHelper.Border(fill),
+                    PriceDetails = _priceDetailsByProduct.TryGetValue(f.ProductId, out var details)
+                        ? details
+                        : Array.Empty<PriceDetailLine>()
                 });
             }
 
             Breakdown = new ObservableCollection<AnalysisSalesRow>(rows);
             PieSeries = BuildPie(sorted);
+        }
+
+        /// <summary>One tooltip line: "3,50 €" plus "24.07.2023 – 01.08.2025" (a single date when the
+        /// first and last sale of the segment share the day).</summary>
+        private static PriceDetailLine FormatPricePeriod(ProductPricePeriod p)
+        {
+            string range = p.From.Date == p.To.Date
+                ? p.From.ToString("dd.MM.yyyy", German)
+                : $"{p.From.ToString("dd.MM.yyyy", German)} – {p.To.ToString("dd.MM.yyyy", German)}";
+            return new PriceDetailLine(p.UnitPrice.ToString("C", German), range);
         }
 
         private ISeries[] BuildPie(List<SalesFigure> figures)

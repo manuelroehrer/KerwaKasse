@@ -31,6 +31,8 @@ public class AnalysisViewModelTests
             .Returns(new List<SalesFigure>());
         _analytics.GetSalesOverTime(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<AnalysisTimeResolution>())
             .Returns(new List<TimeBucketSales>());
+        _analytics.GetPricePeriods(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+            .Returns(new List<ProductPricePeriod>());
     }
 
     private AnalysisViewModel CreateSut() => new(_analytics, _products, _saved, _dialog, NullLogger<AnalysisViewModel>.Instance);
@@ -118,6 +120,44 @@ public class AnalysisViewModelTests
         sut.SortBreakdownCommand.Execute("Revenue");
         Assert.Equal("Bratwurst", sut.Breakdown[0].Name);
         Assert.Equal(" ▼", sut.RevenueSortIndicator);
+    }
+
+    [Fact]
+    public void Breakdown_CarriesFormattedPricePeriodsPerProduct()
+    {
+        WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m });
+        _analytics.GetPricePeriods(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+            .Returns(new List<ProductPricePeriod>
+            {
+                new() { ProductId = 1, UnitPrice = 3.00m, From = new DateTime(2022, 7, 24), To = new DateTime(2022, 7, 29) },
+                new() { ProductId = 1, UnitPrice = 3.50m, From = new DateTime(2023, 7, 25), To = new DateTime(2023, 7, 25) }
+            });
+
+        var sut = CreateSut();
+
+        var row = Assert.Single(sut.Breakdown);
+        Assert.True(row.HasPriceDetails);
+        Assert.Equal(2, row.PriceDetails.Count);
+        Assert.Equal("Einzelpreise", row.PriceDetailsHeader);
+        Assert.Equal("3,00 €", row.PriceDetails[0].Price);
+        Assert.Equal("24.07.2022 – 29.07.2022", row.PriceDetails[0].Range);
+        Assert.Equal("3,50 €", row.PriceDetails[1].Price);
+        Assert.Equal("25.07.2023", row.PriceDetails[1].Range); // single-day segment shows one date
+    }
+
+    [Fact]
+    public void PriceDetailsHeader_IsSingularForASinglePriceLine()
+    {
+        WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m });
+        _analytics.GetPricePeriods(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+            .Returns(new List<ProductPricePeriod>
+            {
+                new() { ProductId = 1, UnitPrice = 3.00m, From = new DateTime(2022, 7, 24), To = new DateTime(2025, 7, 29) }
+            });
+
+        var sut = CreateSut();
+
+        Assert.Equal("Einzelpreis", Assert.Single(sut.Breakdown).PriceDetailsHeader);
     }
 
     [Fact]
