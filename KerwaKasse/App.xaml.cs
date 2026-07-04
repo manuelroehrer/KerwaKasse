@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Markup;
 using KerwaKasse.Core.Data;
+using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -19,9 +20,15 @@ namespace KerwaKasse
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // The UI is German-only for now, so pin the culture instead of following the OS:
+            // otherwise date pickers and weekday names render in the OS language on non-German
+            // machines while the rest of the UI stays German.
+            var culture = CultureInfo.GetCultureInfo("de-DE");
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
             FrameworkElement.LanguageProperty.OverrideMetadata(
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
 
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
             Directory.CreateDirectory(appDir);
@@ -60,6 +67,10 @@ namespace KerwaKasse
 
         protected override void OnExit(ExitEventArgs e)
         {
+            // Pooled connections keep the database file open past their Dispose; release them so
+            // SQLite closes the file cleanly instead of leaving journal remnants behind.
+            SqliteConnection.ClearAllPools();
+
             _logger?.LogInformation("KerwaKasse exited (exit code {ExitCode})", e.ApplicationExitCode);
             Log.CloseAndFlush();
             base.OnExit(e);

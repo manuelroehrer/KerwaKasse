@@ -163,6 +163,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand ToggleNameLockCommand { get; }
         public RelayCommand MoveSelectedUpCommand { get; }
         public RelayCommand MoveSelectedDownCommand { get; }
+        public RelayCommand BeginPositionEditCommand { get; }
         public RelayCommand ApplyMenuCommand { get; }
         public RelayCommand OpenMenuManagementCommand { get; }
 
@@ -189,6 +190,7 @@ namespace KerwaKasse.MVVM.ViewModel
             ToggleNameLockCommand = new RelayCommand(_ => ToggleNameLock(), _ => DetailPanel is { IsNew: false });
             MoveSelectedUpCommand = new RelayCommand(_ => MoveSelected(-1), _ => CanMoveSelected(-1));
             MoveSelectedDownCommand = new RelayCommand(_ => MoveSelected(1), _ => CanMoveSelected(1));
+            BeginPositionEditCommand = new RelayCommand(_ => BeginPositionEdit(), _ => SelectedProduct != null && !IsAddingNew);
             ApplyMenuCommand = new RelayCommand(o => ApplyMenu(o as Menu), o => (o as Menu) != null || SelectedMenu != null);
             OpenMenuManagementCommand = new RelayCommand(_ => OpenMenuManagement());
 
@@ -384,10 +386,15 @@ namespace KerwaKasse.MVVM.ViewModel
         private void MoveSelected(int direction)
         {
             if (!CanMoveSelected(direction)) return;
+            MoveSelectedToIndex(Products.IndexOf(SelectedProduct) + direction);
+        }
 
+        /// <summary>Moves the selected product to the given index and persists the whole order once.</summary>
+        private void MoveSelectedToIndex(int targetIdx)
+        {
             var item = SelectedProduct;
             int idx = Products.IndexOf(item);
-            int targetIdx = idx + direction;
+            if (idx < 0 || targetIdx == idx) return;
 
             _suppressSelectionChange = true;
             Products.RemoveAt(idx);
@@ -399,6 +406,43 @@ namespace KerwaKasse.MVVM.ViewModel
                 Products.Select((p, i) => new Product { Id = p.ProductId, SortOrder = i + 1 }));
 
             OnPropertyChanged(nameof(CurrentPositionText));
+        }
+
+        // ── Direct position input (clicking "X / N" swaps it for a small text box) ──
+
+        private bool _isEditingPosition;
+        public bool IsEditingPosition
+        {
+            get => _isEditingPosition;
+            private set { _isEditingPosition = value; OnPropertyChanged(); }
+        }
+
+        private string _positionInput = string.Empty;
+        public string PositionInput
+        {
+            get => _positionInput;
+            set { _positionInput = value; OnPropertyChanged(); }
+        }
+
+        private void BeginPositionEdit()
+        {
+            if (SelectedProduct == null || IsAddingNew) return;
+            int idx = Products.IndexOf(SelectedProduct);
+            if (idx < 0) return;
+            PositionInput = (idx + 1).ToString();
+            IsEditingPosition = true;
+        }
+
+        public void CancelPositionEdit() => IsEditingPosition = false;
+
+        /// <summary>Applies the typed position, clamped to 1..N; non-numeric input is discarded.</summary>
+        public void CommitPositionEdit()
+        {
+            if (!IsEditingPosition) return;
+            IsEditingPosition = false;
+
+            if (SelectedProduct == null || !int.TryParse(PositionInput?.Trim(), out int position)) return;
+            MoveSelectedToIndex(Math.Clamp(position - 1, 0, Products.Count - 1));
         }
 
         // ── Persistence helpers ──────────────────────────────────

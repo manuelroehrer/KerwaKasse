@@ -66,6 +66,25 @@ public class MenuManagementViewModelTests
     }
 
     [Fact]
+    public void CommitPositionEdit_MovesSelectedMenuToTypedPosition()
+    {
+        var sut = CreateSut(out var service);
+        sut.AddMenuCommand.Execute(null); // "Neue Speisekarte", position 1
+        sut.AddMenuCommand.Execute(null); // "Neue Speisekarte 2", position 2, selected
+
+        sut.BeginPositionEditCommand.Execute(null);
+        Assert.Equal("2", sut.PositionInput);
+
+        sut.PositionInput = "1";
+        sut.CommitPositionEdit();
+
+        Assert.False(sut.IsEditingPosition);
+        Assert.Equal("Neue Speisekarte 2", sut.Menus[0].Name);
+        Assert.Equal("Neue Speisekarte 2", service.GetAll()[0].Name); // persisted order
+        Assert.Equal("1 / 2", sut.SelectedMenuPositionText);
+    }
+
+    [Fact]
     public void AddMenu_SelectsTheNewMenu()
     {
         var sut = CreateSut(out _);

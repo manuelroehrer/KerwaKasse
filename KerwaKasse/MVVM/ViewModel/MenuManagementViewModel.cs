@@ -192,6 +192,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DiscardCommand { get; }
         public RelayCommand MoveMenuUpCommand { get; }
         public RelayCommand MoveMenuDownCommand { get; }
+        public RelayCommand BeginPositionEditCommand { get; }
         public RelayCommand SelectAllProductsCommand { get; }
         public RelayCommand ClearProductsCommand { get; }
 
@@ -210,6 +211,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 _ => SelectedMenu != null && HasUnsavedChanges);
             MoveMenuUpCommand = new RelayCommand(_ => MoveMenu(-1), _ => CanMoveMenu(-1));
             MoveMenuDownCommand = new RelayCommand(_ => MoveMenu(1), _ => CanMoveMenu(1));
+            BeginPositionEditCommand = new RelayCommand(_ => BeginPositionEdit(), _ => HasMenuSelected);
             SelectAllProductsCommand = new RelayCommand(_ => SetAllProducts(true), _ => HasMenuSelected);
             ClearProductsCommand = new RelayCommand(_ => SetAllProducts(false), _ => HasMenuSelected);
 
@@ -232,6 +234,51 @@ namespace KerwaKasse.MVVM.ViewModel
             if (!CanMoveMenu(direction)) return;
             int idx = Menus.IndexOf(_selectedMenu);
             Menus.Move(idx, idx + direction);
+            _menuService.UpdateSortOrder(Menus.Select((m, i) => new Menu { Id = m.Id, SortOrder = i + 1 }));
+            OnPropertyChanged(nameof(SelectedMenuPositionText));
+        }
+
+        // ── Direct position input (clicking "X / N" swaps it for a small text box) ──
+
+        private bool _isEditingPosition;
+        public bool IsEditingPosition
+        {
+            get => _isEditingPosition;
+            private set { _isEditingPosition = value; OnPropertyChanged(); }
+        }
+
+        private string _positionInput = string.Empty;
+        public string PositionInput
+        {
+            get => _positionInput;
+            set { _positionInput = value; OnPropertyChanged(); }
+        }
+
+        private void BeginPositionEdit()
+        {
+            if (_selectedMenu == null) return;
+            int idx = Menus.IndexOf(_selectedMenu);
+            if (idx < 0) return;
+            PositionInput = (idx + 1).ToString();
+            IsEditingPosition = true;
+        }
+
+        public void CancelPositionEdit() => IsEditingPosition = false;
+
+        /// <summary>Applies the typed position, clamped to 1..N; non-numeric input is discarded.</summary>
+        public void CommitPositionEdit()
+        {
+            if (!IsEditingPosition) return;
+            IsEditingPosition = false;
+
+            if (_selectedMenu == null || !int.TryParse(PositionInput?.Trim(), out int position)) return;
+            int idx = Menus.IndexOf(_selectedMenu);
+            if (idx < 0) return;
+
+            int target = Math.Clamp(position - 1, 0, Menus.Count - 1);
+            if (target == idx) return;
+
+            Menus.Move(idx, target);
             _menuService.UpdateSortOrder(Menus.Select((m, i) => new Menu { Id = m.Id, SortOrder = i + 1 }));
             OnPropertyChanged(nameof(SelectedMenuPositionText));
         }

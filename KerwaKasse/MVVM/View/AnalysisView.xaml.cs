@@ -1,6 +1,8 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
 using ModernWpf.Controls.Primitives;
@@ -13,6 +15,12 @@ namespace KerwaKasse.MVVM.View
         {
             InitializeComponent();
         }
+
+        // Clicking empty space keeps WPF keyboard focus where it is, so a control's own LostFocus
+        // commit (e.g. a date typed into a DatePicker, or the product search box) never fires
+        // there; see FocusCommitBehavior.
+        private void Root_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+            => FocusCommitBehavior.CommitPendingEditOnOutsideClick(e);
 
         // Saving/applying/managing opens a ContentDialog or changes the view behind the flyout; a
         // ContentDialog cannot open while the flyout is up, so close it first (mirrors the products view).

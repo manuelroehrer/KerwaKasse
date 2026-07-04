@@ -230,7 +230,7 @@
 
     </UserControl.Resources>
 
-    <Grid Margin="12">
+    <Grid Margin="12" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition/>

@@ -127,7 +127,7 @@
 
     </UserControl.Resources>
 
-    <Grid Margin="12">
+    <Grid Margin="12" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -369,16 +369,40 @@
 
                         <!-- Table -->
                         <DockPanel Grid.Column="0" Margin="4,0,0,0">
-                            <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="0,12">
+                            <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1">
                                 <Grid Margin="16,0,32,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="80"/>
                                         <ColumnDefinition Width="125"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="PRODUKT" Style="{StaticResource CaptionText}"/>
-                                    <TextBlock Grid.Column="1" Text="MENGE" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
-                                    <TextBlock Grid.Column="2" Text="UMSATZ" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
+                                    <!-- Clickable headers: first click sorts the column, a second click flips the
+                                         direction. The transparent borders carry the header row's vertical padding,
+                                         so the whole column cell is the hit area, not just the caption text. -->
+                                    <Border Grid.Column="0" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Name"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Left">
+                                            <Run Text="PRODUKT"/><Run Text="{Binding NameSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
+                                    <Border Grid.Column="1" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Amount"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Right">
+                                            <Run Text="MENGE"/><Run Text="{Binding AmountSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
+                                    <Border Grid.Column="2" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Revenue"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Right">
+                                            <Run Text="UMSATZ"/><Run Text="{Binding RevenueSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
                                 </Grid>
                             </Border>
 
@@ -405,7 +429,37 @@
                                 <ItemsControl ItemsSource="{Binding Breakdown}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9">
+                                            <!-- Transparent background so the whole row (not just its texts) hit-tests
+                                                 for the price-history tooltip. -->
+                                            <Border BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9"
+                                                    Background="Transparent"
+                                                    ToolTipService.IsEnabled="{Binding HasPriceDetails}"
+                                                    ToolTipService.InitialShowDelay="400">
+                                                <Border.ToolTip>
+                                                    <ToolTip>
+                                                        <!-- Shared size scope keeps the price column equally wide across
+                                                             all lines, so the right-aligned date ranges line up. -->
+                                                        <StackPanel Margin="4,3" Grid.IsSharedSizeScope="True">
+                                                            <TextBlock Text="{Binding PriceDetailsHeader}" FontSize="13"
+                                                                       FontWeight="SemiBold" Margin="0,0,0,7"/>
+                                                            <ItemsControl ItemsSource="{Binding PriceDetails}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Grid Margin="0,1">
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="Auto" SharedSizeGroup="PriceColumn"/>
+                                                                                <ColumnDefinition Width="*"/>
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock Text="{Binding Price}" FontFamily="Consolas"/>
+                                                                            <TextBlock Grid.Column="1" Text="{Binding Range}" FontFamily="Consolas"
+                                                                                       HorizontalAlignment="Right" Margin="18,0,0,0"/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </ToolTip>
+                                                </Border.ToolTip>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>

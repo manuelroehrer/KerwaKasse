@@ -157,7 +157,7 @@
         </Style>
     </ui:ContentDialog.Resources>
 
-    <Grid x:Name="RootGrid" Width="720" Height="760">
+    <Grid x:Name="RootGrid" Width="720" Height="760" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -316,7 +316,7 @@
                                     </Button>
                                 </Grid>
                                 <TextBlock FontSize="12" Foreground="#E53935" Margin="0,5,0,0"
-                                           Text="{Binding (Validation.Errors)[0].ErrorContent, ElementName=NameBox}"
+                                           Text="{Binding (Validation.Errors)/ErrorContent, ElementName=NameBox}"
                                            Visibility="{Binding (Validation.HasError), ElementName=NameBox, Converter={StaticResource BoolToVisibility}}"/>
                             </StackPanel>
 
@@ -338,8 +338,25 @@
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding SelectedPositionText}" FontSize="12.5" Foreground="#8A8F96"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <!-- Position indicator: clicking it swaps to a text box for direct position input. -->
+                                    <Grid HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedPositionText}" FontSize="12.5" Foreground="#8A8F96"
+                                                   VerticalAlignment="Center" Cursor="Hand"
+                                                   ToolTip="Klicken, um die Position direkt einzugeben"
+                                                   Visibility="{Binding IsEditingPosition, Converter={StaticResource InverseBoolToVisibility}}">
+                                            <TextBlock.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding BeginPositionEditCommand}"/>
+                                            </TextBlock.InputBindings>
+                                        </TextBlock>
+                                        <TextBox x:Name="PositionInputBox" Width="52" FontSize="12.5" VerticalAlignment="Center"
+                                                 TextAlignment="Center" VerticalContentAlignment="Center"
+                                                 Text="{Binding PositionInput, UpdateSourceTrigger=PropertyChanged}"
+                                                 Visibility="{Binding IsEditingPosition, Converter={StaticResource BoolToVisibility}}"
+                                                 IsVisibleChanged="PositionInputBox_IsVisibleChanged"
+                                                 PreviewKeyDown="PositionInputBox_PreviewKeyDown"
+                                                 PreviewTextInput="PositionInputBox_PreviewTextInput"
+                                                 LostFocus="PositionInputBox_LostFocus"/>
+                                    </Grid>
                                 </Grid>
                             </StackPanel>
 
@@ -371,11 +388,25 @@
                                     <Run Text="PRODUKTE" FontSize="12.5" FontWeight="SemiBold" Foreground="#8B929E"/><Run Text="   "/><Run Text="{Binding ProductSelectionSummary, Mode=OneWay}" FontSize="12.5" Foreground="#8B929E"/>
                                 </TextBlock>
                             </DockPanel>
+                            <!-- Search (manual placeholder so it stays vertically centered) -->
                             <Grid DockPanel.Dock="Top" Margin="24,8,24,0">
                                 <TextBox Text="{Binding ProductSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Height="38" VerticalContentAlignment="Center" Padding="36,0,10,0"/>
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#8B929E"
                                            IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="13,0,0,0"/>
+                                <TextBlock Text="Produkt suchen …" Foreground="#9AA0A6" FontSize="14" IsHitTestVisible="False"
+                                           VerticalAlignment="Center" HorizontalAlignment="Left" Margin="36,0,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ProductSearchText}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="24,12,18,6">

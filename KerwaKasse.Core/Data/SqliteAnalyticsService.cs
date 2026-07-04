@@ -114,6 +114,56 @@ public class SqliteAnalyticsService : IAnalyticsService
         return result;
     }
 
+    public List<ProductPricePeriod> GetPricePeriods(DateTime from, DateTime to, IReadOnlyCollection<int>? productIds)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+
+        bool filtered = productIds is { Count: > 0 };
+
+        var sql = $"""
+            SELECT op.ProductId, op.UnitPriceCents, o.OrderTime
+            FROM OrderPositions op
+            INNER JOIN Orders o ON o.Id = op.OrderId
+            WHERE o.OrderTime BETWEEN @From AND @To
+            {(filtered ? "AND op.ProductId IN @ProductIds" : "")}
+            ORDER BY op.ProductId, o.OrderTime
+            """;
+
+        // Walk each product's sales chronologically and start a new segment whenever the unit
+        // price changes. A price that is used again later therefore gets its own new segment
+        // instead of being merged into one misleading min–max range.
+        var result = new List<ProductPricePeriod>();
+        ProductPricePeriod? current = null;
+        foreach (var row in connection.Query<PricePeriodRow>(sql, new
+        {
+            From = from.ToString(SqliteDateFormat),
+            To = to.ToString(SqliteDateFormat),
+            ProductIds = productIds
+        }))
+        {
+            var time = DateTime.ParseExact(row.OrderTime, SqliteDateFormat, CultureInfo.InvariantCulture);
+            var unitPrice = row.UnitPriceCents / 100m;
+
+            if (current == null || current.ProductId != row.ProductId || current.UnitPrice != unitPrice)
+            {
+                current = new ProductPricePeriod
+                {
+                    ProductId = row.ProductId,
+                    UnitPrice = unitPrice,
+                    From = time,
+                    To = time
+                };
+                result.Add(current);
+            }
+            else
+            {
+                current.To = time;
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>Rounds a timestamp down to the start of its bucket within the day (buckets are aligned
     /// to midnight, so e.g. 15-minute buckets always start at :00/:15/:30/:45).</summary>
     private static DateTime FloorToBucket(DateTime time, int bucketMinutes)
@@ -138,5 +188,12 @@ public class SqliteAnalyticsService : IAnalyticsService
         public string OrderTime { get; set; } = "";
         public int Amount { get; set; }
         public long UnitPriceCents { get; set; }
+    }
+
+    private class PricePeriodRow
+    {
+        public int ProductId { get; set; }
+        public long UnitPriceCents { get; set; }
+        public string OrderTime { get; set; } = "";
     }
 }

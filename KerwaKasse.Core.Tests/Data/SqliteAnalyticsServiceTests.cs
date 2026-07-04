@@ -93,6 +93,57 @@ public class SqliteAnalyticsServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetPricePeriods_GroupsByProductAndPriceWithFirstAndLastSale()
+    {
+        int p1 = AddProduct("Bratwurst", 3.50m);
+        var year1 = new DateTime(2022, 7, 24, 18, 0, 0);
+        var year1End = new DateTime(2022, 7, 29, 21, 0, 0);
+        var year2 = new DateTime(2023, 7, 25, 19, 0, 0);
+        InsertOrder(year1, (p1, 2, 3.00m));
+        InsertOrder(year1End, (p1, 1, 3.00m));
+        InsertOrder(year2, (p1, 4, 3.50m));
+
+        var periods = _sut.GetPricePeriods(new DateTime(2022, 1, 1), new DateTime(2024, 1, 1), null);
+
+        Assert.Equal(2, periods.Count);
+        Assert.Equal(3.00m, periods[0].UnitPrice); // ordered by first sale
+        Assert.Equal(year1, periods[0].From);
+        Assert.Equal(year1End, periods[0].To);
+        Assert.Equal(3.50m, periods[1].UnitPrice);
+        Assert.Equal(year2, periods[1].From);
+        Assert.Equal(year2, periods[1].To);
+    }
+
+    [Fact]
+    public void GetPricePeriods_PriceUsedAgainLater_GetsItsOwnSegment()
+    {
+        int p1 = AddProduct("Bratwurst", 3.00m);
+        InsertOrder(new DateTime(2022, 7, 24, 18, 0, 0), (p1, 1, 3.00m));
+        InsertOrder(new DateTime(2023, 7, 25, 18, 0, 0), (p1, 1, 3.50m));
+        InsertOrder(new DateTime(2024, 7, 26, 18, 0, 0), (p1, 1, 3.00m)); // back to the old price
+
+        var periods = _sut.GetPricePeriods(new DateTime(2022, 1, 1), new DateTime(2025, 1, 1), null);
+
+        Assert.Equal(3, periods.Count);
+        Assert.Equal(new[] { 3.00m, 3.50m, 3.00m }, periods.Select(p => p.UnitPrice));
+        Assert.Equal(new DateTime(2024, 7, 26, 18, 0, 0), periods[2].From);
+    }
+
+    [Fact]
+    public void GetPricePeriods_WithProductFilter_ReturnsOnlySelected()
+    {
+        int p1 = AddProduct("Bratwurst", 3.00m);
+        int p2 = AddProduct("Bier", 3.50m);
+        InsertOrder(DateTime.Today.AddHours(10), (p1, 1, 3.00m), (p2, 1, 3.50m));
+
+        var periods = _sut.GetPricePeriods(DateTime.Today, DateTime.Today.AddDays(1), new[] { p2 });
+
+        var only = Assert.Single(periods);
+        Assert.Equal(p2, only.ProductId);
+        Assert.Equal(3.50m, only.UnitPrice);
+    }
+
+    [Fact]
     public void GetSalesFigures_RespectsDateRange()
     {
         int p1 = AddProduct("Bratwurst", 3.00m);

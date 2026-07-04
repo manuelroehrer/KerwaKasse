@@ -80,6 +80,7 @@ namespace KerwaKasse.MVVM.ViewModel
             DiscardCommand = new RelayCommand(_ => Discard(), _ => HasSelection && IsDirty);
             MoveUpCommand = new RelayCommand(_ => Move(-1), _ => CanMove(-1));
             MoveDownCommand = new RelayCommand(_ => Move(1), _ => CanMove(1));
+            BeginPositionEditCommand = new RelayCommand(_ => BeginPositionEdit(), _ => HasSelection);
             SelectAllProductsCommand = new RelayCommand(_ => SetAllProducts(true));
             ClearProductsCommand = new RelayCommand(_ => SetAllProducts(false));
 
@@ -169,6 +170,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DiscardCommand { get; }
         public RelayCommand MoveUpCommand { get; }
         public RelayCommand MoveDownCommand { get; }
+        public RelayCommand BeginPositionEditCommand { get; }
         public RelayCommand SelectAllProductsCommand { get; }
         public RelayCommand ClearProductsCommand { get; }
 
@@ -392,6 +394,51 @@ namespace KerwaKasse.MVVM.ViewModel
             if (!CanMove(direction)) return;
             int idx = Items.IndexOf(_selected);
             Items.Move(idx, idx + direction);
+            _service.UpdateSortOrder(Items.Select((it, i) => new SavedAnalysis { Id = it.Id, SortOrder = i + 1 }));
+            OnPropertyChanged(nameof(SelectedPositionText));
+        }
+
+        // ── Direct position input (clicking "X / N" swaps it for a small text box) ──
+
+        private bool _isEditingPosition;
+        public bool IsEditingPosition
+        {
+            get => _isEditingPosition;
+            private set { _isEditingPosition = value; OnPropertyChanged(); }
+        }
+
+        private string _positionInput = string.Empty;
+        public string PositionInput
+        {
+            get => _positionInput;
+            set { _positionInput = value; OnPropertyChanged(); }
+        }
+
+        private void BeginPositionEdit()
+        {
+            if (_selected == null) return;
+            int idx = Items.IndexOf(_selected);
+            if (idx < 0) return;
+            PositionInput = (idx + 1).ToString();
+            IsEditingPosition = true;
+        }
+
+        public void CancelPositionEdit() => IsEditingPosition = false;
+
+        /// <summary>Applies the typed position, clamped to 1..N; non-numeric input is discarded.</summary>
+        public void CommitPositionEdit()
+        {
+            if (!IsEditingPosition) return;
+            IsEditingPosition = false;
+
+            if (_selected == null || !int.TryParse(PositionInput?.Trim(), out int position)) return;
+            int idx = Items.IndexOf(_selected);
+            if (idx < 0) return;
+
+            int target = Math.Clamp(position - 1, 0, Items.Count - 1);
+            if (target == idx) return;
+
+            Items.Move(idx, target);
             _service.UpdateSortOrder(Items.Select((it, i) => new SavedAnalysis { Id = it.Id, SortOrder = i + 1 }));
             OnPropertyChanged(nameof(SelectedPositionText));
         }

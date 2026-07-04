@@ -22,4 +22,10 @@ public interface IAnalyticsService
     /// <summary>Totals per time bucket within the range for the given resolution. Empty buckets
     /// between the first and last sale are filled with zero so the column chart has no gaps.</summary>
     List<TimeBucketSales> GetSalesOverTime(DateTime from, DateTime to, IReadOnlyCollection<int>? productIds, AnalysisTimeResolution resolution);
+
+    /// <summary>The unit-price segments per product within the range: one entry per consecutive
+    /// stretch of sales at the same price, with its first and last sale time. A price used again
+    /// after an interruption yields a new segment. Same product filter semantics as
+    /// <see cref="GetSalesFigures"/>; ordered by product, then chronologically.</summary>
+    List<ProductPricePeriod> GetPricePeriods(DateTime from, DateTime to, IReadOnlyCollection<int>? productIds);
 }

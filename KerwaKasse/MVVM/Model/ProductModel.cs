@@ -73,12 +73,14 @@ namespace KerwaKasse.MVVM.Model
         private string colorAsString;
         public string ColorAsString
         {
-            get 
+            get
             {
+                // Same fallback as ColorBorderHelper.ParseBrush (LightGray), so a product without a
+                // colour looks identical on the order panel, in the analysis table and in the pie.
                 if (colorAsString == null)
-                    return "#000000";
+                    return "#D3D3D3";
                 else
-                    return colorAsString; 
+                    return colorAsString;
             }
             set
             {

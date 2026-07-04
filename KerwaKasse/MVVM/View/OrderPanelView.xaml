@@ -13,6 +13,10 @@
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
         <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
 
+        <!-- Captures this view's DataContext so the tiles' ScaleTransform (not in the visual tree,
+             so RelativeSource FindAncestor cannot reach the view model) can bind the scale factor. -->
+        <helper:BindingProxy x:Key="ViewModelProxy" Data="{Binding}"/>
+
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </UserControl.Resources>
 
@@ -23,11 +27,13 @@
             <ColumnDefinition Width="{Binding OrderPanelWidth, Converter={StaticResource DoubleToGridLengthConverter}, FallbackValue=350}" MinWidth="280" MaxWidth="600"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Product grid -->
+        <!-- Product grid. Uniform padding: together with the uniform tile margin (4) this yields the
+             same 10px gap to the nav bar, the title bar and the panel edges. -->
         <ScrollViewer Grid.Column="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Padding="4,10,4,10">
+                      Padding="6"
+                      SizeChanged="ProductScroll_SizeChanged">
             <ItemsControl ItemsSource="{Binding Products}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -39,13 +45,15 @@
                         <Button Command="{Binding Path=DataContext.AddOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}">
                             <Button.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding Path=DataContext.Button_ResizeFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                ScaleY="{Binding Path=DataContext.Button_ResizeFactor, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
+                                                ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
                             </Button.LayoutTransform>
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Card" Width="170" Height="105" CornerRadius="5" Background="White" Margin="4,3,4,7"
-                                            BorderThickness="0.9">
+                                    <!-- Keep the auto-fit footprint constants in OrderPanelViewModel in sync
+                                         with this size and margin (170+8 × 105+8). -->
+                                    <Border x:Name="Card" Width="170" Height="105" CornerRadius="5" Background="White" Margin="4"
+                                            BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
                                         <Border.BorderBrush>
                                             <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
                                                 <Binding Path="Color"/>
@@ -175,11 +183,35 @@
                     <Button Grid.Column="1" VerticalAlignment="Center" Cursor="Hand" ToolTip="UI-Anpassungen">
                         <ui:FlyoutService.Flyout>
                             <ui:Flyout Placement="BottomEdgeAlignedRight">
-                                <StackPanel Width="260">
-                                    <TextBlock Text="Größe der Produkt-Buttons" Foreground="#444" FontSize="13"
-                                               FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <StackPanel Width="270">
+                                    <TextBlock Text="Größe der Produkt-Buttons" Foreground="#1B1E24" FontSize="14"
+                                               FontWeight="SemiBold" Margin="0,0,0,12"/>
+
+                                    <!-- Auto-fit on top: the default mode. Its slider caps how large the
+                                         tiles may grow when only a few products are available. -->
+                                    <DockPanel>
+                                        <ui:ToggleSwitch DockPanel.Dock="Left" IsOn="{Binding AutoFitTiles, Mode=TwoWay}"
+                                                         OnContent="" OffContent="" MinWidth="0" Width="44"
+                                                         VerticalAlignment="Center"/>
+                                        <TextBlock Text="Automatisch einpassen" FontSize="13" Foreground="#444"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"
+                                                   ToolTip="Wählt die Größe automatisch so, dass alle Produkte ohne Scrollen sichtbar sind"/>
+                                    </DockPanel>
+                                    <TextBlock Text="Maximale Größe" FontSize="12" Foreground="#8A8F96" Margin="0,10,0,2"/>
+                                    <!-- Starts at ~1/3 of the track: a very low upper bound would only ever shrink
+                                         the tiles and never be picked, so the useful range begins higher. -->
+                                    <Slider Minimum="1.14" Maximum="2.5" Value="{Binding AutoFitMaxFactor}"
+                                            Thumb.DragCompleted="MaxFactorSlider_DragCompleted"
+                                            IsEnabled="{Binding AutoFitTiles}"
+                                            ToolTip="Obergrenze für die automatische Vergrößerung bei wenigen Produkten"/>
+
+                                    <Border Height="1" Background="#E4E6E9" Margin="0,14,0,12"/>
+
+                                    <TextBlock Text="Manuelle Größe" FontSize="12" Foreground="#8A8F96" Margin="0,0,0,2"/>
                                     <Slider Minimum="0.5" Value="{Binding Button_ResizeFactor}" Maximum="2.5"
-                                            Thumb.DragCompleted="Slider_DragCompleted"/>
+                                            Thumb.DragCompleted="Slider_DragCompleted"
+                                            IsEnabled="{Binding IsManualTileSize}"
+                                            ToolTip="Feste Größe der Produkt-Buttons (nur ohne automatisches Einpassen)"/>
                                 </StackPanel>
                             </ui:Flyout>
                         </ui:FlyoutService.Flyout>

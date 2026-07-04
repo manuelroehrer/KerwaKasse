@@ -52,6 +52,24 @@ public class SavedAnalysisManagementViewModelTests
     }
 
     [Fact]
+    public void CommitPositionEdit_MovesSelectedAnalysisToTypedPosition()
+    {
+        var sut = CreateSut();
+        sut.Selected = sut.Items.First(i => i.Name == "Beta"); // position 2
+
+        sut.BeginPositionEditCommand.Execute(null);
+        Assert.Equal("2", sut.PositionInput);
+
+        sut.PositionInput = "1";
+        sut.CommitPositionEdit();
+
+        Assert.False(sut.IsEditingPosition);
+        Assert.Equal("Beta", sut.Items[0].Name);
+        Assert.Equal("1 / 2", sut.SelectedPositionText);
+        _service.Received(1).UpdateSortOrder(Arg.Any<IEnumerable<SavedAnalysis>>());
+    }
+
+    [Fact]
     public void Delete_RemovesSelected()
     {
         var sut = CreateSut();
