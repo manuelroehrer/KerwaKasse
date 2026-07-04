@@ -20,9 +20,15 @@ namespace KerwaKasse
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // The UI is German-only for now, so pin the culture instead of following the OS:
+            // otherwise date pickers and weekday names render in the OS language on non-German
+            // machines while the rest of the UI stays German.
+            var culture = CultureInfo.GetCultureInfo("de-DE");
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
             FrameworkElement.LanguageProperty.OverrideMetadata(
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
 
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
             Directory.CreateDirectory(appDir);
