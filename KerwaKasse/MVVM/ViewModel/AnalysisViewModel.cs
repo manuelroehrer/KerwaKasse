@@ -673,7 +673,7 @@ namespace KerwaKasse.MVVM.ViewModel
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("Produkt;Menge;Umsatz");
+                sb.AppendLine("Produkt;Menge;Umsatz in €");
                 foreach (var row in Breakdown)
                     sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.Revenue.ToString("0.00", German)}");
                 sb.AppendLine($"Gesamt;{TotalAmount};{TotalRevenue.ToString("0.00", German)}");
