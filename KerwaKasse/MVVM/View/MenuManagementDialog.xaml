@@ -137,7 +137,7 @@
     <!-- Height is the comfortable target on large screens; MaxHeight is capped in
          code-behind to the host window so the content shrinks (sidebar list / product
          list give up space first) instead of being clipped on small monitors. -->
-    <Grid x:Name="RootGrid" Width="700" Height="700">
+    <Grid x:Name="RootGrid" Width="700" Height="700" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

@@ -1,8 +1,10 @@
+using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
 using ModernWpf.Controls.Primitives;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace KerwaKasse.MVVM.View
 {
@@ -42,5 +44,11 @@ namespace KerwaKasse.MVVM.View
         // Give the pill an accent border while its flyout is open (mirrors a focused ModernWpf control).
         private void MenuFlyout_Opened(object sender, object e) => MenuButton.Tag = "open";
         private void MenuFlyout_Closed(object sender, object e) => MenuButton.Tag = null;
+
+        // Clicking empty space keeps WPF keyboard focus where it is, so a control's own LostFocus
+        // commit (position input, but also e.g. the Name/Price fields or a DatePicker elsewhere)
+        // never fires there; see FocusCommitBehavior.
+        private void Root_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+            => FocusCommitBehavior.CommitPendingEditOnOutsideClick(e);
     }
 }

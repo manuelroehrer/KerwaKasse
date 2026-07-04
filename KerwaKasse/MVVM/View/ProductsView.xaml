@@ -164,7 +164,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid x:Name="MainGrid" Margin="12">
+    <Grid x:Name="MainGrid" Margin="12" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition/>

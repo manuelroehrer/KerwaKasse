@@ -1,3 +1,4 @@
+using KerwaKasse.Helper;
 using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
@@ -98,6 +99,13 @@ namespace KerwaKasse.MVVM.View
             if ((result == ContentDialogResult.Primary || dialog.Confirmed) && dialog.SelectedProduct != null)
                 onPicked(dialog.SelectedProduct);
         }
+
+        // Clicking empty space keeps WPF keyboard focus where it is, so a control's own LostFocus
+        // commit (e.g. a date typed into the DatePicker, or the search box) never fires there; see
+        // FocusCommitBehavior. Runs in the tunnel phase, before the more specific bubble-phase
+        // handlers below (selection clearing etc.), so it does not interfere with them.
+        private void Root_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+            => FocusCommitBehavior.CommitPendingEditOnOutsideClick(e);
 
         // Clicking empty space around the detail card clears the selection.
         private void DetailBackground_MouseDown(object sender, MouseButtonEventArgs e)

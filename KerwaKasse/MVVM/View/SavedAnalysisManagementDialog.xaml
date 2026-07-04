@@ -157,7 +157,7 @@
         </Style>
     </ui:ContentDialog.Resources>
 
-    <Grid x:Name="RootGrid" Width="720" Height="760">
+    <Grid x:Name="RootGrid" Width="720" Height="760" PreviewMouseDown="Root_PreviewMouseDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

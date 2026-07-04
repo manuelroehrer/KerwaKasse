@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
 using ModernWpf.Controls.Primitives;
@@ -54,5 +55,11 @@ namespace KerwaKasse.MVVM.View
         {
             if (sender is ListBoxItem item) item.IsSelected = true;
         }
+
+        // Clicking empty space keeps WPF keyboard focus where it is, so a control's own LostFocus
+        // commit (position input, but also e.g. the analysis name field, the product search box or
+        // a DatePicker) never fires there; see FocusCommitBehavior.
+        private void Root_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+            => FocusCommitBehavior.CommitPendingEditOnOutsideClick(e);
     }
 }
