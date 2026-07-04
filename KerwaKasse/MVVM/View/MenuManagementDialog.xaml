@@ -363,8 +363,25 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                            <TextBlock Text="{Binding SelectedMenuPositionText}" FontSize="12.5" Foreground="#8A8F96"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            <!-- Position indicator: clicking it swaps to a text box for direct position input. -->
+                            <Grid HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedMenuPositionText}" FontSize="12.5" Foreground="#8A8F96"
+                                           VerticalAlignment="Center" Cursor="Hand"
+                                           ToolTip="Klicken, um die Position direkt einzugeben"
+                                           Visibility="{Binding IsEditingPosition, Converter={StaticResource InverseBoolToVisibility}}">
+                                    <TextBlock.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick" Command="{Binding BeginPositionEditCommand}"/>
+                                    </TextBlock.InputBindings>
+                                </TextBlock>
+                                <TextBox x:Name="PositionInputBox" Width="52" FontSize="12.5" VerticalAlignment="Center"
+                                         TextAlignment="Center" VerticalContentAlignment="Center"
+                                         Text="{Binding PositionInput, UpdateSourceTrigger=PropertyChanged}"
+                                         Visibility="{Binding IsEditingPosition, Converter={StaticResource BoolToVisibility}}"
+                                         IsVisibleChanged="PositionInputBox_IsVisibleChanged"
+                                         PreviewKeyDown="PositionInputBox_PreviewKeyDown"
+                                         PreviewTextInput="PositionInputBox_PreviewTextInput"
+                                         LostFocus="PositionInputBox_LostFocus"/>
+                            </Grid>
                         </Grid>
                     </StackPanel>
 

@@ -60,6 +60,41 @@ public class ProductsViewModelTests
     }
 
     [Fact]
+    public void CommitPositionEdit_MovesSelectedProductToTypedPosition()
+    {
+        _sut.SelectedProduct = _sut.Products[1]; // "Bier", position 2
+
+        _sut.BeginPositionEditCommand.Execute(null);
+        Assert.True(_sut.IsEditingPosition);
+        Assert.Equal("2", _sut.PositionInput);
+
+        _sut.PositionInput = "1";
+        _sut.CommitPositionEdit();
+
+        Assert.False(_sut.IsEditingPosition);
+        Assert.Equal("Bier", _sut.Products[0].Name);
+        Assert.Equal("1 / 2", _sut.CurrentPositionText);
+        _productService.Received(1).UpdateSortOrder(Arg.Any<IEnumerable<Product>>());
+    }
+
+    [Fact]
+    public void CommitPositionEdit_ClampsOutOfRange_AndIgnoresInvalidInput()
+    {
+        _sut.SelectedProduct = _sut.Products[0]; // "Bratwurst", position 1
+
+        _sut.BeginPositionEditCommand.Execute(null);
+        _sut.PositionInput = "99";
+        _sut.CommitPositionEdit();
+        Assert.Equal("Bratwurst", _sut.Products[^1].Name); // clamped to the last position
+
+        _sut.BeginPositionEditCommand.Execute(null);
+        _sut.PositionInput = "abc";
+        _sut.CommitPositionEdit();
+        Assert.Equal("Bratwurst", _sut.Products[^1].Name); // discarded, order unchanged
+        _productService.Received(1).UpdateSortOrder(Arg.Any<IEnumerable<Product>>());
+    }
+
+    [Fact]
     public void AddProduct_OpensEmptyNewDetailPanel()
     {
         _sut.AddProductCommand.Execute(null);
