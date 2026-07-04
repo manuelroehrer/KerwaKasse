@@ -369,16 +369,40 @@
 
                         <!-- Table -->
                         <DockPanel Grid.Column="0" Margin="4,0,0,0">
-                            <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="0,12">
+                            <Border DockPanel.Dock="Top" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1">
                                 <Grid Margin="16,0,32,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="80"/>
                                         <ColumnDefinition Width="125"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="PRODUKT" Style="{StaticResource CaptionText}"/>
-                                    <TextBlock Grid.Column="1" Text="MENGE" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
-                                    <TextBlock Grid.Column="2" Text="UMSATZ" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
+                                    <!-- Clickable headers: first click sorts the column, a second click flips the
+                                         direction. The transparent borders carry the header row's vertical padding,
+                                         so the whole column cell is the hit area, not just the caption text. -->
+                                    <Border Grid.Column="0" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Name"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Left">
+                                            <Run Text="PRODUKT"/><Run Text="{Binding NameSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
+                                    <Border Grid.Column="1" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Amount"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Right">
+                                            <Run Text="MENGE"/><Run Text="{Binding AmountSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
+                                    <Border Grid.Column="2" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Revenue"/>
+                                        </Border.InputBindings>
+                                        <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Right">
+                                            <Run Text="UMSATZ"/><Run Text="{Binding RevenueSortIndicator, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Border>
                                 </Grid>
                             </Border>
 

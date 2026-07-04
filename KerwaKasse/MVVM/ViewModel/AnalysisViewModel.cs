@@ -51,6 +51,16 @@ namespace KerwaKasse.MVVM.ViewModel
         private List<SavedAnalysis> _savedCache = new();
         private readonly Dictionary<int, HashSet<int>> _savedProductSets = new();
 
+        // Loaded figures, kept so re-sorting the table only rebuilds rows/pie without hitting the
+        // database again.
+        private List<SalesFigure> _currentFigures = new();
+        private string _sortColumn = "Amount";
+        private bool _sortDescending = true;
+
+        // Metric the pie slices represent. Follows the sorted column; sorting by name keeps the
+        // last numeric metric (a name is not quantifiable).
+        private string _pieMetricColumn = "Amount";
+
         public AnalysisViewModel(
             IAnalyticsService analytics,
             IProductService productService,
@@ -122,6 +132,7 @@ namespace KerwaKasse.MVVM.ViewModel
             SelectAllProductsCommand = new RelayCommand(o => SetAllProducts(true));
             ClearProductsCommand = new RelayCommand(o => SetAllProducts(false));
             ExportCsvCommand = new RelayCommand(o => ExportCsv());
+            SortBreakdownCommand = new RelayCommand(o => SortBreakdown(o as string));
             SaveCurrentCommand = new RelayCommand(async o => await SaveCurrentAsync(), o => !HasActiveAnalysis);
             ApplySavedCommand = new RelayCommand(o => ApplySaved(ToId(o)));
             ManageCommand = new RelayCommand(async o => await ManageAsync());
@@ -201,6 +212,57 @@ namespace KerwaKasse.MVVM.ViewModel
 
         public bool HasData => TotalAmount > 0;
 
+        // ── Table sorting (header click cycles the column, second click flips the direction) ──
+        public string NameSortIndicator => SortIndicator("Name");
+        public string AmountSortIndicator => SortIndicator("Amount");
+        public string RevenueSortIndicator => SortIndicator("Revenue");
+
+        // ▼ always marks a column's own default (first-click) direction, ▲ the other — so a first
+        // click on any header shows ▼, regardless of which column. Name's default is ascending
+        // (A→Z reads naturally), Amount/Revenue's is descending (largest first).
+        private string SortIndicator(string column)
+        {
+            if (_sortColumn != column) return string.Empty;
+            bool isDefaultDirection = column == "Name" ? !_sortDescending : _sortDescending;
+            return isDefaultDirection ? " ▼" : " ▲";
+        }
+
+        private void SortBreakdown(string column)
+        {
+            if (string.IsNullOrEmpty(column)) return;
+
+            if (_sortColumn == column)
+            {
+                _sortDescending = !_sortDescending;
+            }
+            else
+            {
+                _sortColumn = column;
+                _sortDescending = column != "Name"; // names read naturally A→Z, numbers largest-first
+            }
+
+            if (column != "Name")
+                _pieMetricColumn = column;
+
+            OnPropertyChanged(nameof(NameSortIndicator));
+            OnPropertyChanged(nameof(AmountSortIndicator));
+            OnPropertyChanged(nameof(RevenueSortIndicator));
+            ApplyBreakdown();
+        }
+
+        private List<SalesFigure> SortFigures(List<SalesFigure> figures) => (_sortColumn switch
+        {
+            "Name" => _sortDescending
+                ? figures.OrderByDescending(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase)
+                : figures.OrderBy(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase),
+            "Revenue" => _sortDescending
+                ? figures.OrderByDescending(f => f.TotalRevenue)
+                : figures.OrderBy(f => f.TotalRevenue),
+            _ => _sortDescending
+                ? figures.OrderByDescending(f => f.TotalAmount)
+                : figures.OrderBy(f => f.TotalAmount)
+        }).ToList();
+
         private ISeries[] _pieSeries = Array.Empty<ISeries>();
         public ISeries[] PieSeries { get => _pieSeries; private set { _pieSeries = value; OnPropertyChanged(); } }
 
@@ -244,6 +306,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand SelectAllProductsCommand { get; }
         public RelayCommand ClearProductsCommand { get; }
         public RelayCommand ExportCsvCommand { get; }
+        public RelayCommand SortBreakdownCommand { get; }
         public RelayCommand SaveCurrentCommand { get; }
         public RelayCommand ApplySavedCommand { get; }
         public RelayCommand ManageCommand { get; }
@@ -357,6 +420,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
             if (none)
             {
+                _currentFigures = new List<SalesFigure>();
                 Breakdown = new ObservableCollection<AnalysisSalesRow>();
                 TotalRevenue = 0m;
                 TotalAmount = 0;
@@ -367,14 +431,29 @@ namespace KerwaKasse.MVVM.ViewModel
 
             IReadOnlyCollection<int> ids = all ? null : currentIds.ToList();
 
-            var figures = _analytics.GetSalesFigures(from, to, ids)
+            _currentFigures = _analytics.GetSalesFigures(from, to, ids)
                 .Where(f => f.TotalAmount > 0)
                 .ToList();
 
+            ApplyBreakdown();
+
+            TotalRevenue = _currentFigures.Sum(f => f.TotalRevenue);
+            TotalAmount = _currentFigures.Sum(f => f.TotalAmount);
+
+            // Build both views' data on every data change, so toggling the view is a pure visibility
+            // switch (no re-initialisation flash on the pie / column chart when switching back).
+            _currentIds = ids;
+            BuildCourse(from, to, ids);
+        }
+
+        /// <summary>(Re)builds the table rows and the pie from the loaded figures in the chosen sort
+        /// order, so a header click never hits the database.</summary>
+        private void ApplyBreakdown()
+        {
+            var sorted = SortFigures(_currentFigures);
+
             var rows = new List<AnalysisSalesRow>();
-            int totalAmount = 0;
-            decimal totalRevenue = 0m;
-            foreach (var f in figures)
+            foreach (var f in sorted)
             {
                 var fill = ColorBorderHelper.ParseBrush(f.ProductColor);
                 rows.Add(new AnalysisSalesRow
@@ -385,39 +464,37 @@ namespace KerwaKasse.MVVM.ViewModel
                     ColorBrush = fill,
                     ColorBorderBrush = ColorBorderHelper.Border(fill)
                 });
-                totalAmount += f.TotalAmount;
-                totalRevenue += f.TotalRevenue;
             }
 
             Breakdown = new ObservableCollection<AnalysisSalesRow>(rows);
-            TotalRevenue = totalRevenue;
-            TotalAmount = totalAmount;
-
-            PieSeries = BuildPie(figures);
-
-            // Build both views' data on every data change, so toggling the view is a pure visibility
-            // switch (no re-initialisation flash on the pie / column chart when switching back).
-            _currentIds = ids;
-            BuildCourse(from, to, ids);
+            PieSeries = BuildPie(sorted);
         }
 
         private ISeries[] BuildPie(List<SalesFigure> figures)
         {
+            bool byRevenue = _pieMetricColumn == "Revenue";
             var series = new List<ISeries>();
             foreach (var f in figures)
             {
                 var pie = new PieSeries<double>
                 {
                     Name = f.ProductName,
-                    Values = new[] { (double)f.TotalAmount },
+                    Values = new[] { byRevenue ? (double)f.TotalRevenue : f.TotalAmount },
                     InnerRadius = _pieInnerRadius,
                     Stroke = StrokePaint(f.ProductColor),
                     DataLabelsPaint = null,
-                    // The tooltip already shows the series Name; only add the quantity here.
-                    ToolTipLabelFormatter = _ => f.TotalAmount.ToString()
+                    // The tooltip already shows the series Name; only add the metric value here.
+                    ToolTipLabelFormatter = _ => byRevenue
+                        ? f.TotalRevenue.ToString("C", German)
+                        : f.TotalAmount.ToString()
                 };
-                if (!string.IsNullOrEmpty(f.ProductColor) && SKColor.TryParse(f.ProductColor, out var c))
-                    pie.Fill = new SolidColorPaint(c);
+
+                // Fill from the same parsed brush as the table swatch (including its LightGray
+                // fallback). Without an explicit fill, LiveCharts assigns an index-based palette
+                // colour to products lacking a colour — which then changes on every re-sort.
+                if (ColorBorderHelper.ParseBrush(f.ProductColor) is System.Windows.Media.SolidColorBrush fillBrush)
+                    pie.Fill = new SolidColorPaint(new SKColor(fillBrush.Color.R, fillBrush.Color.G, fillBrush.Color.B));
+
                 series.Add(pie);
             }
             return series.ToArray();

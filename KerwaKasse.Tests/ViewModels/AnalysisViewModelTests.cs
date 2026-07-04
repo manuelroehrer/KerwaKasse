@@ -86,6 +86,41 @@ public class AnalysisViewModelTests
     }
 
     [Fact]
+    public void SortBreakdown_TogglesDirectionAndSortsByColumn()
+    {
+        WithFigures(
+            new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m },
+            new SalesFigure { ProductId = 2, ProductName = "Bier", TotalAmount = 5, TotalRevenue = 17.50m });
+        var sut = CreateSut();
+
+        // Default: amount descending.
+        Assert.Equal("Bratwurst", sut.Breakdown[0].Name);
+        Assert.Equal(" ▼", sut.AmountSortIndicator);
+
+        // Second click on the same column flips the direction.
+        sut.SortBreakdownCommand.Execute("Amount");
+        Assert.Equal("Bier", sut.Breakdown[0].Name);
+        Assert.Equal(" ▲", sut.AmountSortIndicator);
+
+        // Switching to the name column starts alphabetically ascending; ▼ marks that default
+        // direction, matching the ▼-on-first-click convention of the other columns.
+        sut.SortBreakdownCommand.Execute("Name");
+        Assert.Equal("Bier", sut.Breakdown[0].Name);
+        Assert.Equal(" ▼", sut.NameSortIndicator);
+        Assert.Equal(string.Empty, sut.AmountSortIndicator);
+
+        // A second click on Name flips to Z→A, now shown with ▲.
+        sut.SortBreakdownCommand.Execute("Name");
+        Assert.Equal("Bratwurst", sut.Breakdown[0].Name);
+        Assert.Equal(" ▲", sut.NameSortIndicator);
+
+        // Numeric columns start descending.
+        sut.SortBreakdownCommand.Execute("Revenue");
+        Assert.Equal("Bratwurst", sut.Breakdown[0].Name);
+        Assert.Equal(" ▼", sut.RevenueSortIndicator);
+    }
+
+    [Fact]
     public void ClearProducts_EmptiesResults_ThenSelectAllRestoresThem()
     {
         WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m });
