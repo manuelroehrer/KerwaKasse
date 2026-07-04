@@ -53,7 +53,7 @@
                                     <!-- Keep the auto-fit footprint constants in OrderPanelViewModel in sync
                                          with this size and margin (170+8 × 105+8). -->
                                     <Border x:Name="Card" Width="170" Height="105" CornerRadius="5" Background="White" Margin="4"
-                                            BorderThickness="0.9">
+                                            BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
                                         <Border.BorderBrush>
                                             <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
                                                 <Binding Path="Color"/>
