@@ -33,6 +33,8 @@ public class OrderPanelViewModelTests
         _settings.Get("orderPanelUseColoredBorder", true).Returns(true);
         _settings.Get("orderPanelBorderDarkenFactor", 0.7).Returns(0.7);
         _settings.Get("orderPanelWidth", 350.0).Returns(350.0);
+        _settings.Get("orderPanelAutoFitTiles", true).Returns(false); // tests start in manual mode
+        _settings.Get("orderPanelAutoFitMaxScale", 2.5).Returns(2.5);
 
         _sut = new OrderPanelViewModel(_productService, _orderService, _settings, _dialogService, NullLogger<OrderPanelViewModel>.Instance);
     }
@@ -42,6 +44,63 @@ public class OrderPanelViewModelTests
     {
         Assert.Equal(2, _sut.Products.Count);
         Assert.Equal("Bratwurst", _sut.Products[0].Name);
+    }
+
+    [Fact]
+    public void ComputeAutoFitFactor_PicksLargestFactorWhereAllTilesFit()
+    {
+        // 4 tiles in an area that holds exactly 2×2 tiles at factor 1.0 (footprint 178×113 each).
+        Assert.Equal(1.0, OrderPanelViewModel.ComputeAutoFitFactor(356, 226, 4, 2.5), 2);
+
+        // Halving the height forces a smaller factor.
+        Assert.True(OrderPanelViewModel.ComputeAutoFitFactor(356, 113, 4, 2.5) < 1.0);
+
+        // The configurable maximum caps the factor even in a huge area.
+        Assert.Equal(2.5, OrderPanelViewModel.ComputeAutoFitFactor(10000, 10000, 1, 2.5), 2);
+        Assert.Equal(1.2, OrderPanelViewModel.ComputeAutoFitFactor(10000, 10000, 1, 1.2), 2);
+    }
+
+    [Fact]
+    public void AutoFitTiles_ComputesEffectiveScale_WithoutTouchingManualSlider()
+    {
+        _sut.Button_ResizeFactor = 1.4; // the user's own manual choice
+        _sut.UpdateAutoFitArea(178, 226); // exactly one column, two rows at factor 1.0
+
+        _sut.AutoFitTiles = true;
+
+        Assert.Equal(1.0, _sut.EffectiveScaleFactor, 2); // computed from the area
+        Assert.Equal(1.4, _sut.Button_ResizeFactor, 2);  // manual slider's own value, unaffected
+        Assert.False(_sut.IsManualTileSize);
+        _settings.Received().Set("orderPanelAutoFitTiles", true);
+    }
+
+    [Fact]
+    public void AutoFitMaxFactor_NeverChangesTheManualSliderValue()
+    {
+        // Regression: dragging the "maximale Größe" slider used to bleed into the (disabled)
+        // manual-size slider because both were the same bound property.
+        _sut.Button_ResizeFactor = 1.4;
+        _sut.UpdateAutoFitArea(10000, 10000); // huge area, so the max factor is always the limiting bound
+        _sut.AutoFitTiles = true;
+
+        _sut.AutoFitMaxFactor = 1.2;
+
+        Assert.Equal(1.2, _sut.EffectiveScaleFactor, 2);
+        Assert.Equal(1.4, _sut.Button_ResizeFactor, 2);
+    }
+
+    [Fact]
+    public void DisablingAutoFit_HandsControlBackToTheManualSliderValue()
+    {
+        _sut.Button_ResizeFactor = 1.4;
+        _sut.UpdateAutoFitArea(178, 226);
+        _sut.AutoFitTiles = true;
+        Assert.Equal(1.0, _sut.EffectiveScaleFactor, 2);
+
+        _sut.AutoFitTiles = false;
+
+        Assert.Equal(1.4, _sut.EffectiveScaleFactor, 2);
+        Assert.True(_sut.IsManualTileSize);
     }
 
     [Fact]
