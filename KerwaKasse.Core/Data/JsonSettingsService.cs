@@ -87,9 +87,15 @@ public class JsonSettingsService : ISettingsService
         File.WriteAllText(_filePath, json);
 
         if (_changedKeys.Count > 0)
-            _logger.LogDebug("Settings saved, changed entries: {ChangedKeys}", string.Join(", ", _changedKeys));
+        {
+            string label = _changedKeys.Count == 1 ? "changed entry" : "changed entries";
+            _logger.LogDebug("Settings saved, {Label}: {ChangedEntries}", label,
+                string.Join(", ", _changedKeys.Select(k => $"{k}={_settings[k].GetRawText()}")));
+        }
         else
+        {
             _logger.LogDebug("Settings saved, no entries changed");
+        }
         _changedKeys.Clear();
     }
 }
