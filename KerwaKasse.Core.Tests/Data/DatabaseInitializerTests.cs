@@ -48,6 +48,39 @@ public class DatabaseInitializerTests : IDisposable
     }
 
     [Fact]
+    public void Initialize_SwitchesWalDatabaseToDeleteJournal()
+    {
+        // Journal modes only apply to file databases; in-memory ones always report "memory".
+        var dir = Path.Combine(Path.GetTempPath(), $"KerwaKasseTest_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var fileConnectionString = $"Data Source={Path.Combine(dir, "wal.db")}";
+        try
+        {
+            using (var setup = new SqliteConnection(fileConnectionString))
+            {
+                setup.Open();
+                using var toWal = setup.CreateCommand();
+                toWal.CommandText = "PRAGMA journal_mode=WAL;";
+                toWal.ExecuteScalar();
+            }
+            SqliteConnection.ClearAllPools();
+
+            DatabaseInitializer.Initialize(fileConnectionString);
+
+            using var connection = new SqliteConnection(fileConnectionString);
+            connection.Open();
+            using var check = connection.CreateCommand();
+            check.CommandText = "PRAGMA journal_mode;";
+            Assert.Equal("delete", (string)check.ExecuteScalar()!);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(dir, recursive: true); } catch { /* best-effort temp cleanup */ }
+        }
+    }
+
+    [Fact]
     public void Initialize_AddsMissingMenuSortOrderColumn()
     {
         // Simulate a database whose Menus table predates the SortOrder column.

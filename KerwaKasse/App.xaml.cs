@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Markup;
 using KerwaKasse.Core.Data;
+using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -60,6 +61,10 @@ namespace KerwaKasse
 
         protected override void OnExit(ExitEventArgs e)
         {
+            // Pooled connections keep the database file open past their Dispose; release them so
+            // SQLite closes the file cleanly instead of leaving journal remnants behind.
+            SqliteConnection.ClearAllPools();
+
             _logger?.LogInformation("KerwaKasse exited (exit code {ExitCode})", e.ApplicationExitCode);
             Log.CloseAndFlush();
             base.OnExit(e);
