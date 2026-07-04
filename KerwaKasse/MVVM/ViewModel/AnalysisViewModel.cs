@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using KerwaKasse.Core.Models;
@@ -133,6 +135,7 @@ namespace KerwaKasse.MVVM.ViewModel
             SelectAllProductsCommand = new RelayCommand(o => SetAllProducts(true));
             ClearProductsCommand = new RelayCommand(o => SetAllProducts(false));
             ExportCsvCommand = new RelayCommand(o => ExportCsv());
+            ExportPdfCommand = new RelayCommand(async o => await ExportPdfAsync());
             SortBreakdownCommand = new RelayCommand(o => SortBreakdown(o as string));
             SaveCurrentCommand = new RelayCommand(async o => await SaveCurrentAsync(), o => !HasActiveAnalysis);
             ApplySavedCommand = new RelayCommand(o => ApplySaved(ToId(o)));
@@ -307,6 +310,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand SelectAllProductsCommand { get; }
         public RelayCommand ClearProductsCommand { get; }
         public RelayCommand ExportCsvCommand { get; }
+        public RelayCommand ExportPdfCommand { get; }
         public RelayCommand SortBreakdownCommand { get; }
         public RelayCommand SaveCurrentCommand { get; }
         public RelayCommand ApplySavedCommand { get; }
@@ -697,6 +701,62 @@ namespace KerwaKasse.MVVM.ViewModel
                 _logger.LogError(ex, "CSV export failed");
                 _dialogService.ShowError("Export fehlgeschlagen: " + ex.Message);
             }
+        }
+
+        // ── PDF export (QuestPDF writes the .pdf file directly) ──
+
+        /// <summary>Asks for a report title (pre-filled with the active analysis' name, or
+        /// "Benutzerdefiniert"), then exports the shown breakdown to a PDF via the save dialog and
+        /// opens it. The chosen title is both the document's heading and the suggested file name.</summary>
+        private async Task ExportPdfAsync()
+        {
+            if (Breakdown.Count == 0)
+            {
+                _dialogService.ShowMessage("Keine Daten zum Exportieren.");
+                return;
+            }
+
+            var title = await _dialogService.ShowTextInputAsync(
+                "PDF exportieren", "Titel (erscheint als Überschrift im PDF)", ActiveAnalysisText);
+            if (string.IsNullOrEmpty(title)) return; // cancelled or left empty
+
+            try
+            {
+                var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var baseName = SanitizeFileName($"KerwaKasse Auswertung - {title}");
+                var suggestedName = UniqueFileName(dir, baseName, ".pdf");
+
+                var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", suggestedName, dir);
+                if (string.IsNullOrEmpty(path)) return;
+
+                AnalysisQuestPdfExporter.Export(BuildReport(title), path);
+                _logger.LogInformation("Analysis exported to PDF: {FilePath}", path);
+
+                // Open the fresh PDF in the default viewer right away — after "save as PDF" the
+                // next step is almost always looking at it.
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "PDF export failed");
+                _dialogService.ShowError("Export fehlgeschlagen: " + ex.Message);
+            }
+        }
+
+        /// <summary>Snapshot of the shown breakdown (current sort order) with the user-chosen title.</summary>
+        private AnalysisReport BuildReport(string title)
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return new AnalysisReport
+            {
+                AnalysisName = title,
+                Period = $"{_currentFrom.ToString("dd.MM.yyyy HH:mm", German)} – {_currentTo.ToString("dd.MM.yyyy HH:mm", German)} Uhr",
+                ProductSummary = ProductFilterSummary,
+                Rows = Breakdown.ToList(),
+                TotalAmount = TotalAmount,
+                TotalRevenue = TotalRevenue,
+                AppVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "?"
+            };
         }
 
         private static string CsvEscape(string value)

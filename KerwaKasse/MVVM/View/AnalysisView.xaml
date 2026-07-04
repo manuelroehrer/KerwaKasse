@@ -332,14 +332,25 @@
             <controls:SegmentedControl ItemsSource="{Binding ViewModes}" Command="{Binding SetViewModeCommand}"
                                        SegmentPadding="18,8" FontSize="14.5" HorizontalAlignment="Left" VerticalAlignment="Center"/>
 
-            <Button Style="{StaticResource CustomAccentButtonStyle}" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                    Padding="18,0" Command="{Binding ExportCsvCommand}"
-                    ToolTipService.ToolTip="Aktuelle Tabelle als CSV exportieren">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Export CSV" FontSize="14.5" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource CustomAccentButtonStyle}" VerticalAlignment="Stretch"
+                        Padding="18,0" Margin="0,0,10,0" Command="{Binding ExportPdfCommand}"
+                        ToolTipService.ToolTip="Aktuelle Tabelle als PDF exportieren">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Export PDF" FontSize="14.5" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Style="{StaticResource CustomAccentButtonStyle}" VerticalAlignment="Stretch"
+                        Padding="18,0" Command="{Binding ExportCsvCommand}"
+                        ToolTipService.ToolTip="Aktuelle Tabelle als CSV exportieren">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Export CSV" FontSize="14.5" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Content card -->
