@@ -1,0 +1,140 @@
+<UserControl x:Class="KerwaKasse.Controls.ColorPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="340">
+
+    <UserControl.Resources>
+        <!-- Palette tile: flat colour square; hover lifts the border, the selected tile (the tile
+             matching the current colour) carries a permanent accent ring. -->
+        <Style x:Key="PaletteTile" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Tile" Background="{TemplateBinding Background}"
+                                CornerRadius="3" BorderThickness="1" BorderBrush="#22000000"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="#333333"/>
+                                <Setter TargetName="Tile" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+                                <Setter TargetName="Tile" Property="BorderThickness" Value="2.5"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- Preset palette (pastel / vivid / dark / grayscale rows, built in code-behind).
+             UniformGrid instead of WrapPanel: with tiles exactly filling the width, WrapPanel's
+             float comparison wrapped one tile per row too early on scaled displays. -->
+        <ItemsControl x:Name="PaletteItems">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Style="{StaticResource PaletteTile}" Background="{Binding Hex}"
+                            Tag="{Binding Hex}" Click="PaletteTile_Click"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Rectangle Height="1" Fill="#E7E9EC" Margin="2,12,2,12"/>
+
+        <!-- Saturation/value square: the hue slider below picks the base colour, the square picks
+             saturation (x) and brightness (y). Fixed size keeps the drag math simple. -->
+        <Canvas x:Name="SpectrumCanvas" Width="336" Height="190" ClipToBounds="True" Cursor="Cross"
+                HorizontalAlignment="Center"
+                MouseLeftButtonDown="Spectrum_MouseDown" MouseMove="Spectrum_MouseMove"
+                MouseLeftButtonUp="Spectrum_MouseUp"
+                TouchDown="Spectrum_TouchDown" TouchMove="Spectrum_TouchMove" TouchUp="Spectrum_TouchUp">
+            <Canvas.Background>
+                <SolidColorBrush x:Name="SpectrumHueBrush" Color="Red"/>
+            </Canvas.Background>
+            <Rectangle Width="336" Height="190">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="White" Offset="0"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Width="336" Height="190">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00000000" Offset="0"/>
+                        <GradientStop Color="Black" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Ellipse x:Name="SpectrumThumb" Width="22" Height="22" Stroke="White" StrokeThickness="3"
+                     Fill="Transparent" IsHitTestVisible="False">
+                <Ellipse.Effect>
+                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.4"/>
+                </Ellipse.Effect>
+            </Ellipse>
+        </Canvas>
+
+        <!-- Hue bar with a round thumb (same look as the spectrum thumb) -->
+        <Border Margin="2,14,2,0" Height="30" ClipToBounds="False" Cursor="Hand" Background="Transparent"
+                MouseLeftButtonDown="Hue_MouseDown" MouseMove="Hue_MouseMove" MouseLeftButtonUp="Hue_MouseUp"
+                TouchDown="Hue_TouchDown" TouchMove="Hue_TouchMove" TouchUp="Hue_TouchUp">
+            <Grid x:Name="HueBarGrid">
+                <Rectangle RadiusX="4" RadiusY="4">
+                    <Rectangle.Fill>
+                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                            <GradientStop Color="#FFFF0000" Offset="0.000"/>
+                            <GradientStop Color="#FFFFFF00" Offset="0.167"/>
+                            <GradientStop Color="#FF00FF00" Offset="0.333"/>
+                            <GradientStop Color="#FF00FFFF" Offset="0.500"/>
+                            <GradientStop Color="#FF0000FF" Offset="0.667"/>
+                            <GradientStop Color="#FFFF00FF" Offset="0.833"/>
+                            <GradientStop Color="#FFFF0000" Offset="1.000"/>
+                        </LinearGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+                <!-- Elongated thumb (a slider handle, not an x/y dot like in the square above),
+                     with only a slight rounding so it reads as a bar, not a grain of rice. -->
+                <Canvas ClipToBounds="False">
+                    <Border x:Name="HueThumb" Width="12" Height="34" Canvas.Top="-2"
+                            Background="Transparent" BorderBrush="White" BorderThickness="3"
+                            CornerRadius="2" IsHitTestVisible="False">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="3" ShadowDepth="1" Opacity="0.35"/>
+                        </Border.Effect>
+                    </Border>
+                </Canvas>
+            </Grid>
+        </Border>
+
+        <!-- Preview swatch + editable hex -->
+        <Grid Margin="2,14,2,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Width="42" Height="42" CornerRadius="3" BorderBrush="#22000000" BorderThickness="1"
+                    VerticalAlignment="Center">
+                <Border.Background>
+                    <SolidColorBrush x:Name="PreviewBrush" Color="Red"/>
+                </Border.Background>
+            </Border>
+            <TextBox x:Name="HexInput" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                     Height="42" VerticalContentAlignment="Center"
+                     FontFamily="Cascadia Mono, Consolas" FontSize="16"
+                     MaxLength="7" CharacterCasing="Upper"
+                     TextChanged="HexInput_TextChanged"/>
+        </Grid>
+    </StackPanel>
+</UserControl>
