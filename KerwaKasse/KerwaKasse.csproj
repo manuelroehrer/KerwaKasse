@@ -10,9 +10,9 @@
     <Product>KerwaKasse</Product>
     <Copyright>© 2022–$([System.DateTime]::Now.Year) Manuel Röhrer</Copyright>
     <Authors>Manuel Röhrer</Authors>
-    <AssemblyVersion>2.8.0</AssemblyVersion>
-    <FileVersion>2.8.0</FileVersion>
-	<Version>2.8.0</Version>
+    <AssemblyVersion>2.9.0</AssemblyVersion>
+    <FileVersion>2.9.0</FileVersion>
+	<Version>2.9.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
