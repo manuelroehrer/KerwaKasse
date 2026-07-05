@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ui="http://schemas.modernwpf.com/2019"
-             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+             xmlns:controls="clr-namespace:KerwaKasse.Controls"
              xmlns:helper="clr-namespace:KerwaKasse.Helper"
              mc:Ignorable="d"
              d:DesignHeight="640" d:DesignWidth="1000">
@@ -633,9 +633,63 @@
 
                         <!-- Colour -->
                         <StackPanel Margin="0,0,0,18">
+                            <StackPanel.Resources>
+                                <!-- Combobox-look trigger, styled like the search box / Speisekarten pill. -->
+                                <Style x:Key="ColorPillButton" TargetType="Button">
+                                    <Setter Property="Background" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Padding" Value="5"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                                    <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </StackPanel.Resources>
+
                             <TextBlock Text="FARBE" Style="{StaticResource FieldLabel}"/>
-                            <xctk:ColorPicker SelectedColor="{Binding DetailPanel.ColorAsString, Mode=TwoWay}"
-                                              UsingAlphaChannel="False" Height="40"/>
+                            <!-- Same live height as the name box (like the price box does), so the
+                                 three inputs always line up regardless of theme or display scale. -->
+                            <Button Style="{StaticResource ColorPillButton}" HorizontalAlignment="Stretch"
+                                    Height="{Binding ActualHeight, ElementName=NameTextBox}"
+                                    ToolTipService.ToolTip="Farbe wählen">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border CornerRadius="3" Background="{Binding DetailPanel.ColorAsString}"
+                                            BorderBrush="#22000000" BorderThickness="1"/>
+                                    <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                               VerticalAlignment="Center" Margin="10,0,4,0" Foreground="#5A6270"/>
+                                </Grid>
+                                <ui:FlyoutService.Flyout>
+                                    <ui:Flyout Placement="Bottom">
+                                        <ui:Flyout.FlyoutPresenterStyle>
+                                            <Style TargetType="ui:FlyoutPresenter">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="Padding" Value="14"/>
+                                            </Style>
+                                        </ui:Flyout.FlyoutPresenterStyle>
+                                        <controls:ColorPicker SelectedHex="{Binding DetailPanel.ColorAsString, Mode=TwoWay}"/>
+                                    </ui:Flyout>
+                                </ui:FlyoutService.Flyout>
+                            </Button>
                         </StackPanel>
 
                         <!-- Availability (box colour reflects state) -->
