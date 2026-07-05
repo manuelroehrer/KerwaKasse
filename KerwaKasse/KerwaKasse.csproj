@@ -8,7 +8,7 @@
     <AssemblyName>KerwaKasse</AssemblyName>
     <ApplicationIcon>KerwaKasse.ico</ApplicationIcon>
     <Product>KerwaKasse</Product>
-    <Copyright>© $([System.DateTime]::Now.Year) Manuel Röhrer</Copyright>
+    <Copyright>© 2022–$([System.DateTime]::Now.Year) Manuel Röhrer</Copyright>
     <Authors>Manuel Röhrer</Authors>
     <AssemblyVersion>2.8.0</AssemblyVersion>
     <FileVersion>2.8.0</FileVersion>
@@ -22,6 +22,15 @@
 
   <ItemGroup>
     <Content Include="KerwaKasse.ico" />
+  </ItemGroup>
+
+  <!-- Ship the license documents with every build. The installer packs the publish folder
+       as-is, so they end up in the installation automatically; the info page opens the
+       third-party notices from there. -->
+  <ItemGroup>
+    <None Include="..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\NOTICE" Link="NOTICE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

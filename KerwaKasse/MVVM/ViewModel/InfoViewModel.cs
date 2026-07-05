@@ -12,9 +12,13 @@ namespace KerwaKasse.MVVM.ViewModel
 {
     public class InfoViewModel : PropertyChangedBase
     {
+        private const string RepositoryUrl = "https://github.com/manuelroehrer/KerwaKasse";
+
         public RelayCommand BackupCommand { get; }
         public RelayCommand RestoreCommand { get; }
         public RelayCommand OpenDataFolderCommand { get; }
+        public RelayCommand OpenRepositoryCommand { get; }
+        public RelayCommand OpenThirdPartyNoticesCommand { get; }
 
         // App name, version and copyright are read from the assembly so they
         // stay in sync with the .csproj and never need to be maintained twice.
@@ -46,6 +50,51 @@ namespace KerwaKasse.MVVM.ViewModel
             BackupCommand = new RelayCommand(o => BackupDatabase());
             RestoreCommand = new RelayCommand(async o => await RestoreDatabaseAsync());
             OpenDataFolderCommand = new RelayCommand(o => OpenDataFolder());
+            OpenRepositoryCommand = new RelayCommand(o => OpenRepository());
+            OpenThirdPartyNoticesCommand = new RelayCommand(o => OpenThirdPartyNotices());
+        }
+
+        private void OpenRepository()
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(RepositoryUrl) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open repository URL");
+                _dialogService.ShowError("Der Link konnte nicht geöffnet werden: " + ex.Message);
+            }
+        }
+
+        // Opens the third-party notices that ship next to the executable (copied into the
+        // build output by the project file, so the installer picks them up automatically).
+        private void OpenThirdPartyNotices()
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md");
+            if (!File.Exists(path))
+            {
+                _dialogService.ShowError("Die Datei THIRD-PARTY-NOTICES.md wurde nicht gefunden.");
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Exception)
+            {
+                // No association for .md files — fall back to Notepad, which is always there.
+                try
+                {
+                    Process.Start(new ProcessStartInfo("notepad.exe", $"\"{path}\""));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to open third-party notices");
+                    _dialogService.ShowError("Die Datei konnte nicht geöffnet werden: " + ex.Message);
+                }
+            }
         }
 
         private void BackupDatabase()
