@@ -143,7 +143,10 @@ namespace KerwaKasse.Helper
             if (GetIsFitting(textBlock) || !textBlock.IsLoaded)
                 return;
 
-            double availableWidth = textBlock.ActualWidth;
+            // Floor the width: with UseLayoutRounding in the ancestor chain the actually
+            // rendered width can be slightly narrower than ActualWidth, which would make
+            // a size that fits the probe still wrap one line further in the live control.
+            double availableWidth = Math.Floor(textBlock.ActualWidth);
             double availableHeight = textBlock.MaxHeight;
 
             if (availableWidth <= 0 || double.IsInfinity(availableWidth) ||
@@ -179,7 +182,10 @@ namespace KerwaKasse.Helper
                         high = mid;
                 }
 
-                textBlock.FontSize = Math.Round(low, 1);
+                // Round DOWN: the binary search converges right at the size where the text
+                // barely fits, so rounding up by even 0.05 can push a word onto an extra
+                // line that gets clipped by MaxHeight.
+                textBlock.FontSize = Math.Max(minFontSize, Math.Floor(low * 10) / 10);
             }
             finally
             {
@@ -190,14 +196,26 @@ namespace KerwaKasse.Helper
         private static bool Fits(TextBlock source, double fontSize, double availableWidth, double availableHeight)
         {
             Size size = Measure(source, fontSize, availableWidth);
-            return size.Width <= availableWidth + 0.5 && size.Height <= availableHeight + 0.5;
+            if (size.Width > availableWidth + 0.5 || size.Height > availableHeight + 0.5)
+                return false;
+
+            // Reject sizes at which a single word only fits by breaking mid-word:
+            // WPF's emergency line break keeps such text inside the bounds, so the
+            // wrapped measurement above cannot detect it.
+            foreach (string word in source.Text.Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (Measure(source, fontSize, double.PositiveInfinity, word).Width > availableWidth + 0.5)
+                    return false;
+            }
+
+            return true;
         }
 
-        private static Size Measure(TextBlock source, double fontSize, double availableWidth)
+        private static Size Measure(TextBlock source, double fontSize, double availableWidth, string text = null)
         {
             var probe = new TextBlock
             {
-                Text = source.Text,
+                Text = text ?? source.Text,
                 FontFamily = source.FontFamily,
                 FontSize = fontSize,
                 FontStretch = source.FontStretch,
