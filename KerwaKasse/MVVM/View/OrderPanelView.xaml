@@ -29,7 +29,8 @@
 
         <!-- Product grid. Uniform padding: together with the uniform tile margin (4) this yields the
              same 10px gap to the nav bar, the title bar and the panel edges. -->
-        <ScrollViewer Grid.Column="0"
+        <ScrollViewer x:Name="ProductScroll"
+                      Grid.Column="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="6"
