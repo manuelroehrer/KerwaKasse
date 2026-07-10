@@ -7,6 +7,8 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="750">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
         <!-- Light card used to group the sections on the page. A full 1px border
              defines all four edges (a directional drop shadow alone made the left
              and top edges blend into the page background). -->
@@ -87,6 +89,42 @@
                                 </StackPanel>
                             </Button.Content>
                         </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Update -->
+            <Border Style="{StaticResource InfoCard}">
+                <StackPanel>
+                    <TextBlock Text="Update" Foreground="Black" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock FontSize="15">
+                        <Hyperlink Command="{Binding OpenReleasesCommand}">Releases auf GitHub</Hyperlink>
+                    </TextBlock>
+                    <!-- Only visible when the startup check was switched off by hand in settings.json. -->
+                    <Border Background="#FBF5E6" BorderBrush="#EBD9A8" BorderThickness="1" CornerRadius="4"
+                            Padding="10,7,12,7" Margin="0,12,0,0" HorizontalAlignment="Left"
+                            Visibility="{Binding StartupCheckDisabled, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#B8860B"
+                                       VerticalAlignment="Center" Margin="0,0,9,0"/>
+                            <TextBlock Text="Automatische Updateprüfung beim Start ist deaktiviert."
+                                       FontSize="14" Foreground="#6B5A22" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Command="{Binding CheckForUpdatesCommand}">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="&#xE72C;" FontSize="16" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <Label Content="Auf Update prüfen" FontSize="16" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                        <TextBlock Text="{Binding UpdateStatusText}" Foreground="#707070" FontSize="14"
+                                   VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#107C10"
+                                   VerticalAlignment="Center" Margin="7,1,0,0"
+                                   Visibility="{Binding UpdateStatusIsPositive, Converter={StaticResource BoolToVisibility}}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

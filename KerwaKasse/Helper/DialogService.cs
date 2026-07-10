@@ -1,7 +1,10 @@
+using KerwaKasse.Core.Services;
 using KerwaKasse.MVVM.View;
 using KerwaKasse.MVVM.ViewModel;
 using Microsoft.Win32;
 using ModernWpf.Controls;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -169,6 +172,60 @@ namespace KerwaKasse.Helper
         {
             var dialog = new SavedAnalysisManagementDialog { DataContext = viewModel };
             await dialog.ShowAsync();
+        }
+
+        public async Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion)
+        {
+            var dialog = new UpdateDialog(update, installedVersion);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<string> ShowDownloadProgressAsync(string title, Func<IProgress<double>, CancellationToken, Task<string>> download)
+        {
+            var bar = new System.Windows.Controls.ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Margin = new Thickness(0, 14, 0, 0)
+            };
+            var panel = new StackPanel { MinWidth = 360 };
+            panel.Children.Add(new TextBlock { Text = "Das Update wird heruntergeladen ...", TextWrapping = TextWrapping.Wrap });
+            panel.Children.Add(bar);
+
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = panel,
+                CloseButtonText = "Abbrechen"
+            };
+
+            using var cancellation = new CancellationTokenSource();
+            // Progress is created on the UI thread, so its callbacks are marshalled back here.
+            var progress = new Progress<double>(fraction => bar.Value = Math.Min(100, fraction * 100));
+            var downloadTask = download(progress, cancellation.Token);
+
+            // The dialog has no OK button; it closes itself the moment the download ends, however it ends.
+            dialog.Opened += (_, _) => downloadTask.ContinueWith(
+                _ => dialog.Hide(),
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.FromCurrentSynchronizationContext());
+
+            await dialog.ShowAsync();
+
+            // Dialog closed while the download still runs — the user pressed "Abbrechen".
+            if (!downloadTask.IsCompleted)
+                cancellation.Cancel();
+
+            try
+            {
+                return await downloadTask;
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
         }
     }
 }

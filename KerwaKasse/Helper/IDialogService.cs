@@ -1,8 +1,22 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
+using KerwaKasse.Core.Services;
 using KerwaKasse.MVVM.ViewModel;
 
 namespace KerwaKasse.Helper
 {
+    /// <summary>What the user chose in the "update available" dialog.</summary>
+    public enum UpdateDialogResult
+    {
+        /// <summary>Download and install now (or open the release page when there is no installer asset).</summary>
+        InstallNow,
+        /// <summary>Never offer this particular version again.</summary>
+        SkipVersion,
+        /// <summary>Just close the dialog; offer the version again on the next check.</summary>
+        Later
+    }
+
     public interface IDialogService
     {
         void ShowMessage(string message);
@@ -29,5 +43,13 @@ namespace KerwaKasse.Helper
 
         /// <summary>Shows the saved-analyses management dialog for the given view model.</summary>
         Task ShowSavedAnalysisManagementAsync(SavedAnalysisManagementViewModel viewModel);
+
+        /// <summary>Tells the user that <paramref name="update"/> is available (with its release notes)
+        /// and lets them install now, skip this version or decide later.</summary>
+        Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion);
+
+        /// <summary>Runs <paramref name="download"/> behind a modal progress dialog whose only button
+        /// cancels it. Returns the downloaded file's path, or null when the user cancelled.</summary>
+        Task<string> ShowDownloadProgressAsync(string title, Func<IProgress<double>, CancellationToken, Task<string>> download);
     }
 }
