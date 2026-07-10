@@ -30,9 +30,21 @@ public class DatabaseBackupService : IDatabaseBackupService
     {
         if (!File.Exists(filePath)) return false;
 
+        // Validate a private local copy, never the user's selected file directly. Opening a WAL-mode backup would
+        // otherwise create -wal/-shm sidecars. It also may live on a network share, a UNC path or an on-demand location
+        // like OneDrive etc., which might cause problems.
+        // Copying to a local temp folder first prevents all of that:
+        // any sidecars the read creates land in the temp folder and are
+        // removed with it, and SQLite only ever works against a plain local file.
+        string tempDir = Path.Combine(Path.GetTempPath(), "KerwaKasse_restore_" + Guid.NewGuid().ToString("N"));
+        string candidatePath = Path.Combine(tempDir, "candidate.db");
         try
         {
-            using var connection = new SqliteConnection($"Data Source={filePath};Mode=ReadOnly");
+            Directory.CreateDirectory(tempDir);
+            File.Copy(filePath, candidatePath);
+
+            // Pooling=False so the file handle is released on dispose and the temp folder can be deleted.
+            using var connection = new SqliteConnection($"Data Source={candidatePath};Mode=ReadOnly;Pooling=False");
             connection.Open();
             var source = ReadSchema(connection);
 
@@ -64,6 +76,17 @@ public class DatabaseBackupService : IDatabaseBackupService
         {
             _logger.LogWarning(ex, "File {FilePath} rejected: not a readable SQLite database", filePath);
             return false;
+        }
+        finally
+        {
+            try 
+            { 
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true); 
+            }
+            catch (Exception ex) 
+            { 
+                _logger.LogWarning(ex, "Could not remove temp validation folder {TempDir}", tempDir); 
+            }
         }
     }
 

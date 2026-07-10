@@ -103,6 +103,27 @@ public class DatabaseBackupServiceTests : IDisposable
         Assert.True(_sut.IsValidDatabaseFile(Path.Combine(_dir, "extra.db")));
     }
 
+    [Fact]
+    public void IsValidDatabaseFile_WalModeBackup_IsValidAndLeavesNoSidecars()
+    {
+        // A backup taken while the database was in WAL mode: journal_mode=wal is persisted in the file
+        // header. Validation must accept it without leaving -wal/-shm files next to the user's backup.
+        var walPath = Path.Combine(_dir, "wal_backup.db");
+        var walConnectionString = $"Data Source={walPath}";
+        DatabaseInitializer.Initialize(walConnectionString); // current schema (and DELETE journal)
+        ExecuteSql(walConnectionString, "PRAGMA journal_mode=WAL; PRAGMA wal_checkpoint(TRUNCATE);");
+        SqliteConnection.ClearAllPools();
+        // A real single-file backup carries no companion sidecars; drop any this setup produced.
+        foreach (var sidecar in new[] { "-wal", "-shm", "-journal" })
+            if (File.Exists(walPath + sidecar)) File.Delete(walPath + sidecar);
+
+        bool valid = _sut.IsValidDatabaseFile(walPath);
+
+        Assert.True(valid);
+        Assert.False(File.Exists(walPath + "-wal"), "-wal sidecar was left next to the backup file");
+        Assert.False(File.Exists(walPath + "-shm"), "-shm sidecar was left next to the backup file");
+    }
+
     // Creates a database file with exactly the given schema (no initializer), then releases the file handle
     // so it can be opened independently as a restore source.
     private string CreateDatabase(string fileName, string schemaSql)
