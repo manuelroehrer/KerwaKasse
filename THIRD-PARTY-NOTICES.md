@@ -10,6 +10,7 @@ are independent of KerwaKasse's Apache-2.0 license.
 | --- | --- | --- |
 | Dapper | Apache-2.0 | <https://github.com/DapperLib/Dapper> |
 | LiveChartsCore (+ SkiaSharpView, SkiaSharpView.WPF) | MIT | <https://github.com/beto-rodriguez/LiveCharts2> |
+| Markdig | BSD-2-Clause | <https://github.com/xoofx/markdig> |
 | Microsoft.Data.Sqlite | MIT | <https://github.com/dotnet/efcore> |
 | Microsoft.Extensions.Logging.Abstractions | MIT | <https://github.com/dotnet/runtime> |
 | ModernWpfUI | MIT | <https://github.com/Kinnara/ModernWpf> |
