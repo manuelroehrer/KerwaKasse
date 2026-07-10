@@ -6,6 +6,7 @@ using KerwaKasse.Core.Data;
 using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -18,8 +19,32 @@ namespace KerwaKasse
         private ILoggerFactory _loggerFactory;
         private ILogger<App> _logger;
 
+        // Named single-instance handles. The DEBUG suffix keeps a Visual Studio debug build from
+        // colliding with an installed release build during development.
+#if DEBUG
+        private const string SingleInstanceName = "KerwaKasse.SingleInstance.Debug";
+#else
+        private const string SingleInstanceName = "KerwaKasse.SingleInstance";
+#endif
+        private static string ActivateEventName => SingleInstanceName + ".Activate";
+
+        private Mutex _singleInstanceMutex;   // kept alive for the whole process so it is not released early
+        private EventWaitHandle _activateSignal;
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Enforce a single running instance: a second launch (e.g. an accidental double-click) would
+            // otherwise open a second window on the same database, where a stale product list could lead
+            // to wrong prices being booked. If one is already running, bring its window to the front and
+            // quit right away — before the logger is set up, so no duplicate log file is created.
+            _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceName, out bool isFirstInstance);
+            if (!isFirstInstance)
+            {
+                SignalExistingInstance();
+                Shutdown();
+                return;
+            }
+
             // The UI is German-only for now, so pin the culture instead of following the OS:
             // otherwise date pickers and weekday names render in the OS language on non-German
             // machines while the rest of the UI stays German.
@@ -62,7 +87,56 @@ namespace KerwaKasse
 
             new MainWindow(_loggerFactory).Show();
 
+            StartActivationListener();
+
             base.OnStartup(e);
+        }
+
+        // Lets a second, exiting instance ask this one to surface. A background thread waits for the
+        // signal and brings the main window to the front on the UI thread.
+        private void StartActivationListener()
+        {
+            _activateSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ActivateEventName);
+            var listener = new Thread(() =>
+            {
+                while (_activateSignal.WaitOne())
+                    Dispatcher.Invoke(BringMainWindowToFront);
+            })
+            {
+                IsBackground = true,
+                Name = "SingleInstanceActivationListener"
+            };
+            listener.Start();
+        }
+
+        private void BringMainWindowToFront()
+        {
+            if (MainWindow is null) return;
+
+            if (MainWindow.WindowState == WindowState.Minimized)
+                MainWindow.WindowState = WindowState.Normal;
+
+            MainWindow.Activate();
+            // Briefly forcing Topmost pulls the window to the foreground without the SetForegroundWindow
+            // restrictions that stop a background process from stealing focus.
+            MainWindow.Topmost = true;
+            MainWindow.Topmost = false;
+
+            _logger.LogInformation("Second launch detected; brought the existing window to the front");
+        }
+
+        // Signals the already-running instance to surface. If it has the mutex but has not published its
+        // activation event yet, there is nothing to do beyond exiting quietly.
+        private static void SignalExistingInstance()
+        {
+            try
+            {
+                using var signal = EventWaitHandle.OpenExisting(ActivateEventName);
+                signal.Set();
+            }
+            catch (WaitHandleCannotBeOpenedException)
+            {
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
