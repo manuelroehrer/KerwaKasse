@@ -17,6 +17,7 @@ public class MainWindowViewModelTests
     private readonly IAnalyticsService _analyticsService;
     private readonly ISavedAnalysisService _savedAnalysisService;
     private readonly IDatabaseBackupService _backupService;
+    private readonly IUpdateService _updateService;
     private readonly MainWindowViewModel _sut;
 
     public MainWindowViewModelTests()
@@ -29,6 +30,7 @@ public class MainWindowViewModelTests
         _analyticsService = Substitute.For<IAnalyticsService>();
         _savedAnalysisService = Substitute.For<ISavedAnalysisService>();
         _backupService = Substitute.For<IDatabaseBackupService>();
+        _updateService = Substitute.For<IUpdateService>();
 
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
@@ -39,7 +41,7 @@ public class MainWindowViewModelTests
         _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
             .Returns(new List<SalesFigure>());
 
-        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, NullLoggerFactory.Instance);
+        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, _updateService, NullLoggerFactory.Instance);
     }
 
     [Fact]

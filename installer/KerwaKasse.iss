@@ -66,3 +66,13 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: deskto
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Relaunch after an in-app update: the app downloads this setup, starts it silently with
+; /AUTORELAUNCH=1 and exits. Without that switch (a normal manual install) nothing changes,
+; the postinstall entry above stays the only launcher.
+Filename: "{app}\{#AppExeName}"; Flags: nowait; Check: ShouldAutoRelaunch
+
+[Code]
+function ShouldAutoRelaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:AUTORELAUNCH|0}') = '1';
+end;

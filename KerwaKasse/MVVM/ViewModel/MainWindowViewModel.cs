@@ -37,7 +37,7 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
-        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService, IDatabaseBackupService backupService, ILoggerFactory loggerFactory)
+        public MainWindowViewModel(IDialogService dialogService, IProductService productService, IOrderService orderService, ISettingsService settingsService, string dbFilePath, IMenuService menuService, IAnalyticsService analyticsService, ISavedAnalysisService savedAnalysisService, IDatabaseBackupService backupService, IUpdateService updateService, ILoggerFactory loggerFactory)
         {
             _dialogService = dialogService;
             _productService = productService;
@@ -48,7 +48,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _savedAnalysisService = savedAnalysisService;
             _loggerFactory = loggerFactory;
 
-            InfoVM = new InfoViewModel(dialogService, dbFilePath, backupService, loggerFactory.CreateLogger<InfoViewModel>());
+            InfoVM = new InfoViewModel(dialogService, dbFilePath, backupService, updateService, settingsService, loggerFactory.CreateLogger<InfoViewModel>());
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = CreateOrderPanelViewModel());
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));

@@ -1,0 +1,77 @@
+<ui:ContentDialog x:Class="KerwaKasse.MVVM.View.UpdateDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d"
+             Padding="0"
+             d:DesignHeight="520" d:DesignWidth="600">
+
+    <ui:ContentDialog.Resources>
+        <Thickness x:Key="ContentDialogPadding">0</Thickness>
+        <sys:Double x:Key="ContentDialogMaxWidth">1000</sys:Double>
+        <!-- Allow the tall layout; the code-behind caps the content to the window on small screens. -->
+        <sys:Double x:Key="ContentDialogMaxHeight">980</sys:Double>
+    </ui:ContentDialog.Resources>
+
+    <!-- No fixed height: with short release notes the dialog stays compact, long notes grow it
+         until the code-behind cap kicks in and the notes area starts scrolling. -->
+    <Grid x:Name="RootGrid" Width="600">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: title + close (X = decide later, same as pressing Escape) -->
+        <Border Grid.Row="0" BorderBrush="#EDEFF2" BorderThickness="0,0,0,1" Padding="22,12,12,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                           Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="Update verfügbar" FontSize="21" FontWeight="SemiBold"
+                           Foreground="#1B1E24" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <Button Grid.Column="2" Click="CloseButton_Click" Background="Transparent" BorderThickness="0"
+                        Width="40" Height="40" Padding="0" Cursor="Hand" ToolTip="Schließen">
+                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#586070"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Body: version line + release link + rendered release notes -->
+        <Grid Grid.Row="1" Margin="22,16,10,4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="VersionText" FontSize="15" Foreground="#404040" TextWrapping="Wrap" Margin="0,0,12,0"/>
+            <TextBlock x:Name="ReleaseLinkText" Grid.Row="1" FontSize="15" Margin="0,6,12,0">
+                <Hyperlink Click="ReleaseLink_Click">Release auf GitHub</Hyperlink>
+            </TextBlock>
+            <!-- Padding keeps the notes clear of the scrollbar, which widens on hover in this theme. -->
+            <FlowDocumentScrollViewer x:Name="NotesViewer" Grid.Row="2" Margin="0,18,0,0" Padding="0,0,12,0"
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="#F7F8FA" BorderBrush="#EDEFF2" BorderThickness="0,1,0,0"
+                Padding="22,12,22,12" CornerRadius="0,0,8,8">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Version überspringen" Click="SkipButton_Click"
+                        Background="Transparent" BorderThickness="0" Foreground="#586070"
+                        Padding="14,8" FontSize="15" Cursor="Hand" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Button x:Name="InstallButton" Click="InstallButton_Click"
+                        Style="{StaticResource CustomAccentButtonStyle}" Padding="20,9">
+                    <TextBlock x:Name="InstallButtonText" Text="Jetzt aktualisieren" FontSize="15" Foreground="White"/>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:ContentDialog>

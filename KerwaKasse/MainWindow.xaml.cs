@@ -29,11 +29,17 @@ namespace KerwaKasse
             var analyticsService = new SqliteAnalyticsService(connectionString);
             var savedAnalysisService = new SqliteSavedAnalysisService(connectionString, loggerFactory.CreateLogger<SqliteSavedAnalysisService>());
             var backupService = new DatabaseBackupService(connectionString, dbFilePath, loggerFactory.CreateLogger<DatabaseBackupService>());
+            var updateService = new GitHubUpdateService(InfoViewModel.RepositoryUrl, loggerFactory.CreateLogger<GitHubUpdateService>());
             _settingsService = settingsService;
 
-            DataContext = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService, loggerFactory);
+            var mainViewModel = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService, updateService, loggerFactory);
+            DataContext = mainViewModel;
             InitializeComponent();
             RestoreWindowState();
+
+            // The background update check waits until the window is up; it never blocks the UI and
+            // only ever speaks up when a new version was actually found.
+            Loaded += async (_, _) => await mainViewModel.InfoVM.CheckForUpdatesOnStartupAsync();
         }
 
         private void NavButton_Click(object sender, RoutedEventArgs e)
