@@ -57,6 +57,21 @@ public class JsonSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void Save_WithoutChanges_DoesNotRewriteFile()
+    {
+        var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);
+        sut.Set("key", "value");
+        sut.Save();
+
+        // Stamp the file with a known time; a second save with nothing changed must not touch it.
+        var marker = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(_filePath, marker);
+        sut.Save();
+
+        Assert.Equal(marker, File.GetLastWriteTimeUtc(_filePath));
+    }
+
+    [Fact]
     public void Get_WithWrongType_ReturnsDefault()
     {
         var sut = new JsonSettingsService(_filePath, NullLogger<JsonSettingsService>.Instance);

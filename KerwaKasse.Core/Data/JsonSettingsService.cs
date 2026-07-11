@@ -79,6 +79,12 @@ public class JsonSettingsService : ISettingsService
 
     public void Save()
     {
+        // Nothing changed since the last save or load, so the file on disk is already current.
+        // Skip the write to avoid a redundant save on every call that changed nothing (for example
+        // the window-state save on exit when the window state was never touched).
+        if (_changedKeys.Count == 0)
+            return;
+
         var options = new JsonSerializerOptions { WriteIndented = true };
         var json = JsonSerializer.Serialize(_settings, options);
         var dir = Path.GetDirectoryName(_filePath);
@@ -86,16 +92,9 @@ public class JsonSettingsService : ISettingsService
             Directory.CreateDirectory(dir);
         File.WriteAllText(_filePath, json);
 
-        if (_changedKeys.Count > 0)
-        {
-            string label = _changedKeys.Count == 1 ? "changed entry" : "changed entries";
-            _logger.LogDebug("Settings saved, {Label}: {ChangedEntries}", label,
-                string.Join(", ", _changedKeys.Select(k => $"{k}={_settings[k].GetRawText()}")));
-        }
-        else
-        {
-            _logger.LogDebug("Settings saved, no entries changed");
-        }
+        string label = _changedKeys.Count == 1 ? "changed entry" : "changed entries";
+        _logger.LogDebug("Settings saved, {Label}: {ChangedEntries}", label,
+            string.Join(", ", _changedKeys.Select(k => $"{k}={_settings[k].GetRawText()}")));
         _changedKeys.Clear();
     }
 }
