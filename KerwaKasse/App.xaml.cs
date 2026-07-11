@@ -83,6 +83,10 @@ namespace KerwaKasse
 
             RegisterGlobalExceptionLogging();
 
+            // Remove the installer a previous one-click update left behind (this run may be the
+            // relaunch after such an update).
+            GitHubUpdateService.CleanupDownloadedInstallers(_loggerFactory.CreateLogger(typeof(GitHubUpdateService)));
+
             DatabaseInitializer.Initialize(connectionString, _loggerFactory.CreateLogger(typeof(DatabaseInitializer)));
 
             new MainWindow(_loggerFactory).Show();
