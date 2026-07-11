@@ -16,6 +16,7 @@ are independent of KerwaKasse's Apache-2.0 license.
 | ModernWpfUI | MIT | <https://github.com/Kinnara/ModernWpf> |
 | QuestPDF | QuestPDF Community License (see below) | <https://github.com/QuestPDF/QuestPDF> |
 | Serilog.Extensions.Logging | Apache-2.0 | <https://github.com/serilog/serilog-extensions-logging> |
+| Serilog.Sinks.Debug | Apache-2.0 | <https://github.com/serilog/serilog-sinks-debug> |
 | Serilog.Sinks.File | Apache-2.0 | <https://github.com/serilog/serilog-sinks-file> |
 
 Notable transitive components distributed with the application:

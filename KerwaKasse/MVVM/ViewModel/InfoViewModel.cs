@@ -204,15 +204,16 @@ namespace KerwaKasse.MVVM.ViewModel
                     return;
                 }
 
-                // /SILENT shows only the small progress window instead of the full wizard.
-                // /FORCECLOSEAPPLICATIONS is a backstop in case this process has not fully exited by
-                // the time the installer replaces the files. /AUTORELAUNCH=1 is our own switch the
-                // setup script evaluates to start KerwaKasse again once the update is through.
-                Process.Start(new ProcessStartInfo(installerPath, "/SILENT /FORCECLOSEAPPLICATIONS /AUTORELAUNCH=1")
+                _logger.LogInformation("Starting installer for update {Version}, shutting down", update.Version);
+
+                // Run the installer silently; /AUTORELAUNCH=1 tells it to start KerwaKasse again once
+                // the update is applied. Shutting down here lets the app close normally: the installer
+                // waits for this process to exit before it replaces any files, so the shutdown
+                // (settings written, database handles released, log flushed) always finishes first.
+                Process.Start(new ProcessStartInfo(installerPath, "/SILENT /AUTORELAUNCH=1")
                 {
                     UseShellExecute = true
                 });
-                _logger.LogInformation("Installer for update {Version} started, exiting", update.Version);
                 Application.Current.Shutdown();
             }
             catch (Exception ex)

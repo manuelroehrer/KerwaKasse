@@ -18,6 +18,10 @@ public class GitHubUpdateService : IUpdateService
     // suffixes ("-beta.1") are ignored.
     private static readonly Regex VersionPattern = new(@"\d+\.\d+(\.\d+){0,2}", RegexOptions.Compiled);
 
+    // Local temp folder the downloaded release installer is stored in. Named specifically so it is
+    // not confused with any other download location in the app.
+    private static readonly string InstallerDownloadDirectory = Path.Combine(Path.GetTempPath(), "KerwaKasse_Update");
+
     private readonly string _latestReleaseUrl;
     private readonly ILogger<GitHubUpdateService> _logger;
 
@@ -136,11 +140,10 @@ public class GitHubUpdateService : IUpdateService
         if (update.InstallerUrl is null)
             throw new InvalidOperationException("The release carries no installer asset.");
 
-        string downloadDir = Path.Combine(Path.GetTempPath(), "KerwaKasse_Update");
-        Directory.CreateDirectory(downloadDir);
+        Directory.CreateDirectory(InstallerDownloadDirectory);
         string fileName = Path.GetFileName(new Uri(update.InstallerUrl).LocalPath);
         if (string.IsNullOrEmpty(fileName)) fileName = "KerwaKasse_Setup.exe";
-        string filePath = Path.Combine(downloadDir, fileName);
+        string filePath = Path.Combine(InstallerDownloadDirectory, fileName);
 
         using var response = await Http.GetAsync(update.InstallerUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -168,5 +171,25 @@ public class GitHubUpdateService : IUpdateService
 
         _logger.LogInformation("Installer for {Version} downloaded to {FilePath}", update.Version, filePath);
         return filePath;
+    }
+
+    /// <summary>Deletes the downloaded-installer folder, best-effort. Called at startup: after an
+    /// update the app relaunches, and this clears the installer it was launched from so nothing
+    /// lingers and the next download always starts from an empty folder.</summary>
+    public static void CleanupDownloadedInstallers(ILogger logger)
+    {
+        try
+        {
+            if (!Directory.Exists(InstallerDownloadDirectory))
+                return;
+
+            Directory.Delete(InstallerDownloadDirectory, recursive: true);
+            logger.LogDebug("Removed leftover update installer folder {Dir}", InstallerDownloadDirectory);
+        }
+        catch (Exception ex)
+        {
+            // A still-locked folder is no problem; it is retried on the next start.
+            logger.LogDebug(ex, "Could not remove update installer folder {Dir}", InstallerDownloadDirectory);
+        }
     }
 }
