@@ -63,15 +63,21 @@ namespace KerwaKasse
             // Serilog writes to a daily rolling file, capped at roughly a year of files as a safety
             // limit against unbounded growth; the daily files are small, so keeping that much history
             // stays cheap. The invariant format provider keeps numbers deterministic (3.50 instead of
-            // 3,50) regardless of the machine's culture.
+            // 3,50) regardless of the machine's culture. shared:true lets overlapping processes (an
+            // update handoff, or a debug build next to the installed one) write to the same daily
+            // file instead of spilling into kerwakasse-<date>_NNN.log. The Debug sink additionally
+            // mirrors everything to the Visual Studio output window during development.
+            const string outputTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File(
                     Path.Combine(appDir, "logs", "kerwakasse-.log"),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 365,
-                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}",
+                    shared: true,
+                    outputTemplate: outputTemplate,
                     formatProvider: CultureInfo.InvariantCulture)
+                .WriteTo.Debug(outputTemplate: outputTemplate, formatProvider: CultureInfo.InvariantCulture)
                 .CreateLogger();
 
             _loggerFactory = new SerilogLoggerFactory(Log.Logger);
