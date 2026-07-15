@@ -51,8 +51,8 @@ namespace KerwaKasse.MVVM.ViewModel
         // The time course is only (re)built while its tab is visible; a reload behind the breakdown
         // tab just marks it stale and the next switch to the tab catches up. Building it eagerly
         // cost seconds on wide ranges (the gap-filled buckets explode: a whole-history range means
-        // >100k quarter-hour columns) even though the course is the rarely used view of the two.
-        private bool _courseIsStale = true;
+        // >100k quarter-hour columns) even though the time course is the rarely used view of the two.
+        private bool _timeCourseIsStale = true;
 
         private DateTime _currentFrom;
         private DateTime _currentTo;
@@ -116,18 +116,18 @@ namespace KerwaKasse.MVVM.ViewModel
             ViewModes = new ObservableCollection<AnalysisSegmentItem>
             {
                 new("Übersicht", "Breakdown", isSelected: true),
-                new("Zeitverlauf", "Course")
+                new("Zeitverlauf", "TimeCourse")
             };
 
-            _courseColumn = new ColumnSeries<double>
+            _timeCourseColumn = new ColumnSeries<double>
             {
                 Name = "Menge",
                 Values = Array.Empty<double>(),
                 Fill = new SolidColorPaint(AccentColor)
             };
-            CourseSeries = new ISeries[] { _courseColumn };
-            CourseXAxes = new[] { _courseXAxis };
-            CourseYAxes = new[] { _courseYAxis };
+            TimeCourseSeries = new ISeries[] { _timeCourseColumn };
+            TimeCourseXAxes = new[] { _timeCourseXAxis };
+            TimeCourseYAxes = new[] { _timeCourseYAxis };
 
             ProductFilter = new ObservableCollection<ProductFilterItem>();
             foreach (var p in _productService.GetAll())
@@ -173,8 +173,8 @@ namespace KerwaKasse.MVVM.ViewModel
         private bool _isBreakdown = true;
         public bool IsBreakdown { get => _isBreakdown; private set { _isBreakdown = value; OnPropertyChanged(); } }
 
-        private bool _isCourse;
-        public bool IsCourse { get => _isCourse; private set { _isCourse = value; OnPropertyChanged(); } }
+        private bool _isTimeCourse;
+        public bool IsTimeCourse { get => _isTimeCourse; private set { _isTimeCourse = value; OnPropertyChanged(); } }
 
         public ObservableCollection<AnalysisSegmentItem> Resolutions { get; }
         public ObservableCollection<AnalysisSegmentItem> ViewModes { get; }
@@ -293,12 +293,12 @@ namespace KerwaKasse.MVVM.ViewModel
 
         // Persistent series/axes instances: only their Values/Labels are updated on reload, so the
         // column chart animates smoothly instead of resetting to zero each time it is shown again.
-        private readonly ColumnSeries<double> _courseColumn;
-        private readonly Axis _courseXAxis = new() { TextSize = 12 };
-        private readonly Axis _courseYAxis = new() { MinLimit = 0, TextSize = 12, Labeler = v => ((int)Math.Round(v)).ToString() };
-        public ISeries[] CourseSeries { get; }
-        public Axis[] CourseXAxes { get; }
-        public Axis[] CourseYAxes { get; }
+        private readonly ColumnSeries<double> _timeCourseColumn;
+        private readonly Axis _timeCourseXAxis = new() { TextSize = 12 };
+        private readonly Axis _timeCourseYAxis = new() { MinLimit = 0, TextSize = 12, Labeler = v => ((int)Math.Round(v)).ToString() };
+        public ISeries[] TimeCourseSeries { get; }
+        public Axis[] TimeCourseXAxes { get; }
+        public Axis[] TimeCourseYAxes { get; }
 
         // ── Saved analyses ──
         public ObservableCollection<SavedAnalysisListItem> SavedAnalyses { get; }
@@ -372,15 +372,15 @@ namespace KerwaKasse.MVVM.ViewModel
         private void SelectViewMode(AnalysisSegmentItem item)
         {
             if (item == null) return;
-            bool course = (string)item.Value == "Course";
+            bool timeCourse = (string)item.Value == "TimeCourse";
             foreach (var v in ViewModes) v.IsSelected = ReferenceEquals(v, item);
-            IsCourse = course;
-            IsBreakdown = !course;
+            IsTimeCourse = timeCourse;
+            IsBreakdown = !timeCourse;
 
-            // The breakdown is always current (rebuilt on every reload); the course is built lazily,
-            // so catch up now if reloads happened while its tab was hidden.
-            if (course && _courseIsStale)
-                BuildCourse(_currentFrom, _currentTo, _currentIds);
+            // The breakdown is always current (rebuilt on every reload); the time course is built
+            // lazily, so catch up now if reloads happened while its tab was hidden.
+            if (timeCourse && _timeCourseIsStale)
+                BuildTimeCourse(_currentFrom, _currentTo, _currentIds);
         }
 
         private void SelectResolution(AnalysisSegmentItem item)
@@ -388,7 +388,7 @@ namespace KerwaKasse.MVVM.ViewModel
             if (item == null) return;
             _resolution = (AnalysisTimeResolution)item.Value;
             foreach (var r in Resolutions) r.IsSelected = ReferenceEquals(r, item);
-            BuildCourse(_currentFrom, _currentTo, _currentIds);
+            BuildTimeCourse(_currentFrom, _currentTo, _currentIds);
         }
 
         // ── Product filter ──
@@ -442,8 +442,8 @@ namespace KerwaKasse.MVVM.ViewModel
                 TotalRevenue = 0m;
                 TotalAmount = 0;
                 PieSeries = Array.Empty<ISeries>();
-                _courseColumn.Values = Array.Empty<double>();
-                _courseIsStale = false; // an empty chart IS the current course for "no products"
+                _timeCourseColumn.Values = Array.Empty<double>();
+                _timeCourseIsStale = false; // an empty chart IS the current time course for "no products"
                 return;
             }
 
@@ -463,10 +463,10 @@ namespace KerwaKasse.MVVM.ViewModel
             TotalAmount = _currentFigures.Sum(f => f.TotalAmount);
 
             _currentIds = ids;
-            if (IsCourse)
-                BuildCourse(from, to, ids);
+            if (IsTimeCourse)
+                BuildTimeCourse(from, to, ids);
             else
-                _courseIsStale = true;
+                _timeCourseIsStale = true;
         }
 
         /// <summary>(Re)builds the table rows and the pie from the loaded figures in the chosen sort
@@ -543,7 +543,7 @@ namespace KerwaKasse.MVVM.ViewModel
             return new SolidColorPaint(SKColors.Gray) { StrokeThickness = 2 };
         }
 
-        private void BuildCourse(DateTime from, DateTime to, IReadOnlyCollection<int> ids)
+        private void BuildTimeCourse(DateTime from, DateTime to, IReadOnlyCollection<int> ids)
         {
             var buckets = _analytics.GetSalesOverTime(from, to, ids, _resolution);
             bool multiDay = (to - from).TotalDays > 1.0;
@@ -552,11 +552,11 @@ namespace KerwaKasse.MVVM.ViewModel
             string format = _resolution == AnalysisTimeResolution.Day ? "dd.MM" : (multiDay ? "dd.MM HH:mm" : "HH:mm");
 
             // Update the existing series/axis in place (no new instances) for smooth animation.
-            _courseColumn.Values = buckets.Select(b => (double)b.TotalAmount).ToArray();
-            _courseXAxis.Labels = buckets.Select(b => b.BucketStart.ToString(format)).ToArray();
-            _courseXAxis.LabelsRotation = buckets.Count > 12 ? 45 : 0;
+            _timeCourseColumn.Values = buckets.Select(b => (double)b.TotalAmount).ToArray();
+            _timeCourseXAxis.Labels = buckets.Select(b => b.BucketStart.ToString(format)).ToArray();
+            _timeCourseXAxis.LabelsRotation = buckets.Count > 12 ? 45 : 0;
 
-            _courseIsStale = false;
+            _timeCourseIsStale = false;
         }
 
         // ── Saved analyses ──
