@@ -47,6 +47,13 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private bool _suppressReload;
         private AnalysisTimeResolution _resolution = AnalysisTimeResolution.Hour;
+
+        // The time course is only (re)built while its tab is visible; a reload behind the breakdown
+        // tab just marks it stale and the next switch to the tab catches up. Building it eagerly
+        // cost seconds on wide ranges (the gap-filled buckets explode: a whole-history range means
+        // >100k quarter-hour columns) even though the course is the rarely used view of the two.
+        private bool _courseIsStale = true;
+
         private DateTime _currentFrom;
         private DateTime _currentTo;
         private IReadOnlyCollection<int> _currentIds;
@@ -369,7 +376,11 @@ namespace KerwaKasse.MVVM.ViewModel
             foreach (var v in ViewModes) v.IsSelected = ReferenceEquals(v, item);
             IsCourse = course;
             IsBreakdown = !course;
-            // No reload: the data for both views is already current, so this is a pure visibility switch.
+
+            // The breakdown is always current (rebuilt on every reload); the course is built lazily,
+            // so catch up now if reloads happened while its tab was hidden.
+            if (course && _courseIsStale)
+                BuildCourse(_currentFrom, _currentTo, _currentIds);
         }
 
         private void SelectResolution(AnalysisSegmentItem item)
@@ -432,6 +443,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 TotalAmount = 0;
                 PieSeries = Array.Empty<ISeries>();
                 _courseColumn.Values = Array.Empty<double>();
+                _courseIsStale = false; // an empty chart IS the current course for "no products"
                 return;
             }
 
@@ -450,10 +462,11 @@ namespace KerwaKasse.MVVM.ViewModel
             TotalRevenue = _currentFigures.Sum(f => f.TotalRevenue);
             TotalAmount = _currentFigures.Sum(f => f.TotalAmount);
 
-            // Build both views' data on every data change, so toggling the view is a pure visibility
-            // switch (no re-initialisation flash on the pie / column chart when switching back).
             _currentIds = ids;
-            BuildCourse(from, to, ids);
+            if (IsCourse)
+                BuildCourse(from, to, ids);
+            else
+                _courseIsStale = true;
         }
 
         /// <summary>(Re)builds the table rows and the pie from the loaded figures in the chosen sort
@@ -542,6 +555,8 @@ namespace KerwaKasse.MVVM.ViewModel
             _courseColumn.Values = buckets.Select(b => (double)b.TotalAmount).ToArray();
             _courseXAxis.Labels = buckets.Select(b => b.BucketStart.ToString(format)).ToArray();
             _courseXAxis.LabelsRotation = buckets.Count > 12 ? 45 : 0;
+
+            _courseIsStale = false;
         }
 
         // ── Saved analyses ──
