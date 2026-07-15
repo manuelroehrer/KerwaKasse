@@ -526,16 +526,16 @@
                     </Grid>
                 </Grid>
 
-                <!-- Zeitverlauf (course): resolution on top, chart fills. ZoomMode=X lets you zoom into
+                <!-- Zeitverlauf (time course): resolution on top, chart fills. ZoomMode=X lets you zoom into
                      long ranges (where bars get very thin); the default still fits everything on screen. -->
-                <Grid Visibility="{Binding IsCourse, Converter={StaticResource BoolToVisibility}}">
+                <Grid Visibility="{Binding IsTimeCourse, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" Margin="14,12,14,0">
                             <TextBlock Text="Auflösung" FontSize="12.5" Foreground="#8A8F96" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <controls:SegmentedControl ItemsSource="{Binding Resolutions}" Command="{Binding SelectResolutionCommand}"
                                                        SegmentPadding="13,7" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <lvc:CartesianChart Series="{Binding CourseSeries}" XAxes="{Binding CourseXAxes}" YAxes="{Binding CourseYAxes}"
+                        <lvc:CartesianChart Series="{Binding TimeCourseSeries}" XAxes="{Binding TimeCourseXAxes}" YAxes="{Binding TimeCourseYAxes}"
                                             Margin="14,8,14,14" Background="Transparent" TooltipPosition="Top" ZoomMode="X"/>
                     </DockPanel>
                 </Grid>

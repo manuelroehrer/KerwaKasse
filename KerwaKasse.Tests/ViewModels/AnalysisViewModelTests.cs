@@ -47,7 +47,7 @@ public class AnalysisViewModelTests
         var sut = CreateSut();
 
         Assert.True(sut.IsBreakdown);
-        Assert.False(sut.IsCourse);
+        Assert.False(sut.IsTimeCourse);
         Assert.Equal("Heute", sut.QuickRanges.Single(q => q.IsSelected).Label);
         Assert.Equal(DateTime.Today, sut.DateFrom);
     }
@@ -193,7 +193,7 @@ public class AnalysisViewModelTests
     }
 
     [Fact]
-    public void SetViewMode_Course_QueriesTimeSeries()
+    public void SetViewMode_TimeCourse_QueriesTimeSeries()
     {
         _analytics.GetSalesOverTime(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<AnalysisTimeResolution>())
             .Returns(new List<TimeBucketSales>
@@ -203,13 +203,13 @@ public class AnalysisViewModelTests
         WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 5, TotalRevenue = 15.00m });
         var sut = CreateSut();
 
-        var course = sut.ViewModes.Single(v => (string)v.Value == "Course");
-        sut.SetViewModeCommand.Execute(course);
+        var timeCourse = sut.ViewModes.Single(v => (string)v.Value == "TimeCourse");
+        sut.SetViewModeCommand.Execute(timeCourse);
 
-        Assert.True(sut.IsCourse);
+        Assert.True(sut.IsTimeCourse);
         Assert.False(sut.IsBreakdown);
-        Assert.True(course.IsSelected); // drives the highlighted segment in the UI
-        Assert.NotEmpty(sut.CourseSeries);
+        Assert.True(timeCourse.IsSelected); // drives the highlighted segment in the UI
+        Assert.NotEmpty(sut.TimeCourseSeries);
     }
 
     [Fact]
