@@ -248,8 +248,9 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Gesamt" FontWeight="Medium" FontSize="22" Foreground="#616161" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                            <!-- Total intentionally in the darker sidebar tone, not the accent colour: see the save button below. -->
                             <TextBlock Grid.Column="1" Text="{Binding Total, StringFormat={}{0:C}}"
-                                       FontWeight="Bold" FontSize="32" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
+                                       FontWeight="Bold" FontSize="32" Foreground="{DynamicResource AppSidebarBrush}" VerticalAlignment="Center"/>
                         </Grid>
                         <!-- Action buttons -->
                         <Grid Height="52">
@@ -264,9 +265,42 @@
                                 <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="23" Foreground="#444444"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
+                            <!-- Save button: intentionally in the darker sidebar tone (AppSidebarBrush)
+                                 instead of the accent colour. In the order panel this is the only accent
+                                 control on screen next to the dark title bar and the even darker nav bar,
+                                 so a third, lighter blue looked off; other views show enough accent
+                                 controls for the accent colour to sit right there. Hover/pressed are
+                                 derived from the base tone at runtime by overlaying a translucent veil
+                                 (same idiom as the product tiles above), so no extra colour constants
+                                 are needed and the disabled state simply dims. -->
                             <Button Grid.Column="2" Command="{Binding SaveOrderCommand}"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" SnapsToDevicePixels="True"
+                                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                                Background="{DynamicResource AppSidebarBrush}">
+                                            <Grid>
+                                                <Border x:Name="veil" Background="Transparent"
+                                                        CornerRadius="{DynamicResource ControlCornerRadius}"/>
+                                                <ContentPresenter x:Name="content"
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="veil" Property="Background" Value="#18FFFFFF"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="veil" Property="Background" Value="#22000000"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="content" Property="Opacity" Value="0.55"/>
+                                                <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="23"
                                                Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
