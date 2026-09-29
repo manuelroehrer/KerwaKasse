@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace KerwaKasse
 {
@@ -13,18 +14,18 @@ namespace KerwaKasse
     {
         private const string WindowStateSettingKey = "MainWindow.WindowState";
         private readonly JsonSettingsService _settingsService;
+        private readonly EventCatalog _eventCatalog;
+        private readonly DialogService _dialogService = new();
 
-        public MainWindow(ILoggerFactory loggerFactory)
+        public MainWindow(ILoggerFactory loggerFactory, JsonSettingsService settingsService, EventCatalog eventCatalog)
         {
-            string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
-            string dbFilePath = Path.Combine(appDir, "kerwakasse.db");
-            string settingsFilePath = Path.Combine(appDir, "settings.json");
+            _eventCatalog = eventCatalog;
+            string dbFilePath = eventCatalog.ActiveFilePath;
             string connectionString = $"Data Source={dbFilePath}";
 
             var productService = new SqliteProductService(connectionString, loggerFactory.CreateLogger<SqliteProductService>());
             var orderService = new SqliteOrderService(connectionString, loggerFactory.CreateLogger<SqliteOrderService>());
-            var settingsService = new JsonSettingsService(settingsFilePath, loggerFactory.CreateLogger<JsonSettingsService>());
-            var dialogService = new DialogService();
+            var dialogService = _dialogService;
             var menuService = new SqliteMenuService(connectionString, loggerFactory.CreateLogger<SqliteMenuService>());
             var analyticsService = new SqliteAnalyticsService(connectionString);
             var savedAnalysisService = new SqliteSavedAnalysisService(connectionString, loggerFactory.CreateLogger<SqliteSavedAnalysisService>());
@@ -39,7 +40,35 @@ namespace KerwaKasse
 
             // The background update check waits until the window is up; it never blocks the UI and
             // only ever speaks up when a new version was actually found.
-            Loaded += async (_, _) => await mainViewModel.InfoVM.CheckForUpdatesOnStartupAsync();
+            Loaded += async (_, _) =>
+            {
+                ReportStartupEventChanges();
+                await mainViewModel.InfoVM.CheckForUpdatesOnStartupAsync();
+            };
+        }
+
+        // Anything unusual the event catalog had to do at startup is said right away, before anyone
+        // starts selling, so nothing is booked into an unexpected event unnoticed.
+        private void ReportStartupEventChanges()
+        {
+            var fallback = _eventCatalog.StartupFallback;
+            if (fallback != null)
+            {
+                var active = _eventCatalog.GetAll().FirstOrDefault(e =>
+                    string.Equals(e.FilePath, _eventCatalog.ActiveFilePath, StringComparison.OrdinalIgnoreCase));
+                string opened = fallback.NewEventCreated
+                    ? $"Da keine weitere Veranstaltung vorhanden war, wurde die neue, leere Veranstaltung „{active?.Name}“ angelegt."
+                    : $"Stattdessen wurde die Veranstaltung „{active?.Name}“ geöffnet.";
+                _dialogService.ShowMessage(
+                    $"Die zuletzt verwendete Veranstaltung wurde nicht gefunden (Datei „{fallback.MissingFileName}“).\n\n{opened}");
+            }
+
+            if (_eventCatalog.AdoptedLegacyEventName is string adopted)
+            {
+                _dialogService.ShowMessage(
+                    "In den Anwendungsdaten wurde eine Datenbank einer älteren KerwaKasse-Version gefunden. " +
+                    $"Sie wurde als zusätzliche Veranstaltung „{adopted}“ übernommen; die aktive Veranstaltung bleibt unverändert.");
+            }
         }
 
         private void NavButton_Click(object sender, RoutedEventArgs e)

@@ -18,9 +18,12 @@ public class DatabaseBackupService : IDatabaseBackupService
         _logger = logger;
     }
 
-    public DatabaseSummary GetSummary()
+    public DatabaseSummary GetSummary() => ReadSummary(_connectionString);
+
+    /// <summary>Row counts of any KerwaKasse database with a current schema (not just the live one).</summary>
+    public static DatabaseSummary ReadSummary(string connectionString)
     {
-        using var connection = new SqliteConnection(_connectionString);
+        using var connection = new SqliteConnection(connectionString);
         connection.Open();
         int Count(string table) => connection.ExecuteScalar<int>($"SELECT COUNT(*) FROM {table}");
         return new DatabaseSummary(Count("Products"), Count("Orders"), Count("Menus"), Count("SavedAnalyses"));
@@ -120,6 +123,11 @@ public class DatabaseBackupService : IDatabaseBackupService
 
     public void Restore(string sourceFilePath)
     {
+        // The Metadata table describes the database itself, e.g. which event it is (see EventCatalog), not
+        // the backed-up data. Keep the live database's entries, so restoring an old backup into
+        // "Herbstkerwa" leaves the event named "Herbstkerwa".
+        var metadata = ReadMetadata();
+
         // Release every pooled connection first, otherwise a retained file handle blocks the overwrite.
         SqliteConnection.ClearAllPools();
 
@@ -135,7 +143,34 @@ public class DatabaseBackupService : IDatabaseBackupService
 
         // The restored file may come from an older app version: create any missing tables/columns.
         DatabaseInitializer.Initialize(_connectionString, _logger);
+        WriteMetadata(metadata);
 
         _logger.LogInformation("Database restored from {SourceFilePath}", sourceFilePath);
+    }
+
+    private List<MetadataRow> ReadMetadata()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        bool hasTable = connection.ExecuteScalar<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'Metadata'") > 0;
+        return hasTable
+            ? connection.Query<MetadataRow>("SELECT Key, Value FROM Metadata").ToList()
+            : new List<MetadataRow>();
+    }
+
+    private void WriteMetadata(List<MetadataRow> rows)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        connection.Execute("DELETE FROM Metadata", transaction: transaction);
+        connection.Execute("INSERT INTO Metadata (Key, Value) VALUES (@Key, @Value)", rows, transaction);
+        transaction.Commit();
+    }
+
+    private sealed class MetadataRow
+    {
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
     }
 }
