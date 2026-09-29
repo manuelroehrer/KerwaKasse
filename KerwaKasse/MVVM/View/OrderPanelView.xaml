@@ -381,7 +381,8 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="2,4" Background="#F5F6F7" CornerRadius="7" ClipToBounds="True">
+                                <Border Margin="2,4" Background="#F5F6F7" CornerRadius="7"
+                                        UseLayoutRounding="True" SnapsToDevicePixels="True">
                                     <Grid MinHeight="54">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="8"/>
@@ -390,9 +391,13 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
+                                        <!-- Neutral outline around the whole row, one step darker than its fill.
+                                             Drawn beneath the strip, whose coloured outline covers it on the left. -->
+                                        <Border Grid.ColumnSpan="5" CornerRadius="7" BorderThickness="0.9" BorderBrush="#E1E3E6"
+                                                UseLayoutRounding="True" SnapsToDevicePixels="True"/>
                                         <!-- Colour strip, outlined like the product tiles (same border settings) so
                                              light product colours stay visible against the grey row. -->
-                                        <Border Grid.Column="0" Background="{Binding Product.Color}" CornerRadius="6,0,0,6"
+                                        <Border Grid.Column="0" Background="{Binding Product.Color}" CornerRadius="7,0,0,7"
                                                 BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
                                             <Border.BorderBrush>
                                                 <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
