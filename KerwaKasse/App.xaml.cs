@@ -49,9 +49,16 @@ namespace KerwaKasse
             // The UI is German-only for now, so pin the culture instead of following the OS:
             // otherwise date pickers and weekday names render in the OS language on non-German
             // machines while the rest of the UI stays German.
-            var culture = CultureInfo.GetCultureInfo("de-DE");
+            // The long date format is shortened to "Mittwoch, 30.09.2026": the DatePickers showing
+            // it (history day filter) cut off the year with the month spelled out.
+            var culture = new CultureInfo("de-DE", useUserOverride: false);
+            culture.DateTimeFormat.LongDatePattern = "dddd, dd.MM.yyyy";
             CultureInfo.DefaultThreadCurrentCulture = culture;
             CultureInfo.DefaultThreadCurrentUICulture = culture;
+            // The defaults only reach threads without a culture of their own yet; the already running
+            // UI thread needs it set directly, as the DatePickers format with its current culture.
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
             FrameworkElement.LanguageProperty.OverrideMetadata(
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
