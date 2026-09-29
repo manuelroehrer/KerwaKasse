@@ -37,6 +37,29 @@ public class DatabaseBackupServiceTests : IDisposable
     }
 
     [Fact]
+    public void Restore_KeepsTheEventNameOfTheLiveDatabase()
+    {
+        // A catalog of its own, so the event names are stored the way the app stores them.
+        var appDir = Path.Combine(_dir, "app");
+        var settings = new JsonSettingsService(Path.Combine(appDir, "settings.json"), NullLogger<JsonSettingsService>.Instance);
+        var catalog = new EventCatalog(appDir, settings, NullLogger<EventCatalog>.Instance);
+        var herbst = catalog.Create("Herbstkerwa");
+
+        // A backup of a differently named event: restoring replaces the data, not the event's identity.
+        var backup = catalog.Create("Kerwa 2025");
+        new SqliteProductService($"Data Source={backup.FilePath}", NullLogger<SqliteProductService>.Instance)
+            .Add(new Product { Name = "Bratwurst", Price = 3m });
+        SqliteConnection.ClearAllPools();
+
+        var sut = new DatabaseBackupService($"Data Source={herbst.FilePath}", herbst.FilePath, NullLogger<DatabaseBackupService>.Instance);
+        sut.Restore(backup.FilePath);
+
+        var restored = catalog.GetAll().Single(e => e.FilePath == herbst.FilePath);
+        Assert.Equal("Herbstkerwa", restored.Name);
+        Assert.Equal(1, restored.Products);
+    }
+
+    [Fact]
     public void GetSummary_FreshDatabase_IsEmpty()
     {
         Assert.True(_sut.GetSummary().IsEmpty);

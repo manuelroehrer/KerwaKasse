@@ -18,6 +18,9 @@
                  products-view dropdown. Defined once here so it is not duplicated per view. -->
             <Geometry x:Key="LayersIcon">M9,1 L17,5 L9,9 L1,5 Z M1,9 L9,13 L17,9 M1,13 L9,17 L17,13</Geometry>
 
+            <!-- Archive box of the "Backup erstellen" buttons (info page and the delete-event dialog). -->
+            <Geometry x:Key="BackupIcon">M64 128C64 110.3 78.3 96 96 96L544 96C561.7 96 576 110.3 576 128L576 160C576 177.7 561.7 192 544 192L96 192C78.3 192 64 177.7 64 160L64 128zM96 240L544 240L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 240zM248 304C234.7 304 224 314.7 224 328C224 341.3 234.7 352 248 352L392 352C405.3 352 416 341.3 416 328C416 314.7 405.3 304 392 304L248 304z</Geometry>
+
             <!-- Single brush that tracks the active AccentColor — use {DynamicResource AppAccentBrush}
                  everywhere instead of hard-coding the hex value. Change AccentColor above and all
                  consuming elements update automatically. -->
@@ -81,6 +84,95 @@
                                     <!-- Dynamic grey veil: dim the content (text + icon) so the disabled
                                          state reads as inactive regardless of the foreground colour. -->
                                     <Setter TargetName="content" Property="Opacity" Value="0.55"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Dropdown trigger in "pill" form (Speisekarte on the products page, Veranstaltung on the
+                 info page): white with a thin border, accent ring while its flyout is open (the view
+                 sets Tag="open" from the flyout's Opened/Closed events). Custom template so a tinted
+                 background set by a derived style survives hover. -->
+            <Style x:Key="DropDownPillButton" TargetType="Button">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
+                <Setter Property="Foreground" Value="#6B7280"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="14,0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid>
+                                <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                                <!-- Accent ring while open: overlaid so its thickness never shifts the content. -->
+                                <Border x:Name="accent" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                        Background="Transparent" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5"
+                                        Visibility="Collapsed" IsHitTestVisible="False"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                                  HorizontalAlignment="Stretch"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                                </Trigger>
+                                <Trigger Property="Tag" Value="open">
+                                    <Setter TargetName="accent" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- A row inside a dropdown flyout: transparent, grey hover, blue when its item IsActive. -->
+            <Style x:Key="FlyoutRowButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Padding" Value="10,9"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" CornerRadius="7" Background="{TemplateBinding Background}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#E4EAF1"/>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Same look, but without the IsActive tint: footer rows ("verwalten", "neu") bind against
+                 the page view model, which has no IsActive, so they must not carry that trigger. -->
+            <Style x:Key="FlyoutFooterButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Padding" Value="10,9"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" CornerRadius="7" Background="{TemplateBinding Background}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

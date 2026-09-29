@@ -45,97 +45,14 @@
         <!-- Prices use a monospace face so the digits line up and stand out a little. -->
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
 
-        <!-- Speisekarten dropdown trigger: subtle when no card is active, tinted blue when one is.
-             Custom template so the active tint survives hover (the default button reverts on hover). -->
-        <Style x:Key="MenuPillButton" TargetType="Button">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource TextControlBorderBrush}"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Grid>
-                            <Border x:Name="bd" CornerRadius="{DynamicResource ControlCornerRadius}"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
-                            <!-- Accent ring while open: overlaid so its thickness never shifts the content. -->
-                            <Border x:Name="accent" CornerRadius="{DynamicResource ControlCornerRadius}"
-                                    Background="Transparent" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5"
-                                    Visibility="Collapsed" IsHitTestVisible="False"/>
-                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
-                                              HorizontalAlignment="Stretch"
-                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
-                            </Trigger>
-                            <Trigger Property="Tag" Value="open">
-                                <Setter TargetName="accent" Property="Visibility" Value="Visible"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <!-- Speisekarten dropdown trigger: the shared pill (App.xaml), tinted blue while a card is active. -->
+        <Style x:Key="MenuPillButton" TargetType="Button" BasedOn="{StaticResource DropDownPillButton}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding HasActiveMenu}" Value="True">
                     <Setter Property="Background" Value="#E4EAF1"/>
                     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
-        </Style>
-
-        <!-- A row inside the Speisekarten flyout: transparent, grey hover, blue when it is the active card. -->
-        <Style x:Key="MenuRowButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="10,9"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="7" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
-                            </Trigger>
-                            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#E4EAF1"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Same look, but without the IsActive tint: the footer "manage" row binds against the
-             ProductsViewModel (which has no IsActive), so it must not carry that trigger. -->
-        <Style x:Key="MenuFooterButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="10,9"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" CornerRadius="7" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#F0F2F4"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <!-- Subtle outline buttons for the reorder actions (white fill, thin border).
@@ -285,7 +202,7 @@
                                 <!-- Footer banner (manage) -->
                                 <Border DockPanel.Dock="Bottom" Background="#F7F8FA" CornerRadius="0,0,8,8"
                                         BorderBrush="#EDEFF2" BorderThickness="0,1,0,0" Padding="6">
-                                    <Button Style="{StaticResource MenuFooterButton}" Click="ManageMenus_Click">
+                                    <Button Style="{StaticResource FlyoutFooterButton}" Click="ManageMenus_Click">
                                         <StackPanel Orientation="Horizontal">
                                             <Path Data="{StaticResource LayersIcon}" Stroke="#586070" StrokeThickness="1.4"
                                                   StrokeLineJoin="Round" Width="16" Height="16" Stretch="Uniform"
@@ -314,7 +231,7 @@
                                         <ItemsControl ItemsSource="{Binding MenuOptions}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Button Style="{StaticResource MenuRowButton}" Click="MenuOption_Click" Margin="0,1">
+                                                    <Button Style="{StaticResource FlyoutRowButton}" Click="MenuOption_Click" Margin="0,1">
                                                         <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
                                                                    Foreground="#1B1E24" VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis"/>

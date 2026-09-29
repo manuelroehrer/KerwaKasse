@@ -21,6 +21,8 @@ The SQLite services (`SqliteProductService`, `SqliteOrderService`) are tested ag
 
 `JsonSettingsService` is tested with temporary files (round-trip, missing file, corrupted JSON).
 
+`EventCatalog` manages real database files (one per event), so its tests run against a temporary folder that is removed afterwards.
+
 ## Intentionally Not Tested
 
 - **App.xaml.cs, MainWindow.xaml.cs, DialogService.cs** — Pure WPF wiring with no testable business logic. `DialogService` is a thin wrapper around `MessageBox.Show` and `SaveFileDialog`.

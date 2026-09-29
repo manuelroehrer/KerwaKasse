@@ -18,6 +18,7 @@ public class MainWindowViewModelTests
     private readonly ISavedAnalysisService _savedAnalysisService;
     private readonly IDatabaseBackupService _backupService;
     private readonly IUpdateService _updateService;
+    private readonly IEventCatalog _eventCatalog;
     private readonly MainWindowViewModel _sut;
 
     public MainWindowViewModelTests()
@@ -31,6 +32,9 @@ public class MainWindowViewModelTests
         _savedAnalysisService = Substitute.For<ISavedAnalysisService>();
         _backupService = Substitute.For<IDatabaseBackupService>();
         _updateService = Substitute.For<IUpdateService>();
+        _eventCatalog = Substitute.For<IEventCatalog>();
+        _eventCatalog.ActiveFilePath.Returns("test.db");
+        _eventCatalog.GetAll().Returns(new List<EventDatabase> { new("test.db", "Kerwa", 0, 0, null, null) });
 
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
@@ -41,13 +45,44 @@ public class MainWindowViewModelTests
         _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
             .Returns(new List<SalesFigure>());
 
-        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, _updateService, NullLoggerFactory.Instance);
+        _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, _updateService, _eventCatalog, NullLoggerFactory.Instance);
     }
 
     [Fact]
     public void Constructor_SetsOrderPanelViewAsDefault()
     {
         Assert.IsType<OrderPanelViewModel>(_sut.CurrentView);
+    }
+
+    [Fact]
+    public void InfoViewCommand_ReloadsEventKeyFigures()
+    {
+        _eventCatalog.ClearReceivedCalls();
+
+        _sut.InfoViewCommand.Execute(null);
+
+        _eventCatalog.Received(1).GetAll();
+        Assert.Same(_sut.InfoVM, _sut.CurrentView);
+    }
+
+    [Fact]
+    public void WindowTitle_SingleEvent_StaysPlain()
+    {
+        Assert.Equal("KerwaKasse", _sut.WindowTitle);
+    }
+
+    [Fact]
+    public void WindowTitle_SeveralEvents_ShowsActiveEvent()
+    {
+        _eventCatalog.GetAll().Returns(new List<EventDatabase>
+        {
+            new("test.db", "Kerwa", 0, 0, null, null),
+            new("herbst.db", "Herbstkerwa", 0, 0, null, null)
+        });
+
+        var sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, _updateService, _eventCatalog, NullLoggerFactory.Instance);
+
+        Assert.Equal("KerwaKasse – Kerwa", sut.WindowTitle);
     }
 
     [Fact]

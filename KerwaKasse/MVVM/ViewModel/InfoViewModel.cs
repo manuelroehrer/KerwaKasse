@@ -36,6 +36,10 @@ namespace KerwaKasse.MVVM.ViewModel
         public string Version { get; }
         public string Copyright { get; }
 
+        /// <summary>The event selector at the top of the "Veranstaltung" card. Backup and restore below it
+        /// always act on its active event.</summary>
+        public EventsViewModel Events { get; }
+
         private string _updateStatusText = string.Empty;
         /// <summary>Feedback line next to the manual check button ("KerwaKasse 2.9.0 ist aktuell", ...).</summary>
         public string UpdateStatusText
@@ -63,20 +67,19 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IUpdateService _updateService;
         private readonly ISettingsService _settingsService;
         private readonly ILogger<InfoViewModel> _logger;
-        private readonly string _dbFilePath;
         private readonly string _dataFolder;
         private readonly Version _currentVersion;
         private readonly string _currentVersionText;
 
-        public InfoViewModel(IDialogService dialogService, string dbFilePath, IDatabaseBackupService backupService, IUpdateService updateService, ISettingsService settingsService, ILogger<InfoViewModel> logger)
+        public InfoViewModel(IDialogService dialogService, string dataFolder, IDatabaseBackupService backupService, IUpdateService updateService, ISettingsService settingsService, EventsViewModel events, ILogger<InfoViewModel> logger)
         {
+            Events = events;
             _dialogService = dialogService;
             _backupService = backupService;
             _updateService = updateService;
             _settingsService = settingsService;
             _logger = logger;
-            _dbFilePath = dbFilePath;
-            _dataFolder = Path.GetDirectoryName(dbFilePath) ?? string.Empty;
+            _dataFolder = dataFolder;
 
             var assembly = Assembly.GetExecutingAssembly();
             _currentVersion = assembly.GetName().Version ?? new Version(0, 0, 0);
@@ -268,42 +271,24 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private void BackupDatabase()
         {
-            string defaultFileName = "kerwakasse_backup_" + DateTime.Now.ToString("dd.MM.yyyy_HH.mm");
-
-            string filePath = _dialogService.ShowSaveFileDialog(
-                "SQLite Datenbank (*.db)|*.db",
-                "Speicherort für Backup wählen ...",
-                defaultFileName);
-
-            if (filePath != null)
-            {
-                try
-                {
-                    File.Copy(_dbFilePath, filePath, true);
-                    _logger.LogInformation("Database backup created: {FilePath}", filePath);
-                    _dialogService.ShowMessage("Backup erfolgreich erstellt.");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Backup to {FilePath} failed", filePath);
-                    _dialogService.ShowError("Backup fehlgeschlagen: " + ex.Message);
-                }
-            }
+            if (Events.SaveBackup(Events.ActiveEvent) != null)
+                _dialogService.ShowMessage("Backup erfolgreich erstellt.");
         }
 
-        // Replaces the live database with a chosen backup file. An empty (never-used) database is replaced
-        // straight away; a database that already holds data needs an explicit confirmation first, with the
-        // counts spelled out and a reminder that the step is irreversible.
+        // Replaces the active event's data with a chosen backup file. An empty (never-used) event is replaced
+        // straight away; one that already holds data needs an explicit confirmation first, with the
+        // counts spelled out and a reminder that the step is irreversible. The event keeps its name.
         private async Task RestoreDatabaseAsync()
         {
+            string eventName = Events.ActiveEventName;
             string sourcePath = _dialogService.ShowOpenFileDialog(
                 "SQLite Datenbank (*.db)|*.db|Alle Dateien (*.*)|*.*",
-                "Datenbank zum Wiederherstellen wählen ...");
+                $"Sicherung zum Wiederherstellen von „{eventName}“ wählen ...");
             if (string.IsNullOrEmpty(sourcePath)) return;
 
-            if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(_dbFilePath), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(Events.ActiveEvent?.FilePath ?? string.Empty), StringComparison.OrdinalIgnoreCase))
             {
-                _dialogService.ShowMessage("Das ist bereits die aktive Datenbank.");
+                _dialogService.ShowMessage("Die gewählte Datei ist die Datenbank der aktiven Veranstaltung selbst.");
                 return;
             }
 
@@ -316,16 +301,17 @@ namespace KerwaKasse.MVVM.ViewModel
             var summary = _backupService.GetSummary();
             if (!summary.IsEmpty)
             {
-                string message = "Die aktuelle Datenbank enthält bereits Daten:\n" + SummaryText(summary);
-                string warning = "Beim Wiederherstellen wird die aktuelle Datenbank unwiderruflich durch die gewählte Sicherung ersetzt.";
-                if (!await _dialogService.ShowWarningConfirmationAsync("Datenbank wiederherstellen", message, warning, "Trotzdem fortfahren?"))
+                string message = $"„{eventName}“ enthält bereits Daten:\n" + SummaryText(summary);
+                string warning = $"Beim Wiederherstellen werden die Daten von „{eventName}“ unwiderruflich durch die gewählte Sicherung ersetzt.";
+                if (!await _dialogService.ShowWarningConfirmationAsync("Veranstaltung wiederherstellen", message, warning, "Trotzdem fortfahren?"))
                     return;
             }
 
             try
             {
                 _backupService.Restore(sourcePath);
-                _dialogService.ShowMessage("Datenbank erfolgreich wiederhergestellt.");
+                Events.Refresh();
+                _dialogService.ShowMessage($"Die Veranstaltung „{eventName}“ wurde erfolgreich wiederhergestellt.");
             }
             catch (Exception ex)
             {

@@ -23,7 +23,7 @@ public static class DatabaseInitializer
 
         // If you add or remove user-data tables here, also update:
         //   • DatabaseSummary (IDatabaseBackupService.cs)  — the record listing the counted tables
-        //   • DatabaseBackupService.GetSummary()           — the queries that produce those counts
+        //   • DatabaseBackupService.ReadSummary()          — the queries that produce those counts
         using var command = connection.CreateCommand();
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS Products (
@@ -79,6 +79,13 @@ public static class DatabaseInitializer
                 PRIMARY KEY (SavedAnalysisId, ProductId),
                 FOREIGN KEY (SavedAnalysisId) REFERENCES SavedAnalyses(Id) ON DELETE CASCADE,
                 FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE
+            );
+
+            -- Facts about the database itself rather than user data (e.g. the event name, see
+            -- EventCatalog), so it is deliberately not counted in DatabaseSummary.
+            CREATE TABLE IF NOT EXISTS Metadata (
+                Key TEXT PRIMARY KEY,
+                Value TEXT NOT NULL
             );
             """;
         command.ExecuteNonQuery();

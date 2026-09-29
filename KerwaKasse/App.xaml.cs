@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Markup;
 using KerwaKasse.Core.Data;
+using KerwaKasse.Helper;
 using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
@@ -57,8 +58,6 @@ namespace KerwaKasse
 
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
             Directory.CreateDirectory(appDir);
-            string dbFilePath = Path.Combine(appDir, "kerwakasse.db");
-            string connectionString = $"Data Source={dbFilePath}";
 
             // Serilog writes to a daily rolling file, capped at roughly a year of files as a safety
             // limit against unbounded growth; the daily files are small, so keeping that much history
@@ -83,6 +82,12 @@ namespace KerwaKasse
             _loggerFactory = new SerilogLoggerFactory(Log.Logger);
             _logger = _loggerFactory.CreateLogger<App>();
 
+            // Which event (= which database file) to open comes from the settings, so both are needed
+            // before anything touches a database.
+            var settingsService = new JsonSettingsService(Path.Combine(appDir, "settings.json"), _loggerFactory.CreateLogger<JsonSettingsService>());
+            var eventCatalog = new EventCatalog(appDir, settingsService, _loggerFactory.CreateLogger<EventCatalog>(), RecycleBin.SendFile);
+            string dbFilePath = eventCatalog.ActiveFilePath;
+
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             _logger.LogInformation("KerwaKasse {Version} started, database: {DbFilePath}",
                 version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "unknown", dbFilePath);
@@ -93,9 +98,9 @@ namespace KerwaKasse
             // relaunch after such an update).
             GitHubUpdateService.CleanupDownloadedInstallers(_loggerFactory.CreateLogger(typeof(GitHubUpdateService)));
 
-            DatabaseInitializer.Initialize(connectionString, _loggerFactory.CreateLogger(typeof(DatabaseInitializer)));
+            DatabaseInitializer.Initialize($"Data Source={dbFilePath}", _loggerFactory.CreateLogger(typeof(DatabaseInitializer)));
 
-            new MainWindow(_loggerFactory).Show();
+            new MainWindow(_loggerFactory, settingsService, eventCatalog).Show();
 
             StartActivationListener();
 
