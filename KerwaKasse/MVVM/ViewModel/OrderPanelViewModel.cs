@@ -14,6 +14,7 @@ namespace KerwaKasse.MVVM.ViewModel
     public class OrderPanelViewModel : PropertyChangedBase
     {
         public RelayCommand AddOrderPositionCommand { get; }
+        public RelayCommand DecreaseOrderPositionCommand { get; }
         public RelayCommand DiscardOrderCommand { get; }
         public RelayCommand SaveOrderCommand { get; }
 
@@ -97,6 +98,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _logger = logger;
 
             AddOrderPositionCommand = new RelayCommand(o => AddOrderPosition(o as ProductModel));
+            DecreaseOrderPositionCommand = new RelayCommand(o => DecreaseOrderPosition(o as OrderPositionModel));
             DiscardOrderCommand = new RelayCommand(o => DiscardOrder());
             SaveOrderCommand = new RelayCommand(o => SaveOrder());
 
@@ -258,12 +260,27 @@ namespace KerwaKasse.MVVM.ViewModel
                 OrderPositions.Add(new OrderPositionModel() { Product = product });
             }
 
-            decimal total = 0.0m;
-            foreach (OrderPositionModel order in OrderPositions)
-            {
-                total += order.Amount * order.Product.Price;
-            }
-            Total = total;
+            RecalculateTotal();
+        }
+
+        /// <summary>Counterpart to tapping a product tile: takes one off the position and removes
+        /// it once the last one is gone, so a mistyped tap can be corrected without discarding the
+        /// whole order.</summary>
+        public void DecreaseOrderPosition(OrderPositionModel position)
+        {
+            if (position == null) return;
+
+            if (position.Amount > 1)
+                position.Amount--;
+            else
+                OrderPositions.Remove(position);
+
+            RecalculateTotal();
+        }
+
+        private void RecalculateTotal()
+        {
+            Total = OrderPositions.Sum(o => o.Amount * o.Product.Price);
         }
 
         private void LoadData()

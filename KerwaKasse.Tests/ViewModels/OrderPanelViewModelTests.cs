@@ -139,6 +139,45 @@ public class OrderPanelViewModelTests
     }
 
     [Fact]
+    public void DecreaseOrderPosition_TakesOneOff()
+    {
+        var product = _sut.Products[0]; // Bratwurst 3.50
+        _sut.AddOrderPosition(product);
+        _sut.AddOrderPosition(product);
+        _sut.AddOrderPosition(product);
+
+        _sut.DecreaseOrderPosition(_sut.OrderPositions[0]);
+
+        Assert.Single(_sut.OrderPositions);
+        Assert.Equal(2, _sut.OrderPositions[0].Amount);
+        Assert.Equal(7.00m, _sut.Total);
+    }
+
+    [Fact]
+    public void DecreaseOrderPosition_AtAmountOne_RemovesOnlyThatPosition()
+    {
+        _sut.AddOrderPosition(_sut.Products[0]); // Bratwurst 3.50
+        _sut.AddOrderPosition(_sut.Products[1]); // Bier 2.80
+
+        _sut.DecreaseOrderPosition(_sut.OrderPositions[0]);
+
+        Assert.Single(_sut.OrderPositions);
+        Assert.Equal("Bier", _sut.OrderPositions[0].Product.Name);
+        Assert.Equal(2.80m, _sut.Total);
+    }
+
+    [Fact]
+    public void DecreaseOrderPositionCommand_OnLastPosition_EmptiesTheOrder()
+    {
+        _sut.AddOrderPosition(_sut.Products[1]);
+
+        _sut.DecreaseOrderPositionCommand.Execute(_sut.OrderPositions[0]);
+
+        Assert.Empty(_sut.OrderPositions);
+        Assert.Equal(0m, _sut.Total);
+    }
+
+    [Fact]
     public void DiscardOrder_ClearsPositionsAndTotal()
     {
         _sut.AddOrderPosition(_sut.Products[0]);

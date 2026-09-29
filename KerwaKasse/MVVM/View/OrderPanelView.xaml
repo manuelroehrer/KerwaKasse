@@ -18,6 +18,43 @@
         <helper:BindingProxy x:Key="ViewModelProxy" Data="{Binding}"/>
 
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
+
+        <!-- Quiet icon button on each order row (minus, or an X at amount 1). Kept grey and
+             borderless because it sits on every row; hover/pressed like the settings gear. -->
+        <Style x:Key="DecreaseButton" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="Eins weniger"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBg" Background="Transparent" CornerRadius="5">
+                            <TextBlock x:Name="Icon" Text="&#xE738;" FontSize="20"
+                                       FontFamily="Segoe MDL2 Assets" Foreground="#8A8F96"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Amount}" Value="1">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE711;"/>
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBg" Property="Background" Value="#0A000000"/>
+                                <Setter TargetName="Icon" Property="Foreground" Value="#333"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BtnBg" Property="Background" Value="#14000000"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Amount}" Value="1">
+                    <Setter Property="ToolTip" Value="Position entfernen"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid x:Name="MainGrid">
@@ -259,10 +296,31 @@
                                 <ColumnDefinition Width="10"/>
                                 <ColumnDefinition/>
                             </Grid.ColumnDefinitions>
+                            <!-- Discard: red outline like the delete button in the history, so the only
+                                 destructive action without a confirmation reads as such, while staying
+                                 secondary to the filled save button. -->
                             <Button Command="{Binding DiscardOrderCommand}"
-                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand"
                                     ToolTip="Bestellung verwerfen">
-                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="23" Foreground="#444444"
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bd" SnapsToDevicePixels="True"
+                                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                                Background="White" BorderBrush="#E3B5B0" BorderThickness="1">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#FBF0EF"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="#D99C95"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#F1E1E1"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="23" Foreground="#C0392B"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <!-- Save button: intentionally in the darker sidebar tone (AppSidebarBrush)
@@ -326,13 +384,24 @@
                                 <Border Margin="2,4" Background="#F5F6F7" CornerRadius="7" ClipToBounds="True">
                                     <Grid MinHeight="54">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="8"/>
                                             <ColumnDefinition Width="46"/>
                                             <ColumnDefinition/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <!-- Accent color indicator -->
-                                        <Border Grid.Column="0" Background="{Binding Product.Color}" CornerRadius="6,0,0,6"/>
+                                        <!-- Colour strip, outlined like the product tiles (same border settings) so
+                                             light product colours stay visible against the grey row. -->
+                                        <Border Grid.Column="0" Background="{Binding Product.Color}" CornerRadius="6,0,0,6"
+                                                BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
+                                            <Border.BorderBrush>
+                                                <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                                    <Binding Path="Product.Color"/>
+                                                    <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                    <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                </MultiBinding>
+                                            </Border.BorderBrush>
+                                        </Border>
                                         <!-- Amount -->
                                         <TextBlock Grid.Column="1" Text="{Binding Amount}"
                                                    FontSize="22" FontWeight="Bold" Foreground="#333"
@@ -344,8 +413,16 @@
                                                    Margin="6,10,6,10"/>
                                         <!-- Unit price -->
                                         <TextBlock Grid.Column="3" Text="{Binding Product.Price, StringFormat={}{0:C}}"
-                                                   FontSize="14" Foreground="#888"
-                                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                                   FontSize="14" Foreground="#606060"
+                                                   VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                        <!-- Fine divider so the button does not read as part of the price. -->
+                                        <Border Grid.Column="4" Width="1" HorizontalAlignment="Left" Margin="0,12"
+                                                Background="#DADCE0"/>
+                                        <!-- Take one off: the counterpart to tapping the tile. Turns into an X at
+                                             amount 1, since the next tap removes the whole row. -->
+                                        <Button Grid.Column="4" Style="{StaticResource DecreaseButton}"
+                                                Command="{Binding DataContext.DecreaseOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
