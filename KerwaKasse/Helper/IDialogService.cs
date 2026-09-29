@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using KerwaKasse.Core.Services;
@@ -16,6 +17,10 @@ namespace KerwaKasse.Helper
         /// <summary>Just close the dialog; offer the version again on the next check.</summary>
         Later
     }
+
+    /// <summary>What the user entered in the "new event" dialog. <paramref name="BackupFilePath"/> is the
+    /// (already validated) backup to import, or null for an empty event.</summary>
+    public record NewEventRequest(string Name, string BackupFilePath);
 
     public interface IDialogService
     {
@@ -40,6 +45,18 @@ namespace KerwaKasse.Helper
         /// <summary>Prompts for a single line of text via a modal dialog. <paramref name="label"/> is the
         /// caption shown above the text box (e.g. "Name"). Returns null when cancelled or left empty.</summary>
         Task<string> ShowTextInputAsync(string title, string label, string initialValue);
+
+        /// <summary>Asks for the name of a new event and whether it starts empty or from a backup file,
+        /// which is picked inside the dialog and checked right away with <paramref name="isValidBackup"/>.
+        /// Names already in <paramref name="existingNames"/> are refused. Returns null when cancelled.</summary>
+        Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, bool> isValidBackup);
+
+        /// <summary>Confirmation for deleting the event <paramref name="eventName"/>: a prominent backup
+        /// warning with a button that runs <paramref name="createBackup"/> (returns the saved file's path,
+        /// or null) without leaving the dialog, and a delete button that only becomes available once the
+        /// event's name has been typed in. <paramref name="contents"/> describes what the event holds.
+        /// Returns true if the deletion was confirmed.</summary>
+        Task<bool> ShowDeleteEventDialogAsync(string eventName, string contents, Func<string> createBackup);
 
         /// <summary>Shows the saved-analyses management dialog for the given view model.</summary>
         Task ShowSavedAnalysisManagementAsync(SavedAnalysisManagementViewModel viewModel);

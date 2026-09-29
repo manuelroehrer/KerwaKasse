@@ -13,7 +13,7 @@
         ui:TitleBar.InactiveBackground="#0C1C2E"
         ui:TitleBar.InactiveForeground="#80FFFFFF"
         mc:Ignorable="d" Background="{DynamicResource AppBackgroundBrush}"
-        Title="KerwaKasse" Height="700" Width="1000">
+        Title="{Binding WindowTitle}" Height="700" Width="1000">
 
     <ui:TitleBar.ButtonStyle>
         <Style TargetType="{x:Type ui:TitleBarButton}">

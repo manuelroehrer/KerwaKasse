@@ -1,6 +1,7 @@
 ﻿using KerwaKasse.Helper;
 using KerwaKasse.MVVM.ViewModel;
 using KerwaKasse.Core.Data;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System.Windows;
 using System.Windows.Input;
@@ -15,25 +16,18 @@ namespace KerwaKasse
         private const string WindowStateSettingKey = "MainWindow.WindowState";
         private readonly JsonSettingsService _settingsService;
         private readonly EventCatalog _eventCatalog;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly DialogService _dialogService = new();
+        private readonly GitHubUpdateService _updateService;
 
         public MainWindow(ILoggerFactory loggerFactory, JsonSettingsService settingsService, EventCatalog eventCatalog)
         {
-            _eventCatalog = eventCatalog;
-            string dbFilePath = eventCatalog.ActiveFilePath;
-            string connectionString = $"Data Source={dbFilePath}";
-
-            var productService = new SqliteProductService(connectionString, loggerFactory.CreateLogger<SqliteProductService>());
-            var orderService = new SqliteOrderService(connectionString, loggerFactory.CreateLogger<SqliteOrderService>());
-            var dialogService = _dialogService;
-            var menuService = new SqliteMenuService(connectionString, loggerFactory.CreateLogger<SqliteMenuService>());
-            var analyticsService = new SqliteAnalyticsService(connectionString);
-            var savedAnalysisService = new SqliteSavedAnalysisService(connectionString, loggerFactory.CreateLogger<SqliteSavedAnalysisService>());
-            var backupService = new DatabaseBackupService(connectionString, dbFilePath, loggerFactory.CreateLogger<DatabaseBackupService>());
-            var updateService = new GitHubUpdateService(InfoViewModel.RepositoryUrl, loggerFactory.CreateLogger<GitHubUpdateService>());
+            _loggerFactory = loggerFactory;
             _settingsService = settingsService;
+            _eventCatalog = eventCatalog;
+            _updateService = new GitHubUpdateService(InfoViewModel.RepositoryUrl, loggerFactory.CreateLogger<GitHubUpdateService>());
 
-            var mainViewModel = new MainWindowViewModel(dialogService, productService, orderService, settingsService, dbFilePath, menuService, analyticsService, savedAnalysisService, backupService, updateService, loggerFactory);
+            var mainViewModel = CreateViewModel();
             DataContext = mainViewModel;
             InitializeComponent();
             RestoreWindowState();
@@ -69,6 +63,39 @@ namespace KerwaKasse
                     "In den Anwendungsdaten wurde eine Datenbank einer älteren KerwaKasse-Version gefunden. " +
                     $"Sie wurde als zusätzliche Veranstaltung „{adopted}“ übernommen; die aktive Veranstaltung bleibt unverändert.");
             }
+        }
+
+        // Every database-bound service is created for the active event's file. After a switch to
+        // another event the whole set (and the main view model holding it) is simply rebuilt.
+        private MainWindowViewModel CreateViewModel()
+        {
+            string dbFilePath = _eventCatalog.ActiveFilePath;
+            string connectionString = $"Data Source={dbFilePath}";
+
+            var productService = new SqliteProductService(connectionString, _loggerFactory.CreateLogger<SqliteProductService>());
+            var orderService = new SqliteOrderService(connectionString, _loggerFactory.CreateLogger<SqliteOrderService>());
+            var menuService = new SqliteMenuService(connectionString, _loggerFactory.CreateLogger<SqliteMenuService>());
+            var analyticsService = new SqliteAnalyticsService(connectionString);
+            var savedAnalysisService = new SqliteSavedAnalysisService(connectionString, _loggerFactory.CreateLogger<SqliteSavedAnalysisService>());
+            var backupService = new DatabaseBackupService(connectionString, dbFilePath, _loggerFactory.CreateLogger<DatabaseBackupService>());
+
+            var viewModel = new MainWindowViewModel(_dialogService, productService, orderService, _settingsService, _eventCatalog.DataFolder, menuService, analyticsService, savedAnalysisService, backupService, _updateService, _eventCatalog, _loggerFactory);
+            viewModel.ActiveEventSwitched += (_, _) => OnActiveEventSwitched();
+            return viewModel;
+        }
+
+        private void OnActiveEventSwitched()
+        {
+            // Release the previous event's file right away (pooled connections would keep it open),
+            // so it can be exported, copied or deleted without restarting the app.
+            SqliteConnection.ClearAllPools();
+
+            var viewModel = CreateViewModel();
+            DataContext = viewModel;
+
+            // Stay on the info page, where the switch was made: its nav button is still the checked
+            // one, and the event selector now shows the new event.
+            viewModel.InfoViewCommand.Execute(null);
         }
 
         private void NavButton_Click(object sender, RoutedEventArgs e)
