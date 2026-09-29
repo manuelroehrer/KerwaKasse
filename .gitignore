@@ -369,3 +369,6 @@ FodyWeavers.xsd
 
 # KerwaKasse installer build output (Inno Setup)
 installer/Output/
+
+# Temporary local working directories
+/.temp*/
