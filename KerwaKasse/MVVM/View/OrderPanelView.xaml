@@ -12,12 +12,183 @@
     <UserControl.Resources>
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
         <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
+        <helper:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Captures this view's DataContext so the tiles' ScaleTransform (not in the visual tree,
-             so RelativeSource FindAncestor cannot reach the view model) can bind the scale factor. -->
+             so RelativeSource FindAncestor cannot reach the view model) can bind the scale factor.
+             The tile face binds its border settings through it too, so it also renders in the
+             floating copy while a tile is dragged, which sits outside this view. -->
         <helper:BindingProxy x:Key="ViewModelProxy" Data="{Binding}"/>
 
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
+
+        <!-- Product tile face, shared by the order button, the arranging mode and the floating copy
+             while dragging. Keep the auto-fit footprint constants in OrderPanelViewModel in sync
+             with this size and margin (170+8 × 105+8). -->
+        <DataTemplate x:Key="ProductTileFace">
+            <Border Width="170" Height="105" CornerRadius="5" Background="White" Margin="4"
+                    BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
+                <Border.BorderBrush>
+                    <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                        <Binding Path="Color"/>
+                        <Binding Path="Data.BorderDarkenFactor" Source="{StaticResource ViewModelProxy}"/>
+                        <Binding Path="Data.UseColoredBorder" Source="{StaticResource ViewModelProxy}"/>
+                    </MultiBinding>
+                </Border.BorderBrush>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="4" ShadowDepth="1.5" Direction="270" Opacity="0.18" Color="Black"/>
+                </Border.Effect>
+                <Grid ClipToBounds="True">
+                    <Border Background="{Binding Color}" VerticalAlignment="Top"
+                            Height="18" CornerRadius="4,4,0,0"
+                            BorderThickness="0,0,0,0.9">
+                        <Border.BorderBrush>
+                            <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
+                                <Binding Path="Color"/>
+                                <Binding Path="Data.BorderDarkenFactor" Source="{StaticResource ViewModelProxy}"/>
+                                <Binding Path="Data.UseColoredBorder" Source="{StaticResource ViewModelProxy}"/>
+                            </MultiBinding>
+                        </Border.BorderBrush>
+                    </Border>
+
+                    <!-- Content -->
+                    <StackPanel VerticalAlignment="Center" Margin="15,19,14,6">
+                        <TextBlock Text="{Binding Name}"
+                                   Foreground="#1A1A1A"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   FontSize="20"
+                                   MaxHeight="54"
+                                   helper:AutoFitTextBlock.Enabled="True"
+                                   helper:AutoFitTextBlock.MaxFontSize="20"
+                                   helper:AutoFitTextBlock.MinFontSize="11"/>
+                        <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
+                                   Foreground="#606060"
+                                   FontFamily="{StaticResource PriceFont}"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Ordering: tapping a tile adds the product to the order. -->
+        <DataTemplate x:Key="ProductTileButtonTemplate">
+            <Button Command="{Binding Path=DataContext.AddOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    CommandParameter="{Binding}">
+                <Button.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
+                                    ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
+                </Button.LayoutTransform>
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource ProductTileFace}"/>
+                            <!-- Hover overlay over the card (inside its margin) -->
+                            <Border x:Name="Overlay" Background="Transparent" CornerRadius="5" Margin="4"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#08000000" TargetName="Overlay"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#12000000" TargetName="Overlay"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+
+        <!-- Arranging: no order button, the tile can be dragged instead (DragReorder). While it is
+             dragged, its slot shows the dashed placeholder where it will land. -->
+        <DataTemplate x:Key="ProductTileArrangeTemplate">
+            <Grid Background="Transparent" Cursor="SizeAll">
+                <Grid.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
+                                    ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
+                </Grid.LayoutTransform>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource ProductTileFace}">
+                    <ContentPresenter.Style>
+                        <Style TargetType="ContentPresenter">
+                            <Style.Triggers>
+                                <Trigger Property="helper:DragReorder.IsDragSource" Value="True">
+                                    <Setter Property="Visibility" Value="Hidden"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentPresenter.Style>
+                </ContentPresenter>
+                <Rectangle Margin="4" RadiusX="5" RadiusY="5" Fill="#F3F7FC"
+                           Stroke="#9DB7D5" StrokeThickness="1.5" StrokeDashArray="4 3">
+                    <Rectangle.Style>
+                        <Style TargetType="Rectangle">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <Trigger Property="helper:DragReorder.IsDragSource" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Rectangle.Style>
+                </Rectangle>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Floating copy of a tile while it is dragged: lifted off with a deeper shadow. -->
+        <DataTemplate x:Key="ProductTileDragTemplate">
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource ProductTileFace}">
+                <ContentPresenter.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
+                                    ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
+                </ContentPresenter.LayoutTransform>
+                <ContentPresenter.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="5" Direction="270" Opacity="0.25" Color="Black"/>
+                </ContentPresenter.Effect>
+            </ContentPresenter>
+        </DataTemplate>
+
+        <!-- Main action button of the panel (save the order, finish arranging), intentionally in the
+             darker sidebar tone (AppSidebarBrush) instead of the accent colour. In the order panel
+             this is the only accent control on screen next to the dark title bar and the even darker
+             nav bar, so a third, lighter blue looked off; other views show enough accent controls
+             for the accent colour to sit right there. Hover/pressed are derived from the base tone
+             at runtime by overlaying a translucent veil (same idiom as the product tiles above), so
+             no extra colour constants are needed and the disabled state simply dims. -->
+        <Style x:Key="SidebarActionButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" SnapsToDevicePixels="True"
+                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                Background="{DynamicResource AppSidebarBrush}">
+                            <Grid>
+                                <Border x:Name="veil" Background="Transparent"
+                                        CornerRadius="{DynamicResource ControlCornerRadius}"/>
+                                <ContentPresenter x:Name="content"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="veil" Property="Background" Value="#18FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="veil" Property="Background" Value="#22000000"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="content" Property="Opacity" Value="0.55"/>
+                                <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- Quiet icon button on each order row (minus, or an X at amount 1). Kept grey and
              borderless because it sits on every row; hover/pressed like the settings gear. -->
@@ -65,93 +236,44 @@
         </Grid.ColumnDefinitions>
 
         <!-- Product grid. Uniform padding: together with the uniform tile margin (4) this yields the
-             same 10px gap to the nav bar, the title bar and the panel edges. -->
+             same 10px gap to the nav bar, the title bar and the panel edges. While arranging, the
+             area is tinted and outlined (below) but keeps its size, so the tiles stay exactly where
+             they are when ordering. -->
+        <Border Grid.Column="0" Background="#D5E1EE"
+                Visibility="{Binding IsArrangingTiles, Converter={StaticResource BoolToVisibility}}"/>
         <ScrollViewer x:Name="ProductScroll"
                       Grid.Column="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="6"
                       SizeChanged="ProductScroll_SizeChanged">
-            <ItemsControl ItemsSource="{Binding Products}">
+            <ItemsControl ItemsSource="{Binding Products}"
+                          helper:DragReorder.IsEnabled="{Binding IsArrangingTiles}"
+                          helper:DragReorder.MoveCommand="{Binding MoveProductCommand}"
+                          helper:DragReorder.DragTemplate="{StaticResource ProductTileDragTemplate}"
+                          helper:DragReorder.LiftScale="1.06">
+                <ItemsControl.Style>
+                    <Style TargetType="ItemsControl">
+                        <Setter Property="ItemTemplate" Value="{StaticResource ProductTileButtonTemplate}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsArrangingTiles}" Value="True">
+                                <Setter Property="ItemTemplate" Value="{StaticResource ProductTileArrangeTemplate}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ItemsControl.Style>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Button Command="{Binding Path=DataContext.AddOrderPositionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}">
-                            <Button.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"
-                                                ScaleY="{Binding Data.EffectiveScaleFactor, Source={StaticResource ViewModelProxy}}"/>
-                            </Button.LayoutTransform>
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <!-- Keep the auto-fit footprint constants in OrderPanelViewModel in sync
-                                         with this size and margin (170+8 × 105+8). -->
-                                    <Border x:Name="Card" Width="170" Height="105" CornerRadius="5" Background="White" Margin="4"
-                                            BorderThickness="0.9" UseLayoutRounding="True" SnapsToDevicePixels="True">
-                                        <Border.BorderBrush>
-                                            <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
-                                                <Binding Path="Color"/>
-                                                <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                            </MultiBinding>
-                                        </Border.BorderBrush>
-                                        <Border.Effect>
-                                            <DropShadowEffect BlurRadius="4" ShadowDepth="1.5" Direction="270" Opacity="0.18" Color="Black"/>
-                                        </Border.Effect>
-                                        <Grid ClipToBounds="True">
-                                            <Border Background="{Binding Color}" VerticalAlignment="Top"
-                                                    Height="18" CornerRadius="4,4,0,0"
-                                                    BorderThickness="0,0,0,0.9">
-                                                <Border.BorderBrush>
-                                                    <MultiBinding Converter="{StaticResource BrushColoredBorderConverter}">
-                                                        <Binding Path="Color"/>
-                                                        <Binding Path="DataContext.BorderDarkenFactor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                        <Binding Path="DataContext.UseColoredBorder" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                    </MultiBinding>
-                                                </Border.BorderBrush>
-                                            </Border>
-
-                                            <!-- Hover overlay -->
-                                            <Border x:Name="Overlay" Background="Transparent" CornerRadius="5"/>
-
-                                            <!-- Content -->
-                                            <StackPanel VerticalAlignment="Center" Margin="15,19,14,6">
-                                                <TextBlock Text="{Binding Name}"
-                                                           Foreground="#1A1A1A"
-                                                           FontWeight="SemiBold"
-                                                           TextWrapping="Wrap"
-                                                           FontSize="20"
-                                                           MaxHeight="54"
-                                                           helper:AutoFitTextBlock.Enabled="True"
-                                                           helper:AutoFitTextBlock.MaxFontSize="20"
-                                                           helper:AutoFitTextBlock.MinFontSize="11"/>
-                                                <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
-                                                           Foreground="#606060"
-                                                           FontFamily="{StaticResource PriceFont}"
-                                                           Margin="0,4,0,0"
-                                                           FontSize="13"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#08000000" TargetName="Overlay"/>
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter Property="Background" Value="#12000000" TargetName="Overlay"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Arranging: accent outline around the tile area, inside the 10px gap around the tiles -->
+        <Border Grid.Column="0" Margin="3" CornerRadius="6" BorderThickness="2"
+                BorderBrush="{DynamicResource AppAccentBrush}" IsHitTestVisible="False"
+                Visibility="{Binding IsArrangingTiles, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Empty state: no products available to order -->
         <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="320">
@@ -169,7 +291,7 @@
                        HorizontalAlignment="Center" Margin="0,0,0,14"/>
             <TextBlock Text="Keine Produkte verfügbar" FontSize="18" FontWeight="SemiBold"
                        HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-            <TextBlock Text="Im Bereich „Produkte“ können Sie Produkte anlegen und verfügbar schalten."
+            <TextBlock Text="Produkte im gleichnamigen Bereich anlegen und verfügbar schalten."
                        FontSize="14" Foreground="#909090" HorizontalAlignment="Center" Margin="0,8,0,0"
                        TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"/>
         </StackPanel>
@@ -207,7 +329,9 @@
 
         <!-- Order panel -->
         <Border Grid.Column="2" Background="White">
-            <DockPanel LastChildFill="True">
+            <Grid>
+            <DockPanel LastChildFill="True"
+                       Visibility="{Binding IsArrangingTiles, Converter={StaticResource InverseBoolToVisibility}}">
 
                 <!-- Header -->
                 <Grid DockPanel.Dock="Top" Margin="16,14,12,10">
@@ -218,7 +342,7 @@
                     <TextBlock Text="Bestellung" FontWeight="Bold" FontSize="27" VerticalAlignment="Center"/>
 
                     <!-- Settings gear button with Flyout -->
-                    <Button Grid.Column="1" VerticalAlignment="Center" Cursor="Hand" ToolTip="UI-Anpassungen">
+                    <Button x:Name="SettingsButton" Grid.Column="1" VerticalAlignment="Center" Cursor="Hand" ToolTip="UI-Anpassungen">
                         <ui:FlyoutService.Flyout>
                             <ui:Flyout Placement="BottomEdgeAlignedRight">
                                 <StackPanel Width="270">
@@ -250,6 +374,19 @@
                                             Thumb.DragCompleted="Slider_DragCompleted"
                                             IsEnabled="{Binding IsManualTileSize}"
                                             ToolTip="Feste Größe der Produkt-Buttons (nur ohne automatisches Einpassen)"/>
+
+                                    <Border Height="1" Background="#E4E6E9" Margin="0,14,0,8"/>
+
+                                    <!-- Enters the arranging mode (closes the flyout). No tooltip: one shown
+                                         inside the flyout stays on screen once the mouse leaves the flyout. -->
+                                    <Button Style="{StaticResource FlyoutRowButton}" Click="ArrangeTiles_Click" Margin="-10,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#586070"
+                                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Anordnung bearbeiten …" FontSize="14" Foreground="#1B1E24"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </StackPanel>
                             </ui:Flyout>
                         </ui:FlyoutService.Flyout>
@@ -323,42 +460,8 @@
                                 <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="23" Foreground="#C0392B"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <!-- Save button: intentionally in the darker sidebar tone (AppSidebarBrush)
-                                 instead of the accent colour. In the order panel this is the only accent
-                                 control on screen next to the dark title bar and the even darker nav bar,
-                                 so a third, lighter blue looked off; other views show enough accent
-                                 controls for the accent colour to sit right there. Hover/pressed are
-                                 derived from the base tone at runtime by overlaying a translucent veil
-                                 (same idiom as the product tiles above), so no extra colour constants
-                                 are needed and the disabled state simply dims. -->
                             <Button Grid.Column="2" Command="{Binding SaveOrderCommand}"
-                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" SnapsToDevicePixels="True"
-                                                CornerRadius="{DynamicResource ControlCornerRadius}"
-                                                Background="{DynamicResource AppSidebarBrush}">
-                                            <Grid>
-                                                <Border x:Name="veil" Background="Transparent"
-                                                        CornerRadius="{DynamicResource ControlCornerRadius}"/>
-                                                <ContentPresenter x:Name="content"
-                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="veil" Property="Background" Value="#18FFFFFF"/>
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter TargetName="veil" Property="Background" Value="#22000000"/>
-                                            </Trigger>
-                                            <Trigger Property="IsEnabled" Value="False">
-                                                <Setter TargetName="content" Property="Opacity" Value="0.55"/>
-                                                <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    Style="{StaticResource SidebarActionButton}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="23"
                                                Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -436,6 +539,42 @@
                 </ScrollViewer>
 
             </DockPanel>
+
+            <!-- Arranging mode: takes the place of the order (which stays as it is and returns with
+                 "Fertig"), so the mode is unmistakable and the tile area keeps its size. -->
+            <DockPanel LastChildFill="True"
+                       Visibility="{Binding IsArrangingTiles, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock DockPanel.Dock="Top" Text="Anordnung" FontWeight="Bold" FontSize="27"
+                           Margin="16,14,12,10" MinHeight="34"/>
+
+                <Border DockPanel.Dock="Bottom" Background="#EFF0F2" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0" Padding="16,16,16,18">
+                    <Button Height="52" Command="{Binding FinishArrangingCommand}"
+                            Style="{StaticResource SidebarActionButton}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="21"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Fertig" FontSize="22" FontWeight="SemiBold"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
+
+                <StackPanel Margin="16,4,16,16">
+                    <Border Background="#EAF1FB" BorderBrush="#BCD4F0" BorderThickness="1" CornerRadius="7" Padding="14,12">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                       Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Top" Margin="0,1,12,0"/>
+                            <TextBlock Text="Produkt-Buttons per Drag &amp; Drop an die gewünschte Stelle ziehen."
+                                       FontSize="16" FontWeight="SemiBold" Foreground="#1B1E24" TextWrapping="Wrap"/>
+                        </DockPanel>
+                    </Border>
+                    <TextBlock Margin="2,14,0,0" FontSize="14" Foreground="#5F6670" TextWrapping="Wrap"
+                               Text="Die neue Reihenfolge wird sofort gespeichert und gilt ebenso für die Produktliste."/>
+                    <TextBlock Margin="2,10,0,0" FontSize="14" Foreground="#5F6670" TextWrapping="Wrap"
+                               Text="Nicht verfügbare Produkte sind hier ausgeblendet und behalten ihren Platz."/>
+                </StackPanel>
+            </DockPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

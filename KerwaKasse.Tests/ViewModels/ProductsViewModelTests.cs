@@ -186,6 +186,39 @@ public class ProductsViewModelTests
     }
 
     [Fact]
+    public void MoveProduct_ByDragAndDrop_ReordersPersistsAndKeepsSelection()
+    {
+        var bier = _sut.Products[1];
+        _sut.SelectedProduct = _sut.Products[0]; // Bratwurst stays selected while Bier is dragged up
+        var detail = _sut.DetailPanel;
+
+        var move = new DragReorderMove(bier, 1, 0);
+        Assert.True(_sut.MoveProductCommand.CanExecute(move));
+        _sut.MoveProductCommand.Execute(move);
+
+        Assert.Same(bier, _sut.Products[0]);
+        Assert.Equal("Bratwurst", _sut.SelectedProduct!.Name);
+        Assert.Same(detail, _sut.DetailPanel);
+        Assert.Equal("2 / 2", _sut.CurrentPositionText);
+        _productService.Received(1).UpdateSortOrder(Arg.Is<IEnumerable<Product>>(ps =>
+            ps.Select(p => p.Id).SequenceEqual(new[] { 2, 1 })));
+    }
+
+    [Fact]
+    public void MoveProduct_IsDisabledWhileSearching()
+    {
+        var move = new DragReorderMove(_sut.Products[1], 1, 0);
+
+        _sut.SearchText = "Bi";
+
+        Assert.False(_sut.CanDragReorder);
+        Assert.False(_sut.MoveProductCommand.CanExecute(move));
+
+        _sut.SearchText = "";
+        Assert.True(_sut.CanDragReorder);
+    }
+
+    [Fact]
     public void CurrentPositionText_ReflectsSelection()
     {
         _sut.SelectedProduct = _sut.Products[0];

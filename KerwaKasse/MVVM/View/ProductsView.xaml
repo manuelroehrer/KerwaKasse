@@ -73,7 +73,74 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Table row: adjoining rows with a bottom divider; selection adds a left accent bar. -->
+        <!-- Table row content: colour swatch + name, price, availability toggle. -->
+        <DataTemplate x:Key="ProductRowTemplate">
+            <Grid Height="52">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="96"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Colour swatch + name -->
+                <Grid Grid.Column="0" Margin="14,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="Swatch" Grid.Column="0" Width="14" Height="14" CornerRadius="4"
+                            Background="{Binding ColorBrush}" BorderThickness="1"
+                            BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"
+                            Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Name}"
+                               FontSize="16" FontWeight="SemiBold" Foreground="#222222"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+
+                <!-- Price -->
+                <TextBlock x:Name="PriceText" Grid.Column="1" Text="{Binding Price, StringFormat={}{0:C}}"
+                           FontFamily="{StaticResource PriceFont}"
+                           FontSize="15" Foreground="#555555" VerticalAlignment="Center"
+                           HorizontalAlignment="Right" Margin="0,0,10,0"/>
+
+                <!-- Availability toggle (never greyed out), centered under the column -->
+                <ui:ToggleSwitch Grid.Column="2" IsOn="{Binding Available, Mode=TwoWay}"
+                                 OnContent="" OffContent="" MinWidth="0" Width="44"
+                                 VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0">
+                    <ui:ToggleSwitch.LayoutTransform>
+                        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
+                    </ui:ToggleSwitch.LayoutTransform>
+                </ui:ToggleSwitch>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Available}" Value="False">
+                    <Setter TargetName="NameText" Property="Foreground" Value="#9AA0A6"/>
+                    <Setter TargetName="NameText" Property="FontWeight" Value="Normal"/>
+                    <Setter TargetName="PriceText" Property="Foreground" Value="#AEB3B8"/>
+                    <Setter TargetName="Swatch" Property="Opacity" Value="0.3"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Floating copy of a row while it is dragged: the same row lifted off as a white card. -->
+        <DataTemplate x:Key="ProductDragCardTemplate">
+            <Border Background="White" CornerRadius="6" BorderBrush="#C9D5E3" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.22" Color="Black"/>
+                </Border.Effect>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource ProductRowTemplate}"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- The dragged row's original slot, kept open in grey until the drop so it stays visible
+             where the row came from. -->
+        <DataTemplate x:Key="ProductOriginSlotTemplate">
+            <Border Margin="8,5" CornerRadius="4" Background="#EDEFF2"/>
+        </DataTemplate>
+
+        <!-- Table row: adjoining rows with a bottom divider; selection adds a left accent bar.
+             Rows can be dragged to reorder (DragReorder); the dragged row's own container then turns
+             into the dashed placeholder that marks where the row will land. -->
         <Style x:Key="ProductRowStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Padding" Value="0"/>
@@ -84,7 +151,10 @@
                                 BorderBrush="#EDEFF2" BorderThickness="0,0,0,1">
                             <Grid>
                                 <Border x:Name="Accent" Width="3" HorizontalAlignment="Left" Background="Transparent"/>
-                                <ContentPresenter/>
+                                <ContentPresenter x:Name="Content"/>
+                                <Rectangle x:Name="DropSlot" Margin="8,5" Visibility="Collapsed"
+                                           RadiusX="4" RadiusY="4" Fill="#F3F7FC"
+                                           Stroke="#AFC6E0" StrokeThickness="1.5" StrokeDashArray="4 3"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -97,6 +167,13 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Row" Property="Background" Value="#CFE0F2"/>
                                 <Setter TargetName="Accent" Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                            </Trigger>
+                            <!-- Last, so it wins over the background triggers above -->
+                            <Trigger Property="helper:DragReorder.IsDragSource" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="Transparent"/>
+                                <Setter TargetName="Accent" Property="Background" Value="Transparent"/>
+                                <Setter TargetName="Content" Property="Visibility" Value="Hidden"/>
+                                <Setter TargetName="DropSlot" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -274,62 +351,26 @@
 
                 <!-- Product rows (empty-state overlays the list area; the header row above stays) -->
                 <Grid>
+                <!-- Drag and drop needs every row realized (plain StackPanel) and pixel scrolling,
+                     which also scrolls more smoothly than jumping row by row. -->
                 <ListBox ItemsSource="{Binding Products}"
                          SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
                          ItemContainerStyle="{StaticResource ProductRowStyle}"
+                         ItemTemplate="{StaticResource ProductRowTemplate}"
+                         helper:DragReorder.IsEnabled="{Binding CanDragReorder}"
+                         helper:DragReorder.MoveCommand="{Binding MoveProductCommand}"
+                         helper:DragReorder.DragTemplate="{StaticResource ProductDragCardTemplate}"
+                         helper:DragReorder.OriginTemplate="{StaticResource ProductOriginSlotTemplate}"
                          Background="Transparent" BorderThickness="0"
                          HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="False"
                          Padding="0,0,0,2">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Height="52">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="96"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Colour swatch + name -->
-                                <Grid Grid.Column="0" Margin="14,0,8,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border x:Name="Swatch" Grid.Column="0" Width="14" Height="14" CornerRadius="4"
-                                            Background="{Binding ColorBrush}" BorderThickness="1"
-                                            BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"
-                                            Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Name}"
-                                               FontSize="16" FontWeight="SemiBold" Foreground="#222222"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                </Grid>
-
-                                <!-- Price -->
-                                <TextBlock x:Name="PriceText" Grid.Column="1" Text="{Binding Price, StringFormat={}{0:C}}"
-                                           FontFamily="{StaticResource PriceFont}"
-                                           FontSize="15" Foreground="#555555" VerticalAlignment="Center"
-                                           HorizontalAlignment="Right" Margin="0,0,10,0"/>
-
-                                <!-- Availability toggle (never greyed out), centered under the column -->
-                                <ui:ToggleSwitch Grid.Column="2" IsOn="{Binding Available, Mode=TwoWay}"
-                                                 OnContent="" OffContent="" MinWidth="0" Width="44"
-                                                 VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0">
-                                    <ui:ToggleSwitch.LayoutTransform>
-                                        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
-                                    </ui:ToggleSwitch.LayoutTransform>
-                                </ui:ToggleSwitch>
-                            </Grid>
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding Available}" Value="False">
-                                    <Setter TargetName="NameText" Property="Foreground" Value="#9AA0A6"/>
-                                    <Setter TargetName="NameText" Property="FontWeight" Value="Normal"/>
-                                    <Setter TargetName="PriceText" Property="Foreground" Value="#AEB3B8"/>
-                                    <Setter TargetName="Swatch" Property="Opacity" Value="0.3"/>
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                 </ListBox>
 
                 <!-- Empty state: no products exist yet -->
@@ -348,7 +389,7 @@
                                HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="Noch keine Produkte" FontSize="18" FontWeight="SemiBold"
                                HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-                    <TextBlock Text="Legen Sie rechts über „Neues Produkt“ Ihr erstes Produkt an."
+                    <TextBlock Text="Rechts über „Neues Produkt“ das erste Produkt anlegen."
                                FontSize="14" Foreground="#909090" HorizontalAlignment="Center" Margin="0,8,0,0"
                                TextWrapping="Wrap" TextAlignment="Center" MaxWidth="260"/>
                 </StackPanel>
@@ -375,7 +416,7 @@
                            Foreground="#C0C0C0" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                 <TextBlock Text="Kein Produkt ausgewählt" FontSize="18" FontWeight="SemiBold"
                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-                <TextBlock Text="Wählen Sie links ein Produkt aus, um es zu bearbeiten, oder legen Sie ein neues an."
+                <TextBlock Text="Zum Bearbeiten links ein Produkt auswählen oder ein neues anlegen."
                            FontSize="14" Foreground="#909090" HorizontalAlignment="Center"
                            Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240"/>
                 <Button Command="{Binding AddProductCommand}"

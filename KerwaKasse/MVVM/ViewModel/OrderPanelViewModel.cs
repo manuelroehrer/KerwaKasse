@@ -17,6 +17,9 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DecreaseOrderPositionCommand { get; }
         public RelayCommand DiscardOrderCommand { get; }
         public RelayCommand SaveOrderCommand { get; }
+        public RelayCommand StartArrangingCommand { get; }
+        public RelayCommand FinishArrangingCommand { get; }
+        public RelayCommand MoveProductCommand { get; }
 
         private readonly IProductService _productService;
         private readonly IOrderService _orderService;
@@ -24,8 +27,8 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly IDialogService _dialogService;
         private readonly ILogger<OrderPanelViewModel> _logger;
 
-        private List<ProductModel> products;
-        public List<ProductModel> Products
+        private ObservableCollection<ProductModel> products;
+        public ObservableCollection<ProductModel> Products
         {
             get { return products; }
             set { products = value; OnPropertyChanged(); }
@@ -101,12 +104,17 @@ namespace KerwaKasse.MVVM.ViewModel
             DecreaseOrderPositionCommand = new RelayCommand(o => DecreaseOrderPosition(o as OrderPositionModel));
             DiscardOrderCommand = new RelayCommand(o => DiscardOrder());
             SaveOrderCommand = new RelayCommand(o => SaveOrder());
+            StartArrangingCommand = new RelayCommand(_ => IsArrangingTiles = true);
+            FinishArrangingCommand = new RelayCommand(_ => IsArrangingTiles = false);
+            MoveProductCommand = new RelayCommand(
+                o => { if (o is DragReorderMove { Item: ProductModel p } m) MoveProduct(p, m.NewIndex); },
+                o => IsArrangingTiles && o is DragReorderMove { Item: ProductModel });
 
             LoadPreferences();
 
             ShowNotification = false;
             Total = 0.0m;
-            Products = new List<ProductModel>();
+            Products = new ObservableCollection<ProductModel>();
             OrderPositions = new ObservableCollection<OrderPositionModel>();
             LoadData();
         }
@@ -286,7 +294,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private void LoadData()
         {
             var coreProducts = _productService.GetAvailable();
-            Products = coreProducts.Select(p => new ProductModel
+            Products = new ObservableCollection<ProductModel>(coreProducts.Select(p => new ProductModel
             {
                 ProductID = p.Id,
                 Name = p.Name,
@@ -294,7 +302,29 @@ namespace KerwaKasse.MVVM.ViewModel
                 Available = p.Available,
                 ColorAsString = p.Color,
                 PositionNumber = p.SortOrder
-            }).OrderBy(o => o.PositionNumber).ToList();
+            }).OrderBy(o => o.PositionNumber));
+        }
+
+        // ── Arranging the tiles (edit mode) ──────────────────────
+
+        private bool _isArrangingTiles;
+        /// <summary>Edit mode in which the tiles are dragged into a new order instead of being
+        /// tapped for an order. The order itself stays untouched and returns afterwards.</summary>
+        public bool IsArrangingTiles
+        {
+            get => _isArrangingTiles;
+            private set { _isArrangingTiles = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>Moves a tile to a new place and saves the order right away. Unavailable
+        /// products are not shown here and keep their positions.</summary>
+        public void MoveProduct(ProductModel product, int newIndex)
+        {
+            int oldIndex = Products.IndexOf(product);
+            if (oldIndex < 0 || newIndex == oldIndex || newIndex < 0 || newIndex >= Products.Count) return;
+
+            _productService.MoveAvailable(product.ProductID, newIndex);
+            Products.Move(oldIndex, newIndex);
         }
 
         public void DiscardOrder()

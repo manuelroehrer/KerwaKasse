@@ -366,7 +366,7 @@
                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <TextBlock Text="Keine Verkäufe für diese Auswahl" FontSize="17" FontWeight="SemiBold"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
-                    <TextBlock Text="Passe Zeitraum oder Produktauswahl an." FontSize="13.5" Foreground="#909090"
+                    <TextBlock Text="Zeitraum oder Produktauswahl anpassen." FontSize="13.5" Foreground="#909090"
                                HorizontalAlignment="Center" Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap"/>
                 </StackPanel>
 

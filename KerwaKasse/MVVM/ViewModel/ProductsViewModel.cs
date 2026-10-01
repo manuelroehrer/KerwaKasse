@@ -36,9 +36,14 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 _searchText = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CanDragReorder));
                 _productsView?.Refresh();
             }
         }
+
+        /// <summary>Drag and drop in the list works on list indices, which only match the collection
+        /// while no search filter hides products.</summary>
+        public bool CanDragReorder => string.IsNullOrWhiteSpace(_searchText);
 
         private bool ProductFilter(object item) =>
             item is ProductListItemViewModel p &&
@@ -163,6 +168,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand ToggleNameLockCommand { get; }
         public RelayCommand MoveSelectedUpCommand { get; }
         public RelayCommand MoveSelectedDownCommand { get; }
+        public RelayCommand MoveProductCommand { get; }
         public RelayCommand BeginPositionEditCommand { get; }
         public RelayCommand ApplyMenuCommand { get; }
         public RelayCommand OpenMenuManagementCommand { get; }
@@ -190,6 +196,9 @@ namespace KerwaKasse.MVVM.ViewModel
             ToggleNameLockCommand = new RelayCommand(_ => ToggleNameLock(), _ => DetailPanel is { IsNew: false });
             MoveSelectedUpCommand = new RelayCommand(_ => MoveSelected(-1), _ => CanMoveSelected(-1));
             MoveSelectedDownCommand = new RelayCommand(_ => MoveSelected(1), _ => CanMoveSelected(1));
+            MoveProductCommand = new RelayCommand(
+                o => { if (o is DragReorderMove { Item: ProductListItemViewModel p } m) MoveToIndex(p, m.NewIndex); },
+                o => CanDragReorder && o is DragReorderMove { Item: ProductListItemViewModel });
             BeginPositionEditCommand = new RelayCommand(_ => BeginPositionEdit(), _ => SelectedProduct != null && !IsAddingNew);
             ApplyMenuCommand = new RelayCommand(o => ApplyMenu(o as Menu), o => (o as Menu) != null || SelectedMenu != null);
             OpenMenuManagementCommand = new RelayCommand(_ => OpenMenuManagement());
@@ -386,20 +395,23 @@ namespace KerwaKasse.MVVM.ViewModel
         private void MoveSelected(int direction)
         {
             if (!CanMoveSelected(direction)) return;
-            MoveSelectedToIndex(Products.IndexOf(SelectedProduct) + direction);
+            MoveToIndex(SelectedProduct, Products.IndexOf(SelectedProduct) + direction);
         }
 
-        /// <summary>Moves the selected product to the given index and persists the whole order once.</summary>
-        private void MoveSelectedToIndex(int targetIdx)
+        /// <summary>Moves a product to the given index (move buttons, typed position or drag and drop)
+        /// and persists the whole order once. The selection stays as it is.</summary>
+        private void MoveToIndex(ProductListItemViewModel item, int targetIdx)
         {
-            var item = SelectedProduct;
             int idx = Products.IndexOf(item);
-            if (idx < 0 || targetIdx == idx) return;
+            if (idx < 0 || targetIdx == idx || targetIdx < 0 || targetIdx >= Products.Count) return;
 
+            // Removing the selected item clears the ListBox selection; restore it without
+            // reloading the detail panel.
+            var selected = SelectedProduct;
             _suppressSelectionChange = true;
             Products.RemoveAt(idx);
             Products.Insert(targetIdx, item);
-            SelectedProduct = item;
+            SelectedProduct = selected;
             _suppressSelectionChange = false;
 
             _productService.UpdateSortOrder(
@@ -442,7 +454,7 @@ namespace KerwaKasse.MVVM.ViewModel
             IsEditingPosition = false;
 
             if (SelectedProduct == null || !int.TryParse(PositionInput?.Trim(), out int position)) return;
-            MoveSelectedToIndex(Math.Clamp(position - 1, 0, Products.Count - 1));
+            MoveToIndex(SelectedProduct, Math.Clamp(position - 1, 0, Products.Count - 1));
         }
 
         // ── Persistence helpers ──────────────────────────────────

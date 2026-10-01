@@ -103,6 +103,49 @@ public class SqliteProductServiceTests : IDisposable
     }
 
     [Fact]
+    public void MoveAvailable_KeepsUnavailableProductsInPlace()
+    {
+        _sut.Add(new Product { Name = "Off1", Price = 1m, Available = false });
+        _sut.Add(new Product { Name = "A", Price = 1m, Available = true });
+        _sut.Add(new Product { Name = "Off2", Price = 1m, Available = false });
+        _sut.Add(new Product { Name = "B", Price = 1m, Available = true });
+        _sut.Add(new Product { Name = "C", Price = 1m, Available = true });
+        int idC = _sut.GetAll().Single(p => p.Name == "C").Id;
+
+        _sut.MoveAvailable(idC, 0); // to the front of the order panel
+
+        Assert.Equal(new[] { "Off1", "C", "Off2", "A", "B" }, _sut.GetAll().Select(p => p.Name));
+        Assert.Equal(new[] { "C", "A", "B" }, _sut.GetAvailable().Select(p => p.Name));
+    }
+
+    [Fact]
+    public void MoveAvailable_SwapsAcrossHiddenProducts()
+    {
+        // Positions 2 and 3 are unavailable, so the order panel shows A and B side by side.
+        _sut.Add(new Product { Name = "A", Price = 1m, Available = true });
+        _sut.Add(new Product { Name = "Off1", Price = 1m, Available = false });
+        _sut.Add(new Product { Name = "Off2", Price = 1m, Available = false });
+        _sut.Add(new Product { Name = "B", Price = 1m, Available = true });
+        int idB = _sut.GetAll().Single(p => p.Name == "B").Id;
+
+        _sut.MoveAvailable(idB, 0); // swap the first two tiles
+
+        Assert.Equal(new[] { "B", "Off1", "Off2", "A" }, _sut.GetAll().Select(p => p.Name));
+    }
+
+    [Fact]
+    public void MoveAvailable_IgnoresUnavailableProduct()
+    {
+        _sut.Add(new Product { Name = "A", Price = 1m, Available = true });
+        _sut.Add(new Product { Name = "Off", Price = 1m, Available = false });
+        int idOff = _sut.GetAll().Single(p => p.Name == "Off").Id;
+
+        _sut.MoveAvailable(idOff, 0);
+
+        Assert.Equal(new[] { "A", "Off" }, _sut.GetAll().Select(p => p.Name));
+    }
+
+    [Fact]
     public void GetAll_ReturnsOrderedBySortOrder()
     {
         _sut.Add(new Product { Name = "C", Price = 1m });

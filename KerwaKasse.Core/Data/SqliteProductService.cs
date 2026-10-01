@@ -97,6 +97,40 @@ public class SqliteProductService : IProductService
         _logger.LogInformation("Sort order of {ProductCount} products updated", productList.Count);
     }
 
+    public void MoveAvailable(int productId, int newIndex)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        var all = connection.Query<ProductRow>(
+            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products ORDER BY SortOrder",
+            transaction: transaction).ToList();
+        var available = all.Where(p => p.Available).Select(p => p.Id).ToList();
+        int oldIndex = available.IndexOf(productId);
+        if (oldIndex < 0) return;
+
+        newIndex = Math.Clamp(newIndex, 0, available.Count - 1);
+        available.RemoveAt(oldIndex);
+        available.Insert(newIndex, productId);
+
+        // Hand the places of the available products out again in their new order.
+        int next = 0;
+        for (int i = 0; i < all.Count; i++)
+        {
+            int id = all[i].Available ? available[next++] : all[i].Id;
+            connection.Execute(
+                "UPDATE Products SET SortOrder = @SortOrder WHERE Id = @Id",
+                new { SortOrder = i + 1, Id = id },
+                transaction);
+        }
+
+        transaction.Commit();
+
+        _logger.LogInformation("Product {ProductId} moved from position {OldIndex} to {NewIndex} among {AvailableCount} available products",
+            productId, oldIndex + 1, newIndex + 1, available.Count);
+    }
+
     public int GetUsageCount(int productId)
     {
         using var connection = new SqliteConnection(_connectionString);

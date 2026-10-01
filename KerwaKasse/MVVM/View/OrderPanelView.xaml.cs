@@ -1,4 +1,6 @@
 using KerwaKasse.MVVM.ViewModel;
+using ModernWpf.Controls;
+using ModernWpf.Controls.Primitives;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -32,6 +34,14 @@ namespace KerwaKasse.MVVM.View
         {
             if (DataContext is OrderPanelViewModel vm)
                 vm.SaveAutoFitMaxFactor();
+        }
+
+        // A flyout entry: close the flyout first, then switch the tiles into arranging mode.
+        private void ArrangeTiles_Click(object sender, RoutedEventArgs e)
+        {
+            (FlyoutService.GetFlyout(SettingsButton) as FlyoutBase)?.Hide();
+            if (DataContext is OrderPanelViewModel vm)
+                vm.StartArrangingCommand.Execute(null);
         }
 
         private void ProductScroll_SizeChanged(object sender, SizeChangedEventArgs e)

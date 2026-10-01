@@ -232,7 +232,7 @@
                                   HorizontalAlignment="Center"/>
                             <TextBlock Text="Noch keine Speisekarten" FontSize="16" FontWeight="SemiBold"
                                        Foreground="#1B1E24" HorizontalAlignment="Center" Margin="0,16,0,0"/>
-                            <TextBlock Text="Legen Sie eine Speisekarte an, um mehrere Produkte gemeinsam verfügbar zu schalten."
+                            <TextBlock Text="Speisekarte anlegen, um mehrere Produkte gemeinsam verfügbar zu schalten."
                                        FontSize="13" Foreground="#8B929E" TextWrapping="Wrap" TextAlignment="Center"
                                        HorizontalAlignment="Center" Margin="0,8,0,0" MaxWidth="200"/>
                             <Button Command="{Binding AddMenuCommand}" Style="{StaticResource CustomAccentButtonStyle}"
