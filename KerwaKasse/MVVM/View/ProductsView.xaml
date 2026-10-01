@@ -132,6 +132,12 @@
             </Border>
         </DataTemplate>
 
+        <!-- The dragged row's original slot, kept open in grey until the drop so it stays visible
+             where the row came from. -->
+        <DataTemplate x:Key="ProductOriginSlotTemplate">
+            <Border Margin="8,5" CornerRadius="4" Background="#EDEFF2"/>
+        </DataTemplate>
+
         <!-- Table row: adjoining rows with a bottom divider; selection adds a left accent bar.
              Rows can be dragged to reorder (DragReorder); the dragged row's own container then turns
              into the dashed placeholder that marks where the row will land. -->
@@ -354,6 +360,7 @@
                          helper:DragReorder.IsEnabled="{Binding CanDragReorder}"
                          helper:DragReorder.MoveCommand="{Binding MoveProductCommand}"
                          helper:DragReorder.DragTemplate="{StaticResource ProductDragCardTemplate}"
+                         helper:DragReorder.OriginTemplate="{StaticResource ProductOriginSlotTemplate}"
                          Background="Transparent" BorderThickness="0"
                          HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"

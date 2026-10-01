@@ -23,6 +23,10 @@ namespace KerwaKasse.Helper
     /// stays untouched while dragging; only on drop is <see cref="MoveCommandProperty"/> executed, so
     /// the view model reorders and persists once. Escape or losing the mouse cancels.
     ///
+    /// With <see cref="OriginTemplateProperty"/> set, the item's original slot stays open (drawn with
+    /// that template) until the drop, so it remains visible where the item came from; without it,
+    /// the other items close that slot right away.
+    ///
     /// Every item slides from its own layout slot to the slot of its new index, so the same code
     /// serves a vertical list and a wrap panel. That assumes a non-virtualizing items panel (all
     /// containers exist and keep their slots) and items of one size, as with KerwaKasse's product
@@ -52,6 +56,14 @@ namespace KerwaKasse.Helper
                 typeof(DragReorder),
                 new PropertyMetadata(null));
 
+        /// <summary>Template of the item's original slot while it is dragged away; keeps that slot open.</summary>
+        public static readonly DependencyProperty OriginTemplateProperty =
+            DependencyProperty.RegisterAttached(
+                "OriginTemplate",
+                typeof(DataTemplate),
+                typeof(DragReorder),
+                new PropertyMetadata(null));
+
         /// <summary>Set on the dragged item's container while it stands in as the landing placeholder.</summary>
         public static readonly DependencyProperty IsDragSourceProperty =
             DependencyProperty.RegisterAttached(
@@ -75,6 +87,9 @@ namespace KerwaKasse.Helper
 
         public static DataTemplate GetDragTemplate(DependencyObject obj) => (DataTemplate)obj.GetValue(DragTemplateProperty);
         public static void SetDragTemplate(DependencyObject obj, DataTemplate value) => obj.SetValue(DragTemplateProperty, value);
+
+        public static DataTemplate GetOriginTemplate(DependencyObject obj) => (DataTemplate)obj.GetValue(OriginTemplateProperty);
+        public static void SetOriginTemplate(DependencyObject obj, DataTemplate value) => obj.SetValue(OriginTemplateProperty, value);
 
         public static bool GetIsDragSource(DependencyObject obj) => (bool)obj.GetValue(IsDragSourceProperty);
         public static void SetIsDragSource(DependencyObject obj, bool value) => obj.SetValue(IsDragSourceProperty, value);
@@ -120,8 +135,11 @@ namespace KerwaKasse.Helper
         private int _targetIndex;
         private Vector _grabOffset;
         private bool _verticalOnly;
+        private bool _keepOrigin;
         private AdornerLayer _cardLayer;
         private DragReorderAdorner _card;
+        private AdornerLayer _originLayer;
+        private DragReorderAdorner _origin;
         private DispatcherTimer _autoScrollTimer;
         private Window _window;
 
@@ -272,6 +290,19 @@ namespace KerwaKasse.Helper
             }
 
             var item = generator.ItemFromContainer(_sourceContainer);
+            var originTemplate = DragReorder.GetOriginTemplate(_owner);
+            _originLayer = originTemplate != null ? AdornerLayer.GetAdornerLayer(_panel) : null;
+            _keepOrigin = _originLayer != null;
+            if (_keepOrigin)
+            {
+                // Drawn in the list's own adorner layer, so it scrolls with the rows and is clipped
+                // to the visible part of the list. Hidden until the item leaves its slot.
+                ReserveRoom(SlotRect(count).Bottom - _panel.ActualHeight);
+                _origin = new DragReorderAdorner(_panel, item, originTemplate, _slots[_sourceIndex].Size) { Opacity = 0 };
+                _origin.MoveTo(_slots[_sourceIndex].TopLeft);
+                _originLayer.Add(_origin);
+            }
+
             var dragTemplate = DragReorder.GetDragTemplate(_owner) ?? _owner.ItemTemplate;
             _card = new DragReorderAdorner(_owner, item, dragTemplate, new Size(_slots[_sourceIndex].Width, double.NaN));
             _cardLayer.Add(_card);
@@ -298,7 +329,8 @@ namespace KerwaKasse.Helper
             Point topLeft = Mouse.GetPosition(_panel) - _grabOffset;
             if (_verticalOnly) topLeft.X = _slots[_sourceIndex].X;
 
-            Rect bounds = new(0, 0, _panel.ActualWidth, _panel.ActualHeight);
+            double contentBottom = _keepOrigin ? Math.Max(_panel.ActualHeight, SlotRect(_slots.Length).Bottom) : _panel.ActualHeight;
+            Rect bounds = new(0, 0, _panel.ActualWidth, contentBottom);
             if (_viewport != null)
                 bounds.Intersect(new Rect(_viewport.TranslatePoint(new Point(), _panel), _viewport.RenderSize));
             if (!bounds.IsEmpty)
@@ -314,7 +346,7 @@ namespace KerwaKasse.Helper
             double bestDistance = double.MaxValue;
             for (int t = 0; t < _slots.Length; t++)
             {
-                Rect landing = _slots[t];
+                Rect landing = SlotRect(LandingSlot(t));
                 double distance = (new Point(landing.X + landing.Width / 2, landing.Y + landing.Height / 2) - center).LengthSquared;
                 if (distance < bestDistance) { bestDistance = distance; target = t; }
             }
@@ -326,6 +358,29 @@ namespace KerwaKasse.Helper
             }
         }
 
+        // ── Slots ────────────────────────────────────────────────
+        //
+        // Without a kept origin there are as many slots as items: the item lands on slot t, and the
+        // items in between move up one slot each to close its original slot. With a kept origin the
+        // original slot stays as it is, a gap opens at the landing slot instead, and every item from
+        // the gap on moves one slot further, so for a while there is one slot more than items.
+
+        /// <summary>The slot the item lands on (and the placeholder moves to) for new index t.</summary>
+        private int LandingSlot(int t) => _keepOrigin && t > _sourceIndex ? t + 1 : t;
+
+        /// <summary>The slot of item k while dragging towards the current target.</summary>
+        private int DragSlot(int k)
+        {
+            if (!_keepOrigin || _targetIndex == _sourceIndex) return IndexAfterMove(k);
+            int gap = LandingSlot(_targetIndex);
+            if (k == _sourceIndex) return gap;
+            return k < gap ? k : k + 1;
+        }
+
+        /// <summary>Where the kept original slot is while dragging: pushed one slot further while
+        /// the gap opens above it.</summary>
+        private int OriginSlot() => _targetIndex < _sourceIndex ? _sourceIndex + 1 : _sourceIndex;
+
         /// <summary>The index of item k once the dragged item has moved to the target index.</summary>
         private int IndexAfterMove(int k)
         {
@@ -335,17 +390,42 @@ namespace KerwaKasse.Helper
             return k;
         }
 
-        /// <summary>Slides every item to the slot it takes once the dragged item lands on the target
-        /// index; the source container (the placeholder) slides straight to the target slot.</summary>
+        /// <summary>Layout slot by index; one past the last item continues the layout's pattern
+        /// (next row of a list, next cell of a wrap panel).</summary>
+        private Rect SlotRect(int index)
+        {
+            int n = _slots.Length;
+            if (index < n) return _slots[index];
+
+            Rect last = _slots[n - 1];
+            if (_verticalOnly)
+                return new Rect(last.X, last.Y + (last.Y - _slots[n - 2].Y), last.Width, last.Height);
+
+            double columnStep = _slots[1].X - _slots[0].X;
+            if (last.X + columnStep + last.Width <= _panel.ActualWidth + 0.5)
+                return new Rect(last.X + columnStep, last.Y, last.Width, last.Height);
+
+            int columns = _slots.Count(s => Math.Abs(s.Y - _slots[0].Y) < 0.5);
+            double rowStep = n > columns ? _slots[columns].Y - _slots[0].Y : last.Height + (columnStep - last.Width);
+            return new Rect(_slots[0].X, last.Y + rowStep, last.Width, last.Height);
+        }
+
         private void LayOutDrag()
         {
             for (int k = 0; k < _containers.Length; k++)
-                SlideTo(k, IndexAfterMove(k));
+                SlideTo(k, DragSlot(k));
+
+            if (_origin != null)
+            {
+                bool away = _targetIndex != _sourceIndex;
+                _origin.GlideTo(SlotRect(away ? OriginSlot() : _sourceIndex).TopLeft, SlideDuration, Ease);
+                _origin.FadeTo(away ? 1 : 0, SlideDuration);
+            }
         }
 
         private void SlideTo(int k, int slot)
         {
-            Vector offset = _slots[slot].TopLeft - _slots[k].TopLeft;
+            Vector offset = SlotRect(slot).TopLeft - _slots[k].TopLeft;
             if (offset == _shiftTargets[k]) return;
             _shiftTargets[k] = offset;
             _shifts[k].BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(offset.X, SlideDuration) { EasingFunction = Ease });
@@ -371,9 +451,9 @@ namespace KerwaKasse.Helper
             if (_scrollViewer.VerticalOffset != before) UpdateDrag();
         }
 
-        /// <summary>Ends the drag: the floating copy glides onto its slot (the target on drop, the
-        /// original one on cancel, with the other items sliding back). Then everything is reset and,
-        /// on drop, the move is reported.</summary>
+        /// <summary>Ends the drag: the items slide to their final slots (closing a kept origin), and
+        /// the floating copy glides onto its slot (the target on drop, the original one on cancel).
+        /// Then everything is reset and, on drop, the move is reported.</summary>
         private void Settle(bool commit)
         {
             _state = State.Settling;
@@ -382,8 +462,9 @@ namespace KerwaKasse.Helper
             if (!commit) _targetIndex = _sourceIndex;
             for (int k = 0; k < _containers.Length; k++)
                 SlideTo(k, IndexAfterMove(k));
+            _origin?.FadeTo(0, SlideDuration);
 
-            Point slot = _panel.TranslatePoint(_slots[_targetIndex].TopLeft, _owner);
+            Point slot = _panel.TranslatePoint(_slots[_targetIndex].TopLeft, _owner) + new Vector(0, ScrollOutOfRoom());
             _card.ScaleTo(1, SlideDuration, Ease);
             _card.GlideTo(slot, SlideDuration, Ease, () => Finish(commit));
         }
@@ -426,13 +507,17 @@ namespace KerwaKasse.Helper
         private void Cleanup()
         {
             _cardLayer.Remove(_card);
+            if (_origin != null) _originLayer.Remove(_origin);
             _sourceContainer.ClearValue(DragReorder.IsDragSourceProperty);
             for (int i = 0; i < _containers.Length; i++)
                 _containers[i].RenderTransform = _originalTransforms[i];
             RestoreItemHitTesting();
+            ReleaseRoom();
 
             _card = null;
             _cardLayer = null;
+            _origin = null;
+            _originLayer = null;
             _containers = null;
             _originalTransforms = null;
             _shifts = null;
@@ -443,6 +528,64 @@ namespace KerwaKasse.Helper
             _scrollViewer = null;
             _sourceContainer = null;
             _state = State.Idle;
+        }
+
+        // ── Room for the kept origin ─────────────────────────────
+        //
+        // A kept origin needs one slot more than the panel has; a bottom margin on the panel extends
+        // the scrollable area by that much while dragging. Taking it away shrinks the list again,
+        // which would make it jump while it is scrolled into that room, so when the drag ends the
+        // list first scrolls back out of it, along with the settle animation.
+
+        private Thickness _panelMargin;
+        private double _room;
+        private EventHandler _scrollBackStep;
+
+        private void ReserveRoom(double room)
+        {
+            _panelMargin = _panel.Margin;
+            _room = Math.Max(0, room);
+            _panel.Margin = new Thickness(_panelMargin.Left, _panelMargin.Top, _panelMargin.Right, _panelMargin.Bottom + _room);
+        }
+
+        /// <summary>Starts scrolling back out of the room, if needed, and returns by how much the
+        /// list content moves down on screen meanwhile.</summary>
+        private double ScrollOutOfRoom()
+        {
+            if (_room <= 0 || _scrollViewer == null) return 0;
+            double from = _scrollViewer.VerticalOffset;
+            double to = Math.Min(from, Math.Max(0, _scrollViewer.ScrollableHeight - _room));
+            if (from - to < 0.5) return 0;
+
+            var scroll = _scrollViewer;
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            _scrollBackStep = (_, _) =>
+            {
+                double progress = Math.Min(1, clock.Elapsed.TotalMilliseconds / SlideDuration.TimeSpan.TotalMilliseconds);
+                scroll.ScrollToVerticalOffset(from + (to - from) * Ease.Ease(progress));
+                if (progress >= 1) StopScrollBack();
+            };
+            CompositionTarget.Rendering += _scrollBackStep;
+            return from - to;
+        }
+
+        private void StopScrollBack()
+        {
+            if (_scrollBackStep != null) CompositionTarget.Rendering -= _scrollBackStep;
+            _scrollBackStep = null;
+        }
+
+        private void ReleaseRoom()
+        {
+            if (_room <= 0 || _panel == null) return;
+            if (_scrollBackStep != null)
+            {
+                // The scroll-back runs one frame behind the settle animation: finish it right here.
+                StopScrollBack();
+                _scrollViewer?.ScrollToVerticalOffset(Math.Max(0, _scrollViewer.ScrollableHeight - _room));
+            }
+            _panel.Margin = _panelMargin;
+            _room = 0;
         }
 
         // ── Helpers ──────────────────────────────────────────────
@@ -474,8 +617,9 @@ namespace KerwaKasse.Helper
             d is Visual or Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
     }
 
-    /// <summary>The floating copy of the dragged item, drawn above everything else in the window's
-    /// adorner layer and positioned in the coordinates of the reordered ItemsControl.</summary>
+    /// <summary>An item drawn above the list with a template: the floating copy of the dragged item
+    /// (in the window's adorner layer) or its kept original slot (in the list's own layer).
+    /// Positioned in the coordinates of the adorned element.</summary>
     internal sealed class DragReorderAdorner : Adorner
     {
         public const double LiftScale = 1.02;
@@ -540,5 +684,8 @@ namespace KerwaKasse.Helper
             _scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation);
             _scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
         }
+
+        public void FadeTo(double opacity, Duration duration) =>
+            BeginAnimation(OpacityProperty, new DoubleAnimation(opacity, duration));
     }
 }
