@@ -16,22 +16,30 @@ namespace KerwaKasse.Helper
     {
         public static FlowDocument ToFlowDocument(string markdown)
         {
-            var document = new FlowDocument
-            {
-                FontFamily = new FontFamily("Segoe UI"),
-                FontSize = 14,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x1B, 0x1E, 0x24)),
-                PagePadding = new Thickness(0),
-                // FlowDocument justifies by default, which looks off for short UI texts.
-                TextAlignment = TextAlignment.Left
-            };
+            var document = CreateDocument();
+            AppendMarkdown(document.Blocks, markdown);
+            return document;
+        }
 
+        /// <summary>An empty document with the renderer's base styling, for callers that combine
+        /// several Markdown texts with blocks of their own.</summary>
+        public static FlowDocument CreateDocument() => new FlowDocument
+        {
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x1B, 0x1E, 0x24)),
+            PagePadding = new Thickness(0),
+            // FlowDocument justifies by default, which looks off for short UI texts.
+            TextAlignment = TextAlignment.Left
+        };
+
+        public static void AppendMarkdown(BlockCollection target, string markdown)
+        {
             foreach (var block in Markdown.Parse(markdown ?? string.Empty))
             {
                 var converted = ConvertBlock(block);
-                if (converted != null) document.Blocks.Add(converted);
+                if (converted != null) target.Add(converted);
             }
-            return document;
         }
 
         private static System.Windows.Documents.Block ConvertBlock(Markdig.Syntax.Block block)

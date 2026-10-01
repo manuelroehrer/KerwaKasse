@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "KerwaKasse": {
+      "commandName": "Project"
+    },
+    "KerwaKasse (update test as 2.8.0)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "KERWAKASSE_SIMULATED_VERSION": "2.8.0"
+      }
+    }
+  }
+}

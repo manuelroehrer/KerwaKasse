@@ -19,6 +19,9 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private const string CheckOnStartupKey = "updateCheckOnStartup";
         private const string SkippedVersionKey = "updateSkippedVersion";
+#if DEBUG
+        private const string SimulatedVersionVariable = "KERWAKASSE_SIMULATED_VERSION";
+#endif
 
         // Lets the window render and the first view load before the network check starts.
         private static readonly TimeSpan StartupCheckDelay = TimeSpan.FromSeconds(3);
@@ -83,6 +86,15 @@ namespace KerwaKasse.MVVM.ViewModel
 
             var assembly = Assembly.GetExecutingAssembly();
             _currentVersion = assembly.GetName().Version ?? new Version(0, 0, 0);
+#if DEBUG
+            // Lets a debug session pretend to be an older version, so the update dialog can be tried
+            // against the real GitHub releases. Set by the "update test" profile in launchSettings.json.
+            if (System.Version.TryParse(Environment.GetEnvironmentVariable(SimulatedVersionVariable), out var simulatedVersion))
+            {
+                _logger.LogInformation("Simulating version {Version} for the update check ({Variable})", simulatedVersion, SimulatedVersionVariable);
+                _currentVersion = simulatedVersion;
+            }
+#endif
             _currentVersionText = $"{_currentVersion.Major}.{_currentVersion.Minor}.{_currentVersion.Build}";
             Version = $"Version {_currentVersionText}";
             Copyright = assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright

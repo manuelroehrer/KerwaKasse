@@ -29,6 +29,12 @@ The SQLite services (`SqliteProductService`, `SqliteOrderService`) are tested ag
 - **LiveCharts rendering** — `CreatePieChartData()` in `StatisticsViewModel` builds chart objects from already-tested data. Color mapping and rendering are framework responsibility.
 - **DatabaseViewModel.BackupDatabase()** — A single `File.Copy` operation with a dialog. Introducing a file system abstraction just for this one call is not worth the effort.
 
+## Trying the Update Dialog
+
+The release parsing is unit-tested; the dialog itself is checked by hand against the real GitHub releases. In Visual Studio, pick the launch profile **"KerwaKasse (update test as 2.8.0)"** next to the start button and run as usual. The Debug build then pretends to be version 2.8.0 (environment variable `KERWAKASSE_SIMULATED_VERSION` in `KerwaKasse/Properties/launchSettings.json`, only honored in Debug builds) and offers the newest release with the notes of every version since.
+
+Close the dialog with X or Escape. "Jetzt aktualisieren" downloads and runs the real installer, and "Version überspringen" is stored in the same `settings.json` the installed app uses. The manual check on the info page shows the dialog again even for a skipped version.
+
 ## Running Tests
 
 ```

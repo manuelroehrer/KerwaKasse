@@ -13,6 +13,11 @@ public class GitHubUpdateService : IUpdateService
     private static readonly HttpClient Http = CreateClient();
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(10);
 
+    // How many of the newest releases one check fetches. One page is still a single request (the
+    // anonymous API allows 60 per hour), and it covers far more versions than anyone skips in
+    // practice; anything older is still listed on the releases page.
+    private const int ReleasesPerCheck = 30;
+
     // Releases are created by hand, so the version is fished out of the tag or title leniently:
     // the first thing looking like a version number counts, prefixes ("v"), surrounding text and
     // suffixes ("-beta.1") are ignored.
@@ -22,17 +27,18 @@ public class GitHubUpdateService : IUpdateService
     // not confused with any other download location in the app.
     private static readonly string InstallerDownloadDirectory = Path.Combine(Path.GetTempPath(), "KerwaKasse_Update");
 
-    private readonly string _latestReleaseUrl;
+    private readonly string _releasesUrl;
     private readonly ILogger<GitHubUpdateService> _logger;
 
     /// <param name="repositoryUrl">The public GitHub repository, e.g. "https://github.com/user/repo".</param>
     public GitHubUpdateService(string repositoryUrl, ILogger<GitHubUpdateService> logger)
     {
         _logger = logger;
-        // "https://github.com/user/repo" → "https://api.github.com/repos/user/repo/releases/latest".
-        // This endpoint returns the newest published release; drafts and pre-releases are excluded.
+        // "https://github.com/user/repo" → "https://api.github.com/repos/user/repo/releases?per_page=30".
+        // The list (newest first) instead of /releases/latest, so the notes of every version between
+        // the running and the newest one can be shown, not just the newest.
         string ownerAndRepo = new Uri(repositoryUrl).AbsolutePath.Trim('/');
-        _latestReleaseUrl = $"https://api.github.com/repos/{ownerAndRepo}/releases/latest";
+        _releasesUrl = $"https://api.github.com/repos/{ownerAndRepo}/releases?per_page={ReleasesPerCheck}";
     }
 
     private static HttpClient CreateClient()
@@ -51,15 +57,16 @@ public class GitHubUpdateService : IUpdateService
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(CheckTimeout);
 
-            string json = await Http.GetStringAsync(_latestReleaseUrl, timeout.Token);
-            var result = ParseLatestRelease(json, currentVersion);
+            string json = await Http.GetStringAsync(_releasesUrl, timeout.Token);
+            var result = ParseReleases(json, currentVersion);
 
             if (result.Status == UpdateCheckStatus.UpdateAvailable)
-                _logger.LogInformation("Update available: {Latest} (running {Current})", result.Update!.Version, Normalize(currentVersion));
+                _logger.LogInformation("Update available: {Latest} (running {Current}, {Count} newer release(s))",
+                    result.Update!.Version, Normalize(currentVersion), result.Update.ReleaseNotes.Count);
             else if (result.Status == UpdateCheckStatus.UpToDate)
                 _logger.LogDebug("No update available");
             else
-                _logger.LogInformation("Update check inconclusive: no version found in the latest release");
+                _logger.LogInformation("Update check inconclusive: no version found in the releases");
 
             return result;
         }
@@ -72,22 +79,49 @@ public class GitHubUpdateService : IUpdateService
         }
     }
 
-    /// <summary>Turns the JSON of GitHub's "latest release" endpoint into a check result.
-    /// Public and static so the lenient parsing is unit-testable without network access.</summary>
-    public static UpdateCheckResult ParseLatestRelease(string json, Version currentVersion)
+    /// <summary>Turns the JSON of GitHub's "list releases" endpoint into a check result: every
+    /// release newer than <paramref name="currentVersion"/> is collected, the newest one is the
+    /// update. Public and static so the lenient parsing is unit-testable without network access.</summary>
+    public static UpdateCheckResult ParseReleases(string json, Version currentVersion)
     {
         using var document = JsonDocument.Parse(json);
-        var release = document.RootElement;
-
-        Version? latest = ExtractVersion(GetString(release, "tag_name")) ?? ExtractVersion(GetString(release, "name"));
-        if (latest is null)
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
             return new UpdateCheckResult(UpdateCheckStatus.Failed);
 
-        if (latest <= Normalize(currentVersion))
+        Version current = Normalize(currentVersion);
+        bool anyVersionFound = false;
+        var newer = new List<(Version Version, JsonElement Release)>();
+
+        foreach (var release in document.RootElement.EnumerateArray())
+        {
+            // Never offered: pre-releases, and drafts (only visible with authentication anyway).
+            // /releases/latest used to exclude both implicitly, the list does not.
+            if (GetBool(release, "draft") || GetBool(release, "prerelease")) continue;
+
+            Version? version = ExtractVersion(GetString(release, "tag_name")) ?? ExtractVersion(GetString(release, "name"));
+            if (version is null) continue;
+
+            anyVersionFound = true;
+            if (version > current)
+                newer.Add((version, release));
+        }
+
+        if (!anyVersionFound)
+            return new UpdateCheckResult(UpdateCheckStatus.Failed);
+        if (newer.Count == 0)
             return new UpdateCheckResult(UpdateCheckStatus.UpToDate);
 
-        var (installerUrl, installerSize) = PickInstallerAsset(release);
-        var update = new UpdateInfo(latest, GetString(release, "body"), GetString(release, "html_url"), installerUrl, installerSize);
+        // GitHub sorts by creation date; a release created late for an older version (e.g. a hotfix)
+        // must not end up as "the newest", so order by the version itself.
+        newer.Sort((a, b) => b.Version.CompareTo(a.Version));
+
+        var notes = newer
+            .Select(n => new ReleaseNote(n.Version, GetString(n.Release, "body"), GetString(n.Release, "html_url"), GetDate(n.Release, "published_at")))
+            .ToList();
+
+        var (latestVersion, latest) = newer[0];
+        var (installerUrl, installerSize) = PickInstallerAsset(latest);
+        var update = new UpdateInfo(latestVersion, notes, GetString(latest, "html_url"), installerUrl, installerSize);
         return new UpdateCheckResult(UpdateCheckStatus.UpdateAvailable, update);
     }
 
@@ -133,6 +167,15 @@ public class GitHubUpdateService : IUpdateService
     private static string? GetString(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
+            : null;
+
+    private static bool GetBool(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.True;
+
+    private static DateTimeOffset? GetDate(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
+            && value.TryGetDateTimeOffset(out var date)
+            ? date
             : null;
 
     public async Task<string> DownloadInstallerAsync(UpdateInfo update, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
