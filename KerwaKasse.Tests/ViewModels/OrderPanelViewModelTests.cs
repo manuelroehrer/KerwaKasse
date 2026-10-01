@@ -47,6 +47,40 @@ public class OrderPanelViewModelTests
     }
 
     [Fact]
+    public void Arranging_StartsAndFinishes()
+    {
+        Assert.False(_sut.IsArrangingTiles);
+
+        _sut.StartArrangingCommand.Execute(null);
+        Assert.True(_sut.IsArrangingTiles);
+
+        _sut.FinishArrangingCommand.Execute(null);
+        Assert.False(_sut.IsArrangingTiles);
+    }
+
+    [Fact]
+    public void MoveProduct_WhileArranging_MovesTileAndSavesOrder()
+    {
+        var bier = _sut.Products[1];
+        var move = new DragReorderMove(bier, 1, 0);
+        _sut.StartArrangingCommand.Execute(null);
+
+        Assert.True(_sut.MoveProductCommand.CanExecute(move));
+        _sut.MoveProductCommand.Execute(move);
+
+        Assert.Same(bier, _sut.Products[0]);
+        _productService.Received(1).MoveAvailable(2, 0);
+    }
+
+    [Fact]
+    public void MoveProduct_OnlyWhileArranging()
+    {
+        var move = new DragReorderMove(_sut.Products[1], 1, 0);
+
+        Assert.False(_sut.MoveProductCommand.CanExecute(move));
+    }
+
+    [Fact]
     public void ComputeAutoFitFactor_PicksLargestFactorWhereAllTilesFit()
     {
         // 4 tiles in an area that holds exactly 2×2 tiles at factor 1.0 (footprint 178×113 each).

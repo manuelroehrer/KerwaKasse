@@ -29,9 +29,10 @@ namespace KerwaKasse.Helper
     ///
     /// Every item slides from its own layout slot to the slot of its new index, so the same code
     /// serves a vertical list and a wrap panel. That assumes a non-virtualizing items panel (all
-    /// containers exist and keep their slots) and items of one size, as with KerwaKasse's product
-    /// rows. While dragging, the source container carries <see cref="IsDragSourceProperty"/> so its
-    /// style can draw it as the placeholder that marks where the item will land.</summary>
+    /// containers exist and keep their slots) and items of one size, as with the rows of the product
+    /// list and the tiles of the order panel. While dragging, the source container carries
+    /// <see cref="IsDragSourceProperty"/> so its style can draw it as the placeholder that marks
+    /// where the item will land.</summary>
     public static class DragReorder
     {
         public static readonly DependencyProperty IsEnabledProperty =
@@ -64,13 +65,22 @@ namespace KerwaKasse.Helper
                 typeof(DragReorder),
                 new PropertyMetadata(null));
 
-        /// <summary>Set on the dragged item's container while it stands in as the landing placeholder.</summary>
+        /// <summary>How much the floating copy grows while lifted; small for wide rows, more for tiles.</summary>
+        public static readonly DependencyProperty LiftScaleProperty =
+            DependencyProperty.RegisterAttached(
+                "LiftScale",
+                typeof(double),
+                typeof(DragReorder),
+                new PropertyMetadata(1.02));
+
+        /// <summary>Set on the dragged item's container while it stands in as the landing placeholder.
+        /// Inherited, so elements inside an item template can react to it as well.</summary>
         public static readonly DependencyProperty IsDragSourceProperty =
             DependencyProperty.RegisterAttached(
                 "IsDragSource",
                 typeof(bool),
                 typeof(DragReorder),
-                new PropertyMetadata(false));
+                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
 
         private static readonly DependencyProperty ControllerProperty =
             DependencyProperty.RegisterAttached(
@@ -90,6 +100,9 @@ namespace KerwaKasse.Helper
 
         public static DataTemplate GetOriginTemplate(DependencyObject obj) => (DataTemplate)obj.GetValue(OriginTemplateProperty);
         public static void SetOriginTemplate(DependencyObject obj, DataTemplate value) => obj.SetValue(OriginTemplateProperty, value);
+
+        public static double GetLiftScale(DependencyObject obj) => (double)obj.GetValue(LiftScaleProperty);
+        public static void SetLiftScale(DependencyObject obj, double value) => obj.SetValue(LiftScaleProperty, value);
 
         public static bool GetIsDragSource(DependencyObject obj) => (bool)obj.GetValue(IsDragSourceProperty);
         public static void SetIsDragSource(DependencyObject obj, bool value) => obj.SetValue(IsDragSourceProperty, value);
@@ -122,6 +135,7 @@ namespace KerwaKasse.Helper
         private FrameworkElement _sourceContainer;
         private Point _pressPoint;
         private UIElement _hitTestBlocked;
+        private bool _capturedWhilePending;
 
         private Panel _panel;
         private FrameworkElement _viewport;
@@ -176,6 +190,9 @@ namespace KerwaKasse.Helper
                     if (e.LeftButton != MouseButtonState.Pressed) { ResetPending(); return; }
                     e.Handled = true;
                     BlockItemHitTesting();
+                    // Capturing the mouse in there raises a nested mouse move, which may have
+                    // started the drag already.
+                    if (_state != State.Pending) return;
                     Vector moved = e.GetPosition(_owner) - _pressPoint;
                     if (Math.Abs(moved.X) >= SystemParameters.MinimumHorizontalDragDistance ||
                         Math.Abs(moved.Y) >= SystemParameters.MinimumVerticalDragDistance)
@@ -228,6 +245,8 @@ namespace KerwaKasse.Helper
         private void ResetPending()
         {
             RestoreItemHitTesting();
+            if (_capturedWhilePending && Mouse.Captured == _owner) _owner.ReleaseMouseCapture();
+            _capturedWhilePending = false;
             _state = State.Idle;
             _sourceContainer = null;
         }
@@ -235,11 +254,16 @@ namespace KerwaKasse.Helper
         // A ListBox selects every row the pressed mouse enters (its drag-to-select), even while it
         // holds the mouse capture. With the rows invisible to hit testing during a drag, no row is
         // entered, so the selection stays on the dragged item and no row shows its hover state.
+        // Without hit-testable rows, the mouse input would then go to whatever lies behind the
+        // ItemsControl; a ListBox has already captured the mouse on the press, a plain ItemsControl
+        // has not, so it is captured here.
         private void BlockItemHitTesting()
         {
             if (_hitTestBlocked != null || VisualTreeHelper.GetParent(_sourceContainer) is not UIElement panel) return;
             panel.IsHitTestVisible = false;
             _hitTestBlocked = panel;
+            if (Mouse.Captured == null)
+                _capturedWhilePending = Mouse.Capture(_owner, CaptureMode.Element);
         }
 
         private void RestoreItemHitTesting()
@@ -255,7 +279,7 @@ namespace KerwaKasse.Helper
             var generator = _owner.ItemContainerGenerator;
             int count = _owner.Items.Count;
             _panel = VisualTreeHelper.GetParent(_sourceContainer) as Panel;
-            _cardLayer = AdornerLayer.GetAdornerLayer(_owner);
+            _cardLayer = WindowAdornerLayer(_owner);
             _sourceIndex = generator.IndexFromContainer(_sourceContainer);
             if (count < 2 || _panel is not { IsItemsHost: true } || _cardLayer == null || _sourceIndex < 0)
             {
@@ -308,6 +332,9 @@ namespace KerwaKasse.Helper
             _cardLayer.Add(_card);
             DragReorder.SetIsDragSource(_sourceContainer, true);
 
+            // Dragging from here on: changing the capture below raises a nested mouse move, which
+            // must move this drag instead of starting another one.
+            _state = State.Dragging;
             Mouse.Capture(_owner, CaptureMode.Element);
             Mouse.OverrideCursor = _verticalOnly ? Cursors.SizeNS : Cursors.SizeAll;
             _window = Window.GetWindow(_owner);
@@ -316,9 +343,8 @@ namespace KerwaKasse.Helper
                                                    OnAutoScrollTick, _owner.Dispatcher);
             _autoScrollTimer.Start();
 
-            _state = State.Dragging;
             UpdateDrag();
-            _card.ScaleTo(DragReorderAdorner.LiftScale, LiftDuration, Ease);
+            _card.ScaleTo(DragReorder.GetLiftScale(_owner), LiftDuration, Ease);
         }
 
         /// <summary>Moves the floating copy with the mouse (kept inside the visible list area) and
@@ -513,6 +539,7 @@ namespace KerwaKasse.Helper
                 _containers[i].RenderTransform = _originalTransforms[i];
             RestoreItemHitTesting();
             ReleaseRoom();
+            _capturedWhilePending = false;
 
             _card = null;
             _cardLayer = null;
@@ -606,6 +633,14 @@ namespace KerwaKasse.Helper
             return false;
         }
 
+        /// <summary>The window's own adorner layer, so the floating copy is never clipped by a
+        /// ScrollViewer around the ItemsControl (whose layer would be the nearest one).</summary>
+        private static AdornerLayer WindowAdornerLayer(Visual element)
+        {
+            var root = Window.GetWindow(element)?.Content as Visual;
+            return (root != null ? AdornerLayer.GetAdornerLayer(root) : null) ?? AdornerLayer.GetAdornerLayer(element);
+        }
+
         private static T FindAncestor<T>(DependencyObject node) where T : DependencyObject
         {
             for (var current = GetParent(node); current != null; current = GetParent(current))
@@ -622,8 +657,6 @@ namespace KerwaKasse.Helper
     /// Positioned in the coordinates of the adorned element.</summary>
     internal sealed class DragReorderAdorner : Adorner
     {
-        public const double LiftScale = 1.02;
-
         private readonly ContentPresenter _presenter;
         private readonly TranslateTransform _position = new();
         private readonly ScaleTransform _scale = new();
