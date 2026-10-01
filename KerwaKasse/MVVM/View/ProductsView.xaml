@@ -389,7 +389,7 @@
                                HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="Noch keine Produkte" FontSize="18" FontWeight="SemiBold"
                                HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-                    <TextBlock Text="Legen Sie rechts über „Neues Produkt“ Ihr erstes Produkt an."
+                    <TextBlock Text="Rechts über „Neues Produkt“ das erste Produkt anlegen."
                                FontSize="14" Foreground="#909090" HorizontalAlignment="Center" Margin="0,8,0,0"
                                TextWrapping="Wrap" TextAlignment="Center" MaxWidth="260"/>
                 </StackPanel>
@@ -416,7 +416,7 @@
                            Foreground="#C0C0C0" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                 <TextBlock Text="Kein Produkt ausgewählt" FontSize="18" FontWeight="SemiBold"
                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-                <TextBlock Text="Wählen Sie links ein Produkt aus, um es zu bearbeiten, oder legen Sie ein neues an."
+                <TextBlock Text="Zum Bearbeiten links ein Produkt auswählen oder ein neues anlegen."
                            FontSize="14" Foreground="#909090" HorizontalAlignment="Center"
                            Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240"/>
                 <Button Command="{Binding AddProductCommand}"
