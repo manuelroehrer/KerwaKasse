@@ -73,6 +73,55 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Table row content: colour swatch + name, price, availability toggle. -->
+        <DataTemplate x:Key="ProductRowTemplate">
+            <Grid Height="52">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="96"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Colour swatch + name -->
+                <Grid Grid.Column="0" Margin="14,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="Swatch" Grid.Column="0" Width="14" Height="14" CornerRadius="4"
+                            Background="{Binding ColorBrush}" BorderThickness="1"
+                            BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"
+                            Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Name}"
+                               FontSize="16" FontWeight="SemiBold" Foreground="#222222"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+
+                <!-- Price -->
+                <TextBlock x:Name="PriceText" Grid.Column="1" Text="{Binding Price, StringFormat={}{0:C}}"
+                           FontFamily="{StaticResource PriceFont}"
+                           FontSize="15" Foreground="#555555" VerticalAlignment="Center"
+                           HorizontalAlignment="Right" Margin="0,0,10,0"/>
+
+                <!-- Availability toggle (never greyed out), centered under the column -->
+                <ui:ToggleSwitch Grid.Column="2" IsOn="{Binding Available, Mode=TwoWay}"
+                                 OnContent="" OffContent="" MinWidth="0" Width="44"
+                                 VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0">
+                    <ui:ToggleSwitch.LayoutTransform>
+                        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
+                    </ui:ToggleSwitch.LayoutTransform>
+                </ui:ToggleSwitch>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Available}" Value="False">
+                    <Setter TargetName="NameText" Property="Foreground" Value="#9AA0A6"/>
+                    <Setter TargetName="NameText" Property="FontWeight" Value="Normal"/>
+                    <Setter TargetName="PriceText" Property="Foreground" Value="#AEB3B8"/>
+                    <Setter TargetName="Swatch" Property="Opacity" Value="0.3"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <!-- Table row: adjoining rows with a bottom divider; selection adds a left accent bar. -->
         <Style x:Key="ProductRowStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -277,60 +326,11 @@
                 <ListBox ItemsSource="{Binding Products}"
                          SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
                          ItemContainerStyle="{StaticResource ProductRowStyle}"
+                         ItemTemplate="{StaticResource ProductRowTemplate}"
                          Background="Transparent" BorderThickness="0"
                          HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         Padding="0,0,0,2">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Height="52">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="96"/>
-                                    <ColumnDefinition Width="120"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Colour swatch + name -->
-                                <Grid Grid.Column="0" Margin="14,0,8,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border x:Name="Swatch" Grid.Column="0" Width="14" Height="14" CornerRadius="4"
-                                            Background="{Binding ColorBrush}" BorderThickness="1"
-                                            BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"
-                                            Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="NameText" Grid.Column="1" Text="{Binding Name}"
-                                               FontSize="16" FontWeight="SemiBold" Foreground="#222222"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                </Grid>
-
-                                <!-- Price -->
-                                <TextBlock x:Name="PriceText" Grid.Column="1" Text="{Binding Price, StringFormat={}{0:C}}"
-                                           FontFamily="{StaticResource PriceFont}"
-                                           FontSize="15" Foreground="#555555" VerticalAlignment="Center"
-                                           HorizontalAlignment="Right" Margin="0,0,10,0"/>
-
-                                <!-- Availability toggle (never greyed out), centered under the column -->
-                                <ui:ToggleSwitch Grid.Column="2" IsOn="{Binding Available, Mode=TwoWay}"
-                                                 OnContent="" OffContent="" MinWidth="0" Width="44"
-                                                 VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0">
-                                    <ui:ToggleSwitch.LayoutTransform>
-                                        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
-                                    </ui:ToggleSwitch.LayoutTransform>
-                                </ui:ToggleSwitch>
-                            </Grid>
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding Available}" Value="False">
-                                    <Setter TargetName="NameText" Property="Foreground" Value="#9AA0A6"/>
-                                    <Setter TargetName="NameText" Property="FontWeight" Value="Normal"/>
-                                    <Setter TargetName="PriceText" Property="Foreground" Value="#AEB3B8"/>
-                                    <Setter TargetName="Swatch" Property="Opacity" Value="0.3"/>
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                         Padding="0,0,0,2"/>
 
                 <!-- Empty state: no products exist yet -->
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="300">
