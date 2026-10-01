@@ -33,7 +33,11 @@ The SQLite services (`SqliteProductService`, `SqliteOrderService`) are tested ag
 
 The release parsing is unit-tested; the dialog itself is checked by hand against the real GitHub releases. In Visual Studio, pick the launch profile **"KerwaKasse (update test as 2.8.0)"** next to the start button and run as usual. The Debug build then pretends to be version 2.8.0 (environment variable `KERWAKASSE_SIMULATED_VERSION` in `KerwaKasse/Properties/launchSettings.json`, only honored in Debug builds) and offers the newest release with the notes of every version since.
 
-Close the dialog with X or Escape. "Jetzt aktualisieren" downloads and runs the real installer, and "Version überspringen" is stored in the same `settings.json` the installed app uses. The manual check on the info page shows the dialog again even for a skipped version.
+Close the dialog with X or Escape: "Jetzt aktualisieren" downloads and runs the real installer. "Version überspringen" only lands in the debug data folder (see below); the manual check on the info page shows the dialog again even for a skipped version.
+
+## Debug Builds and Their Data
+
+Debug builds keep settings, event databases and logs in `%AppData%\KerwaKasse.Debug` instead of `%AppData%\KerwaKasse`, and use their own single-instance name. A debug session from Visual Studio can therefore run next to an installed KerwaKasse without touching its data. "Datenordner öffnen" on the info page opens the folder of the running build.
 
 ## Running Tests
 

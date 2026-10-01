@@ -20,12 +20,16 @@ namespace KerwaKasse
         private ILoggerFactory _loggerFactory;
         private ILogger<App> _logger;
 
-        // Named single-instance handles. The DEBUG suffix keeps a Visual Studio debug build from
-        // colliding with an installed release build during development.
+        // Named single-instance handles and the data folder under %AppData% (settings, event databases,
+        // logs). The DEBUG variants keep a Visual Studio debug build from colliding with an installed
+        // release build on the same machine: both can run at once, and the debug build never reads or
+        // changes the installed app's data.
 #if DEBUG
         private const string SingleInstanceName = "KerwaKasse.SingleInstance.Debug";
+        private const string DataFolderName = "KerwaKasse.Debug";
 #else
         private const string SingleInstanceName = "KerwaKasse.SingleInstance";
+        private const string DataFolderName = "KerwaKasse";
 #endif
         private static string ActivateEventName => SingleInstanceName + ".Activate";
 
@@ -63,15 +67,15 @@ namespace KerwaKasse
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
 
-            string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KerwaKasse");
+            string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), DataFolderName);
             Directory.CreateDirectory(appDir);
 
             // Serilog writes to a daily rolling file, capped at roughly a year of files as a safety
             // limit against unbounded growth; the daily files are small, so keeping that much history
             // stays cheap. The invariant format provider keeps numbers deterministic (3.50 instead of
             // 3,50) regardless of the machine's culture. shared:true lets overlapping processes (an
-            // update handoff, or a debug build next to the installed one) write to the same daily
-            // file instead of spilling into kerwakasse-<date>_NNN.log. The Debug sink additionally
+            // update handoff) write to the same daily file instead of spilling into
+            // kerwakasse-<date>_NNN.log. The Debug sink additionally
             // mirrors everything to the Visual Studio output window during development.
             const string outputTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
             Log.Logger = new LoggerConfiguration()
