@@ -530,32 +530,11 @@
                             </ScrollViewer>
                         </DockPanel>
 
-                        <!-- Donut + own scrollable legend (the built-in legend grew unbounded and
-                             squeezed/clipped the chart when there were many products). -->
-                        <Grid Grid.Column="1" Margin="8,0,4,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <lvc:PieChart Grid.Column="0" x:Name="DonutChart" Series="{Binding PieSeries}" LegendPosition="Hidden"
-                                          SizeChanged="DonutChart_SizeChanged"
-                                          Margin="4,12,8,12" Background="Transparent" MaxHeight="520" MinWidth="100"/>
-                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="0,12,2,12">
-                                <ItemsControl ItemsSource="{Binding Breakdown}" Width="196">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,3">
-                                                <Border Width="11" Height="11" CornerRadius="3" Background="{Binding ColorBrush}"
-                                                        BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
-                                                        Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#3A4453"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="168"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
+                        <!-- Donut only, no legend: the table next to it already lists every product with its
+                             colour, and hovering a slice names its product. -->
+                        <lvc:PieChart Grid.Column="1" x:Name="DonutChart" Series="{Binding PieSeries}" LegendPosition="Hidden"
+                                      SizeChanged="DonutChart_SizeChanged"
+                                      Margin="12" Background="Transparent" MaxHeight="520" MinWidth="100"/>
                     </Grid>
                 </Grid>
 
