@@ -105,6 +105,9 @@ namespace KerwaKasse
 
             RegisterGlobalExceptionLogging();
 
+            // Before the main window: it may already show a dialog on startup.
+            DialogLightDismiss.Register();
+
             // Remove the installer a previous one-click update left behind (this run may be the
             // relaunch after such an update).
             GitHubUpdateService.CleanupDownloadedInstallers(_loggerFactory.CreateLogger(typeof(GitHubUpdateService)));

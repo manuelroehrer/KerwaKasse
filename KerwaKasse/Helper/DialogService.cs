@@ -423,6 +423,8 @@ namespace KerwaKasse.Helper
                 Content = panel,
                 CloseButtonText = "Abbrechen"
             };
+            // A stray tap next to it must not cancel the download.
+            DialogLightDismiss.SetKeepOpen(dialog, true);
 
             using var cancellation = new CancellationTokenSource();
             // Progress is created on the UI thread, so its callbacks are marshalled back here.
