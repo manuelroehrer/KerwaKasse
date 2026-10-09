@@ -79,11 +79,11 @@ namespace KerwaKasse.MVVM.ViewModel
         {
             if (item is null) return null;
 
-            string defaultFileName = $"kerwakasse_backup_{EventCatalog.Slugify(item.Name)}_{DateTime.Now:dd.MM.yyyy_HH.mm}";
+            string baseName = $"kerwakasse_backup_{EventCatalog.Slugify(item.Name)}_{DateTime.Now:dd.MM.yyyy_HH.mm}";
             string targetPath = _dialogService.ShowSaveFileDialog(
                 "SQLite Datenbank (*.db)|*.db",
                 $"Speicherort für das Backup von „{item.Name}“ wählen ...",
-                defaultFileName);
+                baseName, ".db");
             if (targetPath is null) return null;
 
             try

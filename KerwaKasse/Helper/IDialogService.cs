@@ -43,7 +43,11 @@ namespace KerwaKasse.Helper
     {
         void ShowMessage(string message);
         void ShowError(string message);
-        string ShowSaveFileDialog(string filter, string title, string defaultFileName, string initialDirectory = null);
+        /// <summary>Shows a save dialog in the folder something was saved to last (Documents when there is
+        /// none or it is gone), suggesting "<paramref name="baseName"/><paramref name="extension"/>" or, when
+        /// that file exists there already, the same name with " (2)", " (3)", … appended. Remembers the chosen
+        /// folder. Returns the chosen path, or null when cancelled.</summary>
+        string ShowSaveFileDialog(string filter, string title, string baseName, string extension);
 
         /// <summary>Shows an open-file dialog and returns the picked path, or null when cancelled.</summary>
         string ShowOpenFileDialog(string filter, string title);

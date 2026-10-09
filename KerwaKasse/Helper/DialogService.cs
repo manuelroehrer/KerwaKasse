@@ -18,6 +18,13 @@ namespace KerwaKasse.Helper
 {
     public class DialogService : IDialogService
     {
+        private readonly SaveLocation _saveLocation;
+
+        public DialogService(ISettingsService settings)
+        {
+            _saveLocation = new SaveLocation(settings);
+        }
+
         public void ShowMessage(string message)
         {
             MessageBox.Show(message);
@@ -28,20 +35,26 @@ namespace KerwaKasse.Helper
             MessageBox.Show(message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        public string ShowSaveFileDialog(string filter, string title, string defaultFileName, string initialDirectory = null)
+        public string ShowSaveFileDialog(string filter, string title, string baseName, string extension)
         {
+            // The suggested name is free in the folder the dialog opens in, so it fits the usual case of
+            // saving to the same place as last time.
+            string folder = _saveLocation.InitialFolder();
             var dialog = new SaveFileDialog
             {
                 Filter = filter,
                 Title = title,
-                FileName = defaultFileName
+                InitialDirectory = folder,
+                FileName = SaveLocation.UniqueFileName(folder, baseName, extension)
                 // OverwritePrompt stays at its default (true): if the user deliberately picks an
                 // existing file, Windows shows the standard "replace?" warning — their choice wins.
             };
-            if (!string.IsNullOrEmpty(initialDirectory))
-                dialog.InitialDirectory = initialDirectory;
 
-            return dialog.ShowDialog() == true ? dialog.FileName : null;
+            if (dialog.ShowDialog() != true)
+                return null;
+
+            _saveLocation.Remember(dialog.FileName);
+            return dialog.FileName;
         }
 
         public string ShowOpenFileDialog(string filter, string title)

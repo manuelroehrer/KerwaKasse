@@ -783,14 +783,10 @@ namespace KerwaKasse.MVVM.ViewModel
                     sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.UnitPrice?.ToString("0.00", German)};{row.Revenue.ToString("0.00", German)}");
                 sb.AppendLine($"Gesamt;{TotalAmount};;{TotalRevenue.ToString("0.00", German)}");
 
-                // Suggest a non-colliding name up front: pick a free "… (2).csv" within the target
-                // folder and offer it as the default. The user's final choice always wins — if they
-                // deliberately keep an existing name, the dialog's own overwrite prompt handles it.
-                var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                // The dialog suggests a name that is still free in its folder ("… (2).csv"); the user's
+                // final choice always wins, an existing file gets the dialog's own overwrite prompt.
                 var baseName = SanitizeFileName($"KerwaKasse Auswertung - {ActiveAnalysisText}");
-                var suggestedName = UniqueFileName(dir, baseName, ".csv");
-
-                var path = _dialogService.ShowSaveFileDialog("CSV-Datei (*.csv)|*.csv", "Auswertung exportieren", suggestedName, dir);
+                var path = _dialogService.ShowSaveFileDialog("CSV-Datei (*.csv)|*.csv", "Auswertung exportieren", baseName, ".csv");
                 if (string.IsNullOrEmpty(path)) return;
 
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
@@ -824,11 +820,8 @@ namespace KerwaKasse.MVVM.ViewModel
 
             try
             {
-                var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 var baseName = SanitizeFileName($"KerwaKasse Auswertung - {title}");
-                var suggestedName = UniqueFileName(dir, baseName, ".pdf");
-
-                var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", suggestedName, dir);
+                var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", baseName, ".pdf");
                 if (string.IsNullOrEmpty(path)) return;
 
                 AnalysisQuestPdfExporter.Export(BuildReport(title, options.IncludeDetails), path);
@@ -875,17 +868,6 @@ namespace KerwaKasse.MVVM.ViewModel
             foreach (var c in Path.GetInvalidFileNameChars())
                 name = name.Replace(c, ' ');
             return name.Trim();
-        }
-
-        /// <summary>A file name (no path) that does not yet exist in <paramref name="dir"/>:
-        /// "<paramref name="baseName"/><paramref name="ext"/>", else " (2)", " (3)", … appended.</summary>
-        private static string UniqueFileName(string dir, string baseName, string ext)
-        {
-            var candidate = baseName + ext;
-            int n = 2;
-            while (File.Exists(Path.Combine(dir, candidate)))
-                candidate = $"{baseName} ({n++}){ext}";
-            return candidate;
         }
 
         // ── Helpers ──

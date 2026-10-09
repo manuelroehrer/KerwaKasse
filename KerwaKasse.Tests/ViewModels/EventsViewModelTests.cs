@@ -213,13 +213,13 @@ public class EventsViewModelTests
         Func<string> createBackup = null;
         _dialogService.ShowDeleteEventDialogAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Do<Func<string>>(f => createBackup = f))
             .Returns(false);
-        _dialogService.ShowSaveFileDialog(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns((string)null);
+        _dialogService.ShowSaveFileDialog(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns((string)null);
         var sut = CreateSut();
 
         sut.DeleteCommand.Execute(sut.Events[0]);
         createBackup();
 
         _dialogService.Received(1).ShowSaveFileDialog(Arg.Any<string>(), Arg.Is<string>(t => t.Contains("Herbstkerwa")),
-            Arg.Is<string>(n => n.StartsWith("kerwakasse_backup_herbstkerwa_")));
+            Arg.Is<string>(n => n.StartsWith("kerwakasse_backup_herbstkerwa_")), ".db");
     }
 }

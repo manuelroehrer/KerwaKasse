@@ -17,13 +17,14 @@ namespace KerwaKasse
         private readonly JsonSettingsService _settingsService;
         private readonly EventCatalog _eventCatalog;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly DialogService _dialogService = new();
+        private readonly DialogService _dialogService;
         private readonly GitHubUpdateService _updateService;
 
         public MainWindow(ILoggerFactory loggerFactory, JsonSettingsService settingsService, EventCatalog eventCatalog)
         {
             _loggerFactory = loggerFactory;
             _settingsService = settingsService;
+            _dialogService = new DialogService(settingsService);
             _eventCatalog = eventCatalog;
             _updateService = new GitHubUpdateService(InfoViewModel.RepositoryUrl, loggerFactory.CreateLogger<GitHubUpdateService>());
 
