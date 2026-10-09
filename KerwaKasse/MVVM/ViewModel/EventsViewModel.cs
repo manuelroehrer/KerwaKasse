@@ -100,6 +100,10 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
+        private const string NewerVersionText =
+            "Diese Veranstaltung wurde mit einer neueren Version von KerwaKasse gespeichert und kann mit dieser " +
+            "Version nicht geöffnet werden. Bitte KerwaKasse aktualisieren.";
+
         private async Task SwitchAsync(EventListItem item)
         {
             if (item is null || item.IsActive) return;
@@ -117,6 +121,12 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 _catalog.SetActive(filePath);
             }
+            catch (DatabaseTooNewException ex)
+            {
+                _logger.LogWarning("Switching to event {FilePath} refused: {Reason}", filePath, ex.Message);
+                _dialogService.ShowError(NewerVersionText);
+                return;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Switching to event {FilePath} failed", filePath);
@@ -131,7 +141,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private async Task CreateAsync()
         {
             var request = await _dialogService.ShowNewEventDialogAsync(
-                Events.Select(e => e.Name).ToList(), _backupService.IsValidDatabaseFile);
+                Events.Select(e => e.Name).ToList(), _backupService.CheckDatabaseFile);
             if (request is null || IsNameTaken(request.Name, exceptFilePath: null)) return;
 
             EventDatabase created;

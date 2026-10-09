@@ -1,5 +1,6 @@
 using KerwaKasse.Core.Data;
 using KerwaKasse.Core.Models;
+using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -66,28 +67,28 @@ public class DatabaseBackupServiceTests : IDisposable
     }
 
     [Fact]
-    public void IsValidDatabaseFile_TrueForKerwaKasseDatabase()
+    public void CheckDatabaseFile_ValidForKerwaKasseDatabase()
     {
-        Assert.True(_sut.IsValidDatabaseFile(_dbPath));
+        Assert.Equal(DatabaseFileCheck.Valid, _sut.CheckDatabaseFile(_dbPath));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_FalseForNonDatabaseFile()
+    public void CheckDatabaseFile_InvalidForNonDatabaseFile()
     {
         var junk = Path.Combine(_dir, "junk.db");
         File.WriteAllText(junk, "this is not a database");
 
-        Assert.False(_sut.IsValidDatabaseFile(junk));
+        Assert.Equal(DatabaseFileCheck.Invalid, _sut.CheckDatabaseFile(junk));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_FalseForMissingFile()
+    public void CheckDatabaseFile_InvalidForMissingFile()
     {
-        Assert.False(_sut.IsValidDatabaseFile(Path.Combine(_dir, "does-not-exist.db")));
+        Assert.Equal(DatabaseFileCheck.Invalid, _sut.CheckDatabaseFile(Path.Combine(_dir, "does-not-exist.db")));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_TrueWhenOnlyOlderTablesPresent()
+    public void CheckDatabaseFile_ValidWhenOnlyOlderTablesPresent()
     {
         // A database from before the Menus/SavedAnalyses features: only the core tables, but those are
         // structurally current. The restore migration adds the missing tables, so the file is acceptable.
@@ -97,11 +98,11 @@ public class DatabaseBackupServiceTests : IDisposable
             CREATE TABLE OrderPositions (OrderId INTEGER NOT NULL, ProductId INTEGER NOT NULL, Amount INTEGER NOT NULL, UnitPriceCents INTEGER NOT NULL, PRIMARY KEY (OrderId, ProductId));
             """);
 
-        Assert.True(_sut.IsValidDatabaseFile(oldPath));
+        Assert.Equal(DatabaseFileCheck.Valid, _sut.CheckDatabaseFile(oldPath));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_FalseWhenSharedTableMissingColumn()
+    public void CheckDatabaseFile_InvalidWhenSharedTableMissingColumn()
     {
         // Products exists but lacks the Color column the app reads. The migration can't add a column to an
         // existing table, so this file must be rejected before it overwrites the live database.
@@ -110,11 +111,11 @@ public class DatabaseBackupServiceTests : IDisposable
             CREATE TABLE Orders (Id INTEGER PRIMARY KEY AUTOINCREMENT, OrderTime TEXT NOT NULL);
             """);
 
-        Assert.False(_sut.IsValidDatabaseFile(brokenPath));
+        Assert.Equal(DatabaseFileCheck.Invalid, _sut.CheckDatabaseFile(brokenPath));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_TrueWhenSourceHasExtraColumn()
+    public void CheckDatabaseFile_ValidWhenSourceHasExtraColumn()
     {
         // An unknown extra column does no harm — every query names its columns explicitly — so a current
         // database with one added stays valid.
@@ -123,11 +124,11 @@ public class DatabaseBackupServiceTests : IDisposable
         ExecuteSql(extraConnectionString, "ALTER TABLE Products ADD COLUMN Notes TEXT;");
         SqliteConnection.ClearAllPools();
 
-        Assert.True(_sut.IsValidDatabaseFile(Path.Combine(_dir, "extra.db")));
+        Assert.Equal(DatabaseFileCheck.Valid, _sut.CheckDatabaseFile(Path.Combine(_dir, "extra.db")));
     }
 
     [Fact]
-    public void IsValidDatabaseFile_WalModeBackup_IsValidAndLeavesNoSidecars()
+    public void CheckDatabaseFile_WalModeBackup_IsValidAndLeavesNoSidecars()
     {
         // A backup taken while the database was in WAL mode: journal_mode=wal is persisted in the file
         // header. Validation must accept it without leaving -wal/-shm files next to the user's backup.
@@ -140,11 +141,24 @@ public class DatabaseBackupServiceTests : IDisposable
         foreach (var sidecar in new[] { "-wal", "-shm", "-journal" })
             if (File.Exists(walPath + sidecar)) File.Delete(walPath + sidecar);
 
-        bool valid = _sut.IsValidDatabaseFile(walPath);
+        var check = _sut.CheckDatabaseFile(walPath);
 
-        Assert.True(valid);
+        Assert.Equal(DatabaseFileCheck.Valid, check);
         Assert.False(File.Exists(walPath + "-wal"), "-wal sidecar was left next to the backup file");
         Assert.False(File.Exists(walPath + "-shm"), "-shm sidecar was left next to the backup file");
+    }
+
+    [Fact]
+    public void CheckDatabaseFile_NewerVersion_IsReportedAsSuch()
+    {
+        // A backup made by a newer app version: this one would only write part of what it expects.
+        var newerPath = Path.Combine(_dir, "newer.db");
+        var newerConnectionString = $"Data Source={newerPath}";
+        DatabaseInitializer.Initialize(newerConnectionString);
+        ExecuteSql(newerConnectionString, $"PRAGMA user_version = {DatabaseMigrator.CurrentVersion + 1};");
+        SqliteConnection.ClearAllPools();
+
+        Assert.Equal(DatabaseFileCheck.NewerVersion, _sut.CheckDatabaseFile(newerPath));
     }
 
     // Creates a database file with exactly the given schema (no initializer), then releases the file handle

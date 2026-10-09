@@ -7,13 +7,25 @@ public interface IDatabaseBackupService
     /// <summary>Row counts of the live database (for the "what am I overwriting" prompt and the empty check).</summary>
     DatabaseSummary GetSummary();
 
-    /// <summary>True when <paramref name="filePath"/> is a readable SQLite database that looks like a
-    /// KerwaKasse database (has the expected core tables).</summary>
-    bool IsValidDatabaseFile(string filePath);
+    /// <summary>Whether <paramref name="filePath"/> is a readable KerwaKasse database (has the expected core
+    /// tables) that this app version can restore or import, i.e. not one of a newer version.</summary>
+    DatabaseFileCheck CheckDatabaseFile(string filePath);
 
     /// <summary>Replaces the live database with the file at <paramref name="sourceFilePath"/> and brings
     /// its schema up to date. Irreversible: the previous contents are gone afterwards.</summary>
     void Restore(string sourceFilePath);
+}
+
+/// <summary>Result of <see cref="IDatabaseBackupService.CheckDatabaseFile"/>.</summary>
+public enum DatabaseFileCheck
+{
+    Valid,
+
+    /// <summary>Missing, unreadable, or not a KerwaKasse database.</summary>
+    Invalid,
+
+    /// <summary>A KerwaKasse database of a newer app version; this one would only write part of it.</summary>
+    NewerVersion
 }
 
 /// <summary>Row counts of the live database. Used to decide whether the database may be replaced

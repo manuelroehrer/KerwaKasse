@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using Dapper;
 using KerwaKasse.Core.Models;
@@ -11,11 +12,17 @@ namespace KerwaKasse.Core.Data;
 /// <summary>Keeps one database file per event, all of them in the "database" subfolder of the data folder.
 /// The event name is stored inside each file, so it travels with backups and a rename never has to move
 /// a file that may be open. Up to version 2.11 the app had a single kerwakasse.db directly in the data
-/// folder; it is moved into the database folder on the first start.</summary>
+/// folder; it is moved into the database folder on the first start.
+/// <para>On every start, after that move, all event files are brought up to the current schema (see
+/// <see cref="DatabaseMigrator"/>), each copied into the backups subfolder before it is changed.</para></summary>
 public class EventCatalog : IEventCatalog
 {
     /// <summary>Next to "logs", the name makes clear that this folder holds the actual data.</summary>
     public const string DatabaseFolderName = "database";
+
+    /// <summary>Subfolder of the database folder for the copies taken before a file is migrated. Being a
+    /// subfolder keeps them out of the event list.</summary>
+    public const string BackupFolderName = "backups";
 
     /// <summary>The single database of app versions up to 2.11, directly in the data folder.</summary>
     public const string LegacyDatabaseFileName = "kerwakasse.db";
@@ -28,10 +35,14 @@ public class EventCatalog : IEventCatalog
     private const string EventNameKey = "EventName";
 
     private readonly string _databaseDir;
+    private readonly string _backupDir;
     private readonly string _legacyPath;
     private readonly ISettingsService _settings;
     private readonly ILogger<EventCatalog> _logger;
     private readonly Action<string> _deleteFile;
+
+    // Event files whose startup migration failed, with the reason (see MigrateAll).
+    private readonly Dictionary<string, Exception> _migrationFailures = new(StringComparer.OrdinalIgnoreCase);
 
     /// <param name="deleteFile">How a deleted event's file is removed. The app sends it to the recycle
     /// bin as a last safety net; defaults to a plain delete (tests).</param>
@@ -39,14 +50,25 @@ public class EventCatalog : IEventCatalog
     {
         DataFolder = Path.GetFullPath(dataDir);
         _databaseDir = Path.Combine(DataFolder, DatabaseFolderName);
+        _backupDir = Path.Combine(_databaseDir, BackupFolderName);
         _legacyPath = Path.Combine(DataFolder, LegacyDatabaseFileName);
         _settings = settings;
         _logger = logger;
         _deleteFile = deleteFile ?? File.Delete;
 
+        // The order matters: first the files move to where they belong, then their schemas are updated.
         Directory.CreateDirectory(_databaseDir);
         MigrateLegacyDatabase();
+        MigrateAll();
         ActiveFilePath = ResolveActive();
+
+        // The active event has to be usable: a failed migration is reported to the app with its original
+        // reason (DatabaseTooNewException, DatabaseMigrationException with the backup path). The call
+        // covers a legacy file that could not be moved and is used in place; for every other file it
+        // finds nothing left to do.
+        if (_migrationFailures.TryGetValue(ActiveFilePath, out var failure))
+            ExceptionDispatchInfo.Throw(failure);
+        Migrate(ActiveFilePath);
     }
 
     public string DataFolder { get; }
@@ -79,7 +101,7 @@ public class EventCatalog : IEventCatalog
         {
             // Opening the file first lets SQLite roll back a journal left behind by a crash and leaves
             // the database as a single file, so moving (or removing) just that file is safe.
-            DatabaseInitializer.Initialize(ConnectionString(_legacyPath), _logger);
+            Migrate(_legacyPath);
 
             if (!firstMigration && DatabaseBackupService.ReadSummary(ConnectionString(_legacyPath)).IsEmpty)
             {
@@ -90,7 +112,7 @@ public class EventCatalog : IEventCatalog
 
             File.Move(_legacyPath, target);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException or DatabaseMigrationException)
         {
             _logger.LogError(ex, "Legacy database {LegacyPath} could not be moved to {TargetPath}; using it in place for now", _legacyPath, target);
             return;
@@ -184,9 +206,8 @@ public class EventCatalog : IEventCatalog
         if (!IsCatalogPath(path) || !File.Exists(path))
             throw new ArgumentException($"'{filePath}' is not an event database of this catalog.", nameof(filePath));
 
-        // The file may have been created by an older app version: bring it up to date before any
-        // service touches it.
-        DatabaseInitializer.Initialize(ConnectionString(path), _logger);
+        // Normally done at startup already; a file that failed there gets another try (and reports why).
+        Migrate(path);
 
         ActiveFilePath = path;
         _settings.Set(ActiveEventSettingKey, Path.GetFileName(path));
@@ -202,7 +223,7 @@ public class EventCatalog : IEventCatalog
 
         try
         {
-            DatabaseInitializer.Initialize(ConnectionString(path), _logger);
+            Migrate(path, backup: false);
             WriteName(path, name);
         }
         catch
@@ -225,8 +246,9 @@ public class EventCatalog : IEventCatalog
         File.Copy(sourceFilePath, path);
         try
         {
-            // An imported backup may come from an older app version.
-            DatabaseInitializer.Initialize(ConnectionString(path), _logger);
+            // An imported backup may come from an older app version. No extra copy is needed, the chosen
+            // file itself stays as it is.
+            Migrate(path, backup: false);
             WriteName(path, name);
         }
         catch
@@ -246,8 +268,8 @@ public class EventCatalog : IEventCatalog
         var path = Path.GetFullPath(filePath);
         var oldName = Describe(path).Name;
 
-        // Make sure the Metadata table exists (older, not yet opened files).
-        DatabaseInitializer.Initialize(ConnectionString(path), _logger);
+        // Make sure the Metadata table exists (a file that could not be migrated at startup).
+        Migrate(path);
         WriteName(path, newName);
 
         _logger.LogInformation("Event \"{OldName}\" renamed to \"{NewName}\" ({FilePath})", oldName, newName, path);
@@ -278,10 +300,12 @@ public class EventCatalog : IEventCatalog
         string name = Path.GetFileNameWithoutExtension(path);
         int products = 0, orders = 0;
         DateTime? firstOrder = null, lastOrder = null;
+        bool requiresNewerVersion = false;
 
         try
         {
             using var connection = OpenReadOnly(path);
+            requiresNewerVersion = connection.ExecuteScalar<int>("PRAGMA user_version;") > DatabaseMigrator.CurrentVersion;
             name = ReadName(connection) ?? name;
             products = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Products");
             var stats = connection.QuerySingle<OrderStatsRow>(
@@ -296,7 +320,7 @@ public class EventCatalog : IEventCatalog
             _logger.LogWarning(ex, "Event database {FilePath} could not be read", path);
         }
 
-        return new EventDatabase(path, name, products, orders, firstOrder, lastOrder);
+        return new EventDatabase(path, name, products, orders, firstOrder, lastOrder, requiresNewerVersion);
     }
 
     private string? ReadName(string path)
@@ -387,6 +411,36 @@ public class EventCatalog : IEventCatalog
 
     private static DateTime? ParseOrderTime(string? value) =>
         DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time) ? time : null;
+
+    /// <summary>Brings every event file up to the current schema at startup, so switching events later never
+    /// has to migrate (say, in the middle of a fest). A file that fails is logged and skipped; it is tried
+    /// again on the next start, and opening it reports the problem.</summary>
+    private void MigrateAll()
+    {
+        foreach (var path in EventFiles())
+        {
+            try
+            {
+                Migrate(path);
+            }
+            catch (DatabaseTooNewException ex)
+            {
+                _migrationFailures[path] = ex;
+                // A known situation, not a bug: no stack trace.
+                _logger.LogWarning("Event database {FilePath} is left as it is: {Reason}", path, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _migrationFailures[path] = ex;
+                _logger.LogError(ex, "Event database {FilePath} could not be brought up to date", path);
+            }
+        }
+    }
+
+    /// <summary>Opens the file through the one database entry point; with <paramref name="backup"/> an
+    /// existing file is copied into the backups folder before its schema changes.</summary>
+    private void Migrate(string path, bool backup = true) =>
+        DatabaseInitializer.Initialize(ConnectionString(path), _logger, backup ? _backupDir : null);
 
     // Pooling off: these are short, one-off accesses to files that may be moved or deleted right
     // afterwards, so no handle may linger in the pool.

@@ -34,7 +34,7 @@ public class EventsViewModelTests
         new(_catalog, _backupService, _dialogService, NullLogger<EventsViewModel>.Instance);
 
     private void AnswerNewEventDialog(NewEventRequest request) =>
-        _dialogService.ShowNewEventDialogAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<Func<string, bool>>()).Returns(request);
+        _dialogService.ShowNewEventDialogAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<Func<string, DatabaseFileCheck>>()).Returns(request);
 
     [Fact]
     public void Constructor_ListsEventsAndMarksTheActiveOne()
@@ -124,16 +124,16 @@ public class EventsViewModelTests
     [Fact]
     public void Create_DialogChecksBackupFilesWithTheBackupService()
     {
-        Func<string, bool> isValidBackup = null;
-        _dialogService.ShowNewEventDialogAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Do<Func<string, bool>>(f => isValidBackup = f))
+        Func<string, DatabaseFileCheck> checkBackup = null;
+        _dialogService.ShowNewEventDialogAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Do<Func<string, DatabaseFileCheck>>(f => checkBackup = f))
             .Returns((NewEventRequest)null);
-        _backupService.IsValidDatabaseFile(@"D:\junk.db").Returns(false);
+        _backupService.CheckDatabaseFile(@"D:\newer.db").Returns(DatabaseFileCheck.NewerVersion);
         var sut = CreateSut();
 
         sut.CreateCommand.Execute(null);
 
-        Assert.False(isValidBackup(@"D:\junk.db"));
-        _backupService.Received(1).IsValidDatabaseFile(@"D:\junk.db");
+        Assert.Equal(DatabaseFileCheck.NewerVersion, checkBackup(@"D:\newer.db"));
+        _backupService.Received(1).CheckDatabaseFile(@"D:\newer.db");
     }
 
     [Fact]

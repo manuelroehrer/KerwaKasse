@@ -173,7 +173,7 @@ namespace KerwaKasse.Helper
             return value.Length == 0 ? null : value;
         }
 
-        public async Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, bool> isValidBackup)
+        public async Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, DatabaseFileCheck> checkBackup)
         {
             var errorBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
             var nameBox = new TextBox
@@ -273,9 +273,15 @@ namespace KerwaKasse.Helper
                 if (string.IsNullOrEmpty(path)) return;
 
                 backupPath = path;
-                backupValid = isValidBackup(path);
+                var check = checkBackup(path);
+                backupValid = check == DatabaseFileCheck.Valid;
                 string fileName = System.IO.Path.GetFileName(path);
-                fileStatus.Text = backupValid ? fileName : $"„{fileName}“ ist keine gültige KerwaKasse-Datenbank.";
+                fileStatus.Text = check switch
+                {
+                    DatabaseFileCheck.Valid => fileName,
+                    DatabaseFileCheck.NewerVersion => $"„{fileName}“ stammt aus einer neueren Version von KerwaKasse.",
+                    _ => $"„{fileName}“ ist keine gültige KerwaKasse-Datenbank."
+                };
                 fileStatus.Foreground = backupValid ? System.Windows.Media.Brushes.Gray : errorBrush;
                 fileStatus.ToolTip = path;
                 fileStatus.Visibility = Visibility.Visible;

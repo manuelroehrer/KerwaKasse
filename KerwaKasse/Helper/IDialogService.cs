@@ -47,9 +47,9 @@ namespace KerwaKasse.Helper
         Task<string> ShowTextInputAsync(string title, string label, string initialValue);
 
         /// <summary>Asks for the name of a new event and whether it starts empty or from a backup file,
-        /// which is picked inside the dialog and checked right away with <paramref name="isValidBackup"/>.
+        /// which is picked inside the dialog and checked right away with <paramref name="checkBackup"/>.
         /// Names already in <paramref name="existingNames"/> are refused. Returns null when cancelled.</summary>
-        Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, bool> isValidBackup);
+        Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, DatabaseFileCheck> checkBackup);
 
         /// <summary>Confirmation for deleting the event <paramref name="eventName"/>: a prominent backup
         /// warning with a button that runs <paramref name="createBackup"/> (returns the saved file's path,
