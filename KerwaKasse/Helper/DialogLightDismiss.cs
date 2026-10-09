@@ -27,6 +27,11 @@ namespace KerwaKasse.Helper
         {
             if (sender is not ContentDialog dialog || GetKeepOpen(dialog)) return;
 
+            // While a control in the dialog has a popup open (the dropdown of a combo box, a flyout), it
+            // holds the mouse capture: a click into the popup, which may reach beyond the dialog card, or
+            // next to it belongs to that control, which closes its popup itself.
+            if (Mouse.Captured != null) return;
+
             // "BackgroundElement" is the dialog card in ModernWpf's template; around it lies the dimmed layer
             // that covers the whole window.
             if (dialog.Template?.FindName("BackgroundElement", dialog) is not FrameworkElement card) return;
