@@ -42,6 +42,21 @@ public class SqliteSavedAnalysisServiceTests : IDisposable
     }
 
     [Fact]
+    public void IncludeFreeEntries_DefaultsToTrue_AndRoundTrips()
+    {
+        var (p1, _) = AddTwoProducts();
+        int id = _sut.Add(new SavedAnalysis { Name = "Nur Bratwurst", AllProducts = false, ProductIds = new List<int> { p1 } });
+        Assert.True(_sut.GetAll().Single().IncludeFreeEntries);
+
+        var analysis = _sut.GetAll().Single();
+        analysis.IncludeFreeEntries = false;
+        analysis.ProductIds = new List<int> { p1 };
+        _sut.Update(analysis);
+
+        Assert.False(_sut.GetAll().Single(a => a.Id == id).IncludeFreeEntries);
+    }
+
+    [Fact]
     public void Add_WithProductSelection_StoresIdsAndCount()
     {
         var (p1, p2) = AddTwoProducts();

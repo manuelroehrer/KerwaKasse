@@ -251,14 +251,19 @@ namespace KerwaKasse.MVVM.ViewModel
                 OrderPositions = o.Positions.Select(p => new OrderPositionModel
                 {
                     Amount = p.Amount,
+                    ProductId = p.ProductId,
+                    Kind = p.Kind,
+                    ListPrice = p.ListPrice,
+                    Note = p.Note,
                     Product = new ProductModel
                     {
-                        ProductID = p.ProductId,
+                        // A free entry without product has no id; the position's ProductId says so.
+                        ProductID = p.ProductId ?? 0,
                         Name = p.ProductName,
                         // The order's snapshotted unit price, kept on edit.
                         Price = p.UnitPrice,
                         // Colour comes from the current product (the order doesn't store it).
-                        ColorAsString = ColorOf(p.ProductId)
+                        ColorAsString = p.ProductId is int productId ? ColorOf(productId) : null
                     }
                 }).ToList()
             };
@@ -280,9 +285,12 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 AddEditPosition(new OrderHistoryEditPosition
                 {
-                    ProductId = pos.Product.ProductID,
+                    ProductId = pos.ProductId,
                     ProductName = pos.Product.Name,
                     UnitPrice = pos.Product.Price,
+                    Kind = pos.Kind,
+                    ListPrice = pos.ListPrice,
+                    Note = pos.Note,
                     ColorBrush = pos.Product.Color,
                     OriginalAmount = pos.Amount,
                     Amount = pos.Amount,
@@ -329,6 +337,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     ProductName = product.Name,
                     // A newly added position uses the product's current price.
                     UnitPrice = product.Price,
+                    ListPrice = product.Price,
                     ColorBrush = product.Color,
                     OriginalAmount = 0,
                     Amount = 1,
@@ -395,8 +404,11 @@ namespace KerwaKasse.MVVM.ViewModel
                     {
                         OrderId = SelectedOrder.OrderID,
                         ProductId = p.ProductId,
+                        Kind = p.Kind,
                         Amount = p.Amount,
-                        UnitPrice = p.UnitPrice
+                        UnitPrice = p.UnitPrice,
+                        ListPrice = p.ListPrice,
+                        Note = p.Note
                     }).ToList()
             };
 

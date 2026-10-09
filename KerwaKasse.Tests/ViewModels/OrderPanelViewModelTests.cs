@@ -236,6 +236,23 @@ public class OrderPanelViewModelTests
     }
 
     [Fact]
+    public void SaveOrder_StoresTheListPriceAsRegularPosition()
+    {
+        var product = _sut.Products[0];
+        _sut.AddOrderPosition(product);
+        List<OrderPosition>? captured = null;
+        _orderService.When(x => x.PlaceOrder(Arg.Any<IEnumerable<OrderPosition>>()))
+            .Do(ci => captured = ci.Arg<IEnumerable<OrderPosition>>().ToList());
+
+        _sut.SaveOrder();
+
+        var position = Assert.Single(captured!);
+        Assert.Equal(OrderPositionKind.Regular, position.Kind);
+        Assert.Equal(product.Price, position.UnitPrice);
+        Assert.Equal(product.Price, position.ListPrice);
+    }
+
+    [Fact]
     public void SaveOrder_MapsPositionsCorrectly()
     {
         _sut.AddOrderPosition(_sut.Products[0]);

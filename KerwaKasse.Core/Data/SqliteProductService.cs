@@ -21,7 +21,7 @@ public class SqliteProductService : IProductService
     {
         using var connection = new SqliteConnection(_connectionString);
         return connection.Query<ProductRow>(
-            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products ORDER BY SortOrder"
+            "SELECT Id, Name, PriceCents, VariablePrice, Available, Color, SortOrder FROM Products ORDER BY SortOrder"
         ).Select(ToProduct).ToList();
     }
 
@@ -29,7 +29,7 @@ public class SqliteProductService : IProductService
     {
         using var connection = new SqliteConnection(_connectionString);
         return connection.Query<ProductRow>(
-            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products WHERE Available = 1 ORDER BY SortOrder"
+            "SELECT Id, Name, PriceCents, VariablePrice, Available, Color, SortOrder FROM Products WHERE Available = 1 ORDER BY SortOrder"
         ).Select(ToProduct).ToList();
     }
 
@@ -38,11 +38,11 @@ public class SqliteProductService : IProductService
         using var connection = new SqliteConnection(_connectionString);
         var productId = connection.ExecuteScalar<long>(
             """
-            INSERT INTO Products (Name, PriceCents, Available, Color, SortOrder)
-            VALUES (@Name, @PriceCents, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1));
+            INSERT INTO Products (Name, PriceCents, VariablePrice, Available, Color, SortOrder)
+            VALUES (@Name, @PriceCents, @VariablePrice, @Available, @Color, COALESCE((SELECT MAX(SortOrder) + 1 FROM Products), 1));
             SELECT last_insert_rowid();
             """,
-            new { product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color });
+            new { product.Name, PriceCents = ToCents(product.Price), product.VariablePrice, product.Available, product.Color });
 
         _logger.LogInformation("Product {ProductId} (\"{ProductName}\") created: price {Price:0.00} €, available: {Available}",
             productId, product.Name, product.Price, product.Available);
@@ -53,10 +53,10 @@ public class SqliteProductService : IProductService
         using var connection = new SqliteConnection(_connectionString);
         connection.Execute(
             """
-            UPDATE Products SET Name = @Name, PriceCents = @PriceCents, Available = @Available, Color = @Color, SortOrder = @SortOrder
+            UPDATE Products SET Name = @Name, PriceCents = @PriceCents, VariablePrice = @VariablePrice, Available = @Available, Color = @Color, SortOrder = @SortOrder
             WHERE Id = @Id
             """,
-            new { product.Id, product.Name, PriceCents = ToCents(product.Price), product.Available, product.Color, product.SortOrder });
+            new { product.Id, product.Name, PriceCents = ToCents(product.Price), product.VariablePrice, product.Available, product.Color, product.SortOrder });
 
         _logger.LogInformation("Product {ProductId} (\"{ProductName}\") updated: price {Price:0.00} €, available: {Available}",
             product.Id, product.Name, product.Price, product.Available);
@@ -104,7 +104,7 @@ public class SqliteProductService : IProductService
         using var transaction = connection.BeginTransaction();
 
         var all = connection.Query<ProductRow>(
-            "SELECT Id, Name, PriceCents, Available, Color, SortOrder FROM Products ORDER BY SortOrder",
+            "SELECT Id, Name, PriceCents, VariablePrice, Available, Color, SortOrder FROM Products ORDER BY SortOrder",
             transaction: transaction).ToList();
         var available = all.Where(p => p.Available).Select(p => p.Id).ToList();
         int oldIndex = available.IndexOf(productId);
@@ -146,6 +146,7 @@ public class SqliteProductService : IProductService
         Id = r.Id,
         Name = r.Name,
         Price = r.PriceCents / 100m,
+        VariablePrice = r.VariablePrice,
         Available = r.Available,
         Color = r.Color,
         SortOrder = r.SortOrder
@@ -156,6 +157,7 @@ public class SqliteProductService : IProductService
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public long PriceCents { get; set; }
+        public bool VariablePrice { get; set; }
         public bool Available { get; set; }
         public string? Color { get; set; }
         public int SortOrder { get; set; }

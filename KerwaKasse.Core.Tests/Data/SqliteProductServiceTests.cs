@@ -36,6 +36,20 @@ public class SqliteProductServiceTests : IDisposable
     }
 
     [Fact]
+    public void VariablePrice_RoundTripsThroughAddAndUpdate()
+    {
+        _sut.Add(new Product { Name = "Makrele", Price = 7.00m, VariablePrice = true, Available = true });
+        var product = _sut.GetAll()[0];
+        Assert.True(product.VariablePrice);
+        Assert.True(_sut.GetAvailable()[0].VariablePrice);
+
+        product.VariablePrice = false;
+        _sut.Update(product);
+
+        Assert.False(_sut.GetAll()[0].VariablePrice);
+    }
+
+    [Fact]
     public void GetAvailable_FiltersUnavailableProducts()
     {
         _sut.Add(new Product { Name = "Bratwurst", Price = 3.50m, Available = true });

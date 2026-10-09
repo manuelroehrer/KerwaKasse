@@ -75,6 +75,47 @@ public class DatabaseMigratorTests : IDisposable
     }
 
     [Fact]
+    public void Migrate_RebuildsOrderPositions_KeepingEveryPosition()
+    {
+        CreateUnversionedDatabase();
+        // Includes a position of a product that no longer exists, as data imported outside the app can have.
+        Execute("""
+            INSERT INTO Orders (Id, OrderTime) VALUES (1, '2026-07-25 18:00:00'), (2, '2026-07-25 18:05:00');
+            INSERT INTO OrderPositions (OrderId, ProductId, Amount, UnitPriceCents) VALUES (1, 1, 2, 300), (2, 1, 1, 350), (2, 99, 1, 120);
+            """);
+
+        Migrate();
+
+        using var connection = new SqliteConnection(_connectionString);
+        var rows = connection.Query<(long Id, long OrderId, long? ProductId, long Kind, long Amount, long UnitPriceCents, long? ListPriceCents, string? Note)>(
+            "SELECT Id, OrderId, ProductId, Kind, Amount, UnitPriceCents, ListPriceCents, Note FROM OrderPositions ORDER BY Id;").ToList();
+        Assert.Equal(3, rows.Count);
+        Assert.Equal(new long[] { 1, 2, 3 }, rows.Select(r => r.Id));
+        Assert.All(rows, r => Assert.Equal(0, r.Kind));                         // all regular
+        Assert.All(rows, r => Assert.Equal(r.UnitPriceCents, r.ListPriceCents)); // list price = price paid
+        Assert.All(rows, r => Assert.Null(r.Note));
+        Assert.Equal(new long[] { 2, 1, 1 }, rows.Select(r => r.Amount));
+        Assert.Contains(rows, r => r.ProductId == 99);
+
+        // One product may now appear several times in an order, and positions without product exist.
+        connection.Execute("INSERT INTO OrderPositions (OrderId, ProductId, Kind, Amount, UnitPriceCents) VALUES (1, 1, 1, 1, 420);");
+        connection.Execute("INSERT INTO OrderPositions (OrderId, ProductId, Kind, Amount, UnitPriceCents, Note) VALUES (1, NULL, 2, 1, 250, 'Kuchen');");
+        Assert.Equal(1L, connection.ExecuteScalar<long>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'IX_OrderPositions_OrderId';"));
+    }
+
+    [Fact]
+    public void Migrate_AddsVariablePriceAndFreeEntrySelectionColumns()
+    {
+        CreateUnversionedDatabase();
+
+        Migrate();
+
+        Assert.Equal(0L, Scalar<long>("SELECT VariablePrice FROM Products;"));
+        Execute("INSERT INTO SavedAnalyses (Name) VALUES ('Alles');");
+        Assert.Equal(1L, Scalar<long>("SELECT IncludeFreeEntries FROM SavedAnalyses;"));
+    }
+
+    [Fact]
     public void Migrate_ExistingFile_IsCopiedOnceBeforeItChanges()
     {
         CreateUnversionedDatabase();

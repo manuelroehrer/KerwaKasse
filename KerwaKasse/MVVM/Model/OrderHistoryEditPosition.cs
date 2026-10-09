@@ -1,3 +1,4 @@
+using KerwaKasse.Core.Models;
 using System.Windows.Media;
 
 namespace KerwaKasse.MVVM.Model
@@ -10,9 +11,15 @@ namespace KerwaKasse.MVVM.Model
     /// </summary>
     public class OrderHistoryEditPosition : PropertyChangedBase
     {
-        public int ProductId { get; init; }
+        /// <summary>Null for a free entry without product.</summary>
+        public int? ProductId { get; init; }
         public string ProductName { get; init; } = string.Empty;
         public decimal UnitPrice { get; init; }
+
+        // Carried through the edit unchanged, so saving keeps them.
+        public OrderPositionKind Kind { get; init; }
+        public decimal? ListPrice { get; init; }
+        public string Note { get; init; }
 
         /// <summary>The product's colour swatch (matches the colour shown in the products view).</summary>
         public Brush ColorBrush { get; init; } = Brushes.Transparent;

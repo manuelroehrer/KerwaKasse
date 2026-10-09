@@ -344,7 +344,8 @@ namespace KerwaKasse.MVVM.ViewModel
                 {
                     ProductId = op.Product.ProductID,
                     Amount = op.Amount,
-                    UnitPrice = op.Product.Price
+                    UnitPrice = op.Product.Price,
+                    ListPrice = op.Product.Price
                 });
                 _orderService.PlaceOrder(positions);
                 Notification();

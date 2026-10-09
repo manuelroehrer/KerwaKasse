@@ -16,5 +16,7 @@ public interface IOrderService
     /// sales figures, since those aggregate over the same positions.</summary>
     void DeleteOrder(int orderId);
 
-    List<SalesFigure> GetSalesFigures(DateTime from, DateTime to);
+    /// <summary>The descriptions of the most recent free entries, newest first, each text once (case
+    /// ignored); offered as suggestions when the next free entry is described.</summary>
+    List<string> GetRecentNotes(int count);
 }

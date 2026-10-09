@@ -21,6 +21,7 @@ public static class DatabaseMigrator
     private static readonly IReadOnlyList<MigrationStep> Steps =
     [
         new(BaselineVersion, "baseline schema of release 2.12", ApplyBaseline),
+        new(2, "free entries and variable prices (release 2.12)", ApplyFreeEntriesAndVariablePrices),
     ];
 
     /// <summary>The schema version this app version writes.</summary>
@@ -48,7 +49,11 @@ public static class DatabaseMigrator
     {
         int newest = steps.Count > 0 ? steps[^1].Version : 0;
 
-        using var connection = new SqliteConnection(connectionString);
+        // Foreign keys off, as SQLite recommends for schema changes: rebuilding a table copies its rows
+        // into a new one, which must not fail on old rows the constraints would reject (e.g. from data
+        // imported outside the app). The setting only applies to this connection.
+        var builder = new SqliteConnectionStringBuilder(connectionString) { ForeignKeys = false };
+        using var connection = new SqliteConnection(builder.ToString());
         connection.Open();
 
         int version = ReadVersion(connection);
@@ -202,6 +207,48 @@ public static class DatabaseMigrator
             new { Default = DatabaseInitializer.DefaultProductColor }, transaction);
         if (recoloured > 0)
             logger.LogInformation("Migration applied: {ProductCount} product(s) without a colour assigned the default colour", recoloured);
+    }
+
+    /// <summary>Step 2: free entries and variable prices.
+    /// <list type="bullet">
+    /// <item>OrderPositions gets its own Id instead of the (OrderId, ProductId) key, so one product can
+    /// appear several times in an order (at different prices). SQLite cannot change a primary key, so the
+    /// table is rebuilt. ProductId may now be null (a free entry without product); Kind, ListPriceCents
+    /// and Note are new. Existing positions are regular ones, so their list price is what was paid.</item>
+    /// <item>Products.VariablePrice: the price is entered at every sale.</item>
+    /// <item>SavedAnalyses.IncludeFreeEntries: whether a saved product selection includes the free entries
+    /// without product; "all products" always does.</item>
+    /// </list></summary>
+    private static void ApplyFreeEntriesAndVariablePrices(SqliteConnection connection, SqliteTransaction transaction, ILogger logger)
+    {
+        connection.Execute("""
+            CREATE TABLE OrderPositions_New (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                OrderId INTEGER NOT NULL,
+                ProductId INTEGER,
+                Kind INTEGER NOT NULL DEFAULT 0,
+                Amount INTEGER NOT NULL,
+                UnitPriceCents INTEGER NOT NULL,
+                ListPriceCents INTEGER,
+                Note TEXT,
+                FOREIGN KEY (OrderId) REFERENCES Orders(Id),
+                FOREIGN KEY (ProductId) REFERENCES Products(Id)
+            );
+
+            INSERT INTO OrderPositions_New (OrderId, ProductId, Kind, Amount, UnitPriceCents, ListPriceCents)
+            SELECT OrderId, ProductId, 0, Amount, UnitPriceCents, UnitPriceCents
+            FROM OrderPositions
+            ORDER BY OrderId, ProductId;
+
+            DROP TABLE OrderPositions;
+            ALTER TABLE OrderPositions_New RENAME TO OrderPositions;
+
+            -- The old primary key indexed OrderId; positions are still looked up per order.
+            CREATE INDEX IX_OrderPositions_OrderId ON OrderPositions (OrderId);
+
+            ALTER TABLE Products ADD COLUMN VariablePrice INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE SavedAnalyses ADD COLUMN IncludeFreeEntries INTEGER NOT NULL DEFAULT 1;
+            """, transaction: transaction);
     }
 }
 

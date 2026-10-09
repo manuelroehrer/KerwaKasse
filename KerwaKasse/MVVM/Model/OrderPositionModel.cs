@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KerwaKasse.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -40,6 +41,13 @@ namespace KerwaKasse.MVVM.Model
                 OnPropertyChanged();
             }
         }
+
+        // Stored alongside the price, so an order read from the history is written back unchanged. Set
+        // once when the position is created.
+        public int? ProductId { get; set; }
+        public OrderPositionKind Kind { get; set; }
+        public decimal? ListPrice { get; set; }
+        public string Note { get; set; }
 
         public OrderPositionModel()
         {

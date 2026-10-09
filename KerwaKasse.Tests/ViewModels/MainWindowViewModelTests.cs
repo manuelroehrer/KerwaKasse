@@ -39,7 +39,6 @@ public class MainWindowViewModelTests
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
         _orderService.GetOrdersByDate(Arg.Any<DateTime>()).Returns(new List<Order>());
-        _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>()).Returns(new List<SalesFigure>());
         _menuService.GetAll().Returns(new List<Menu>());
         _savedAnalysisService.GetAll().Returns(new List<SavedAnalysis>());
         _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())

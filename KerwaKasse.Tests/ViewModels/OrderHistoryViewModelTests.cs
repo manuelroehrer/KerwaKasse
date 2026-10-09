@@ -224,8 +224,37 @@ public class OrderHistoryViewModelTests
             o.Id == 1 &&
             o.Positions.Count == 2 &&
             o.Positions.Any(p => p.ProductId == 1 && p.UnitPrice == 3.50m) &&
-            o.Positions.Any(p => p.ProductId == 2 && p.UnitPrice == 2.80m)));
+            o.Positions.Any(p => p.ProductId == 2 && p.UnitPrice == 2.80m && p.ListPrice == 2.80m)));
         Assert.False(sut.IsEditing);
+    }
+
+    [Fact]
+    public void Save_KeepsKindListPriceAndNoteOfUntouchedPositions()
+    {
+        _orderService.GetOrdersByDate(DateTime.Today).Returns(new List<Order>
+        {
+            new()
+            {
+                Id = 3,
+                OrderTime = DateTime.Today,
+                Positions =
+                [
+                    new OrderPosition { ProductId = 1, ProductName = "Bratwurst", Amount = 1, UnitPrice = 3.50m, ListPrice = 3.50m },
+                    new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.50m, Note = "Kuchen" }
+                ]
+            }
+        });
+        var sut = CreateSut();
+        sut.SelectedOrder = sut.Orders[0];
+        sut.BeginEditCommand.Execute(null);
+
+        sut.EditPositions.Single(p => p.ProductId == 1).Amount = 2;
+        sut.SaveCommand.Execute(null);
+
+        _orderService.Received(1).ReplaceOrderPositions(Arg.Is<Order>(o =>
+            o.Positions.Count == 2 &&
+            o.Positions.Any(p => p.ProductId == 1 && p.Amount == 2 && p.ListPrice == 3.50m && p.Kind == OrderPositionKind.Regular) &&
+            o.Positions.Any(p => p.ProductId == null && p.Kind == OrderPositionKind.FreeEntry && p.Note == "Kuchen" && p.UnitPrice == 2.50m)));
     }
 
     [Fact]
