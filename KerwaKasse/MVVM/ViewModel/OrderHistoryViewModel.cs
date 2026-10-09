@@ -251,6 +251,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 OrderPositions = o.Positions.Select(p => new OrderPositionModel
                 {
                     Amount = p.Amount,
+                    UnitPrice = p.UnitPrice,
                     ProductId = p.ProductId,
                     Kind = p.Kind,
                     ListPrice = p.ListPrice,

@@ -1,0 +1,102 @@
+<ui:ContentDialog x:Class="KerwaKasse.MVVM.View.FreeEntryDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ctrl="clr-namespace:KerwaKasse.Controls"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d">
+    <ui:ContentDialog.Resources>
+        <!-- The two ways to say what the entry is for, each in its own quiet box. -->
+        <Style x:Key="SectionBox" TargetType="Border">
+            <Setter Property="Background" Value="#F4F5F7"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,10,12,12"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1B1E24"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+    </ui:ContentDialog.Resources>
+
+    <!-- No ContentDialog buttons: the dialog brings its own, touch-sized ones (main action on the right) and
+         closes with the X, Escape or a tap next to it, like the management dialogs. -->
+    <Grid Width="340">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,-6,-12,10">
+            <TextBlock x:Name="TitleText" Text="Freie Eingabe" FontSize="21" FontWeight="SemiBold" Foreground="#1B1E24"
+                       VerticalAlignment="Center" Margin="0,0,48,0"/>
+            <Button Click="Close_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Padding="0"
+                    HorizontalAlignment="Right" Cursor="Hand" ToolTip="Schließen" AutomationProperties.Name="Schließen">
+                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#586070"/>
+            </Button>
+        </Grid>
+
+        <!-- Both steps share this area; it keeps the height of the first one, so the dialog does not
+             shrink on "Weiter" (the hint in step 2 may still make it grow). -->
+        <Grid x:Name="StepArea" Grid.Row="1">
+            <!-- Step 1: the amount -->
+            <StackPanel x:Name="AmountStep">
+                <TextBlock Text="Betrag eingeben" FontSize="14" Foreground="#6B7178" Margin="0,0,0,10"/>
+                <ctrl:PricePad x:Name="Pad"/>
+                <TextBlock x:Name="AmountError" Text="Bitte einen Betrag eingeben." FontSize="13" Foreground="#C42B1C"
+                           Margin="2,6,0,0" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <!-- Step 2: what it is for. A description, a product (special price) or both count as an
+                 answer; adding without either needs a second, deliberate tap. -->
+            <StackPanel x:Name="PurposeStep" Visibility="Collapsed">
+                <TextBlock Text="Beschreibung, Produkt oder beides" FontSize="14" Foreground="#6B7178"/>
+
+                <Border Style="{StaticResource SectionBox}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Beschreibung" Style="{StaticResource SectionTitle}"/>
+                        <TextBox x:Name="NoteBox" FontSize="16" MinHeight="40" MaxLength="60"
+                                 VerticalContentAlignment="Center"/>
+                        <!-- The last descriptions as shortcuts; a tap only fills the text box. -->
+                        <WrapPanel x:Name="Suggestions" Margin="0,8,0,-4"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionBox}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Sonderpreis für bestehendes Produkt" Style="{StaticResource SectionTitle}"/>
+                        <ComboBox x:Name="ProductBox" HorizontalAlignment="Stretch" FontSize="15" DisplayMemberPath="Text"/>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="Hurdle" Visibility="Collapsed" Margin="0,14,0,0" Padding="12,10"
+                        Background="#FFF6E5" BorderBrush="#F0C24B" BorderThickness="1" CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#7A5200"
+                                   Text="Bitte eine Beschreibung eingeben oder ein Produkt wählen. Ohne Angabe lässt sich die Eingabe später kaum nachvollziehen."/>
+                        <Button Content="Trotzdem ohne Angabe hinzufügen" Margin="0,10,0,0" HorizontalAlignment="Left"
+                                Click="WithoutDescription_Click"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" Height="50" Margin="0,18,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="BackButton" Grid.Column="0" Style="{StaticResource OutlineActionButton}" Click="Back_Click"
+                    Visibility="Hidden">
+                <TextBlock Text="Zurück" FontSize="18" Foreground="#333"/>
+            </Button>
+            <Button Grid.Column="2" Style="{StaticResource SidebarActionButton}" Click="Primary_Click">
+                <TextBlock x:Name="PrimaryText" Text="Weiter" FontSize="18" FontWeight="SemiBold" Foreground="White"/>
+            </Button>
+        </Grid>
+    </Grid>
+</ui:ContentDialog>

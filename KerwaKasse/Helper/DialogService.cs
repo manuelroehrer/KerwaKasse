@@ -1,4 +1,5 @@
 using KerwaKasse.Core.Services;
+using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.View;
 using KerwaKasse.MVVM.ViewModel;
 using Microsoft.Win32;
@@ -407,6 +408,20 @@ namespace KerwaKasse.Helper
         public async Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion)
         {
             var dialog = new UpdateDialog(update, installedVersion);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<decimal?> ShowPriceEntryAsync(string productName, decimal suggestion)
+        {
+            var dialog = new PriceEntryDialog(productName, suggestion);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new FreeEntryDialog(recentNotes, products);
             await dialog.ShowAsync();
             return dialog.Result;
         }

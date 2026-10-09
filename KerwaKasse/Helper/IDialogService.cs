@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using KerwaKasse.Core.Services;
+using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.ViewModel;
 
 namespace KerwaKasse.Helper
@@ -21,6 +22,11 @@ namespace KerwaKasse.Helper
     /// <summary>What the user entered in the "new event" dialog. <paramref name="BackupFilePath"/> is the
     /// (already validated) backup to import, or null for an empty event.</summary>
     public record NewEventRequest(string Name, string BackupFilePath);
+
+    /// <summary>What was entered in the "Freie Eingabe" dialog: the amount, and what it is for, a
+    /// <paramref name="Note"/> and/or the <paramref name="Product"/> it is a special price for. Both are
+    /// null when it was added without a description.</summary>
+    public record FreeEntryResult(decimal Amount, string Note, ProductModel Product);
 
     public interface IDialogService
     {
@@ -64,6 +70,15 @@ namespace KerwaKasse.Helper
         /// <summary>Tells the user that <paramref name="update"/> is available (with its release notes)
         /// and lets them install now, skip this version or decide later.</summary>
         Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion);
+
+        /// <summary>Asks for the price of a product whose price is entered at the sale, starting from
+        /// <paramref name="suggestion"/>. Returns null when cancelled.</summary>
+        Task<decimal?> ShowPriceEntryAsync(string productName, decimal suggestion);
+
+        /// <summary>"Freie Eingabe": asks for the amount, then what it is for, offering
+        /// <paramref name="recentNotes"/> as suggestions and <paramref name="products"/> for a special
+        /// price. Returns null when cancelled.</summary>
+        Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products);
 
         /// <summary>Runs <paramref name="download"/> behind a modal progress dialog whose only button
         /// cancels it. Returns the downloaded file's path, or null when the user cancelled.</summary>

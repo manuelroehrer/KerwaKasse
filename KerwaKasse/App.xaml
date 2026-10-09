@@ -179,6 +179,74 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!-- Main action button (save the order, finish arranging, confirm a till dialog), intentionally in the
+                 darker sidebar tone (AppSidebarBrush) instead of the accent colour. In the order panel
+                 this is the only accent control on screen next to the dark title bar and the even darker
+                 nav bar, so a third, lighter blue looked off; other views show enough accent controls
+                 for the accent colour to sit right there. Hover/pressed are derived from the base tone
+                 at runtime by overlaying a translucent veil (same idiom as the product tiles above), so
+                 no extra colour constants are needed and the disabled state simply dims. -->
+            <Style x:Key="SidebarActionButton" TargetType="Button">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" SnapsToDevicePixels="True"
+                                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                                    Background="{DynamicResource AppSidebarBrush}">
+                                <Grid>
+                                    <Border x:Name="veil" Background="Transparent"
+                                            CornerRadius="{DynamicResource ControlCornerRadius}"/>
+                                    <ContentPresenter x:Name="content"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="veil" Property="Background" Value="#18FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="veil" Property="Background" Value="#22000000"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="content" Property="Opacity" Value="0.55"/>
+                                    <Setter TargetName="bd" Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Secondary action next to it (e.g. "Zurück") and the "Freie Eingabe" button: white with
+                 a grey outline, same height and corner radius, so both read as one family. -->
+            <Style x:Key="OutlineActionButton" TargetType="Button">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" SnapsToDevicePixels="True" CornerRadius="{DynamicResource ControlCornerRadius}"
+                                    Background="White" BorderBrush="#C9CDD3" BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F5F6F7"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="#AEB3B9"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#ECEEF0"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
