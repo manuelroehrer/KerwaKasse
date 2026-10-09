@@ -93,6 +93,24 @@ public class SqliteAnalyticsServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetSalesFigures_ReportsLowestAndHighestUnitPrice()
+    {
+        int p1 = AddProduct("Bratwurst", 3.50m);
+        int p2 = AddProduct("Bier", 3.50m);
+        InsertOrder(DateTime.Today.AddHours(10), (p1, 2, 3.00m), (p2, 1, 3.50m));
+        InsertOrder(DateTime.Today.AddHours(11), (p1, 1, 3.50m), (p2, 4, 3.50m));
+
+        var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1), null);
+
+        var bratwurst = figures.Single(f => f.ProductId == p1);
+        Assert.Equal(3.00m, bratwurst.MinUnitPrice);
+        Assert.Equal(3.50m, bratwurst.MaxUnitPrice);
+        var bier = figures.Single(f => f.ProductId == p2);
+        Assert.Equal(3.50m, bier.MinUnitPrice);
+        Assert.Equal(3.50m, bier.MaxUnitPrice);
+    }
+
+    [Fact]
     public void GetPricePeriods_GroupsByProductAndPriceWithFirstAndLastSale()
     {
         int p1 = AddProduct("Bratwurst", 3.50m);

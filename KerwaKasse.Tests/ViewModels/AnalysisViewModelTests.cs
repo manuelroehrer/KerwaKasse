@@ -1,3 +1,4 @@
+using System.Globalization;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
 using KerwaKasse.Helper;
@@ -158,6 +159,31 @@ public class AnalysisViewModelTests
         var sut = CreateSut();
 
         Assert.Equal("Einzelpreis", Assert.Single(sut.Breakdown).PriceDetailsHeader);
+    }
+
+    [Fact]
+    public void Breakdown_ShowsTheUnitPrice_WhenAllSalesShareOnePrice()
+    {
+        WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m, MinUnitPrice = 3.00m, MaxUnitPrice = 3.00m });
+
+        var sut = CreateSut();
+
+        var row = Assert.Single(sut.Breakdown);
+        Assert.Equal(3.00m, row.UnitPrice);
+        Assert.Equal(3.00m.ToString("C", CultureInfo.GetCultureInfo("de-DE")), row.UnitPriceText);
+    }
+
+    [Fact]
+    public void Breakdown_ShowsAWordInsteadOfARange_WhenThePriceChanged()
+    {
+        WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 32.50m, MinUnitPrice = 3.00m, MaxUnitPrice = 3.50m });
+
+        var sut = CreateSut();
+
+        var row = Assert.Single(sut.Breakdown);
+        Assert.Null(row.UnitPrice);
+        Assert.True(row.IsUnitPriceVariable);
+        Assert.Equal("var.", row.UnitPriceText);
     }
 
     [Fact]

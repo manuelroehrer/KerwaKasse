@@ -31,7 +31,9 @@ public class SqliteAnalyticsService : IAnalyticsService
                 COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName,
                 p.Color AS ProductColor,
                 SUM(op.Amount) AS TotalAmount,
-                SUM(op.Amount * op.UnitPriceCents) AS TotalRevenueCents
+                SUM(op.Amount * op.UnitPriceCents) AS TotalRevenueCents,
+                MIN(op.UnitPriceCents) AS MinUnitPriceCents,
+                MAX(op.UnitPriceCents) AS MaxUnitPriceCents
             FROM OrderPositions op
             INNER JOIN Orders o ON o.Id = op.OrderId
             LEFT JOIN Products p ON p.Id = op.ProductId
@@ -52,7 +54,9 @@ public class SqliteAnalyticsService : IAnalyticsService
             ProductName = r.ProductName,
             ProductColor = r.ProductColor,
             TotalAmount = r.TotalAmount,
-            TotalRevenue = r.TotalRevenueCents / 100m
+            TotalRevenue = r.TotalRevenueCents / 100m,
+            MinUnitPrice = r.MinUnitPriceCents / 100m,
+            MaxUnitPrice = r.MaxUnitPriceCents / 100m
         }).ToList();
     }
 
@@ -181,6 +185,8 @@ public class SqliteAnalyticsService : IAnalyticsService
         public string? ProductColor { get; set; }
         public int TotalAmount { get; set; }
         public long TotalRevenueCents { get; set; }
+        public long MinUnitPriceCents { get; set; }
+        public long MaxUnitPriceCents { get; set; }
     }
 
     private class PositionTimeRow

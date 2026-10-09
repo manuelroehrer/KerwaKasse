@@ -66,6 +66,7 @@ namespace KerwaKasse.Helper
                     columns.ConstantColumn(22);  // colour swatch
                     columns.RelativeColumn();    // product name
                     columns.ConstantColumn(70);  // amount
+                    columns.ConstantColumn(75);  // unit price
                     columns.ConstantColumn(95);  // revenue
                 });
 
@@ -74,6 +75,7 @@ namespace KerwaKasse.Helper
                     header.Cell().Element(HeaderCell);
                     header.Cell().Element(HeaderCell).Text("Produkt").SemiBold();
                     header.Cell().Element(HeaderCell).AlignRight().Text("Menge").SemiBold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Einzelpreis").SemiBold();
                     header.Cell().Element(HeaderCell).AlignRight().Text("Umsatz").SemiBold();
                 });
 
@@ -88,12 +90,14 @@ namespace KerwaKasse.Helper
                         .Border(0.8f).BorderColor(Hex(row.ColorBorderBrush, LineGray));
                     table.Cell().Element(c => BodyCell(c, zebra)).Text(row.Name);
                     table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.Amount.ToString(German));
+                    table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.UnitPriceText);
                     table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.Revenue.ToString("C", German));
                 }
 
                 table.Cell().Element(TotalCell);
                 table.Cell().Element(TotalCell).Text("Gesamt").SemiBold();
                 table.Cell().Element(TotalCell).AlignRight().Text(report.TotalAmount.ToString(German)).SemiBold();
+                table.Cell().Element(TotalCell);
                 table.Cell().Element(TotalCell).AlignRight().Text(report.TotalRevenue.ToString("C", German)).SemiBold();
             });
         }

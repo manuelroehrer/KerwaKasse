@@ -484,6 +484,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     Name = f.ProductName,
                     Amount = f.TotalAmount,
                     Revenue = f.TotalRevenue,
+                    UnitPrice = f.MinUnitPrice == f.MaxUnitPrice ? f.MinUnitPrice : null,
                     ColorBrush = fill,
                     ColorBorderBrush = ColorBorderHelper.Border(fill),
                     PriceDetails = _priceDetailsByProduct.TryGetValue(f.ProductId, out var details)
@@ -692,10 +693,11 @@ namespace KerwaKasse.MVVM.ViewModel
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("Produkt;Menge;Umsatz in €");
+                // Several prices leave the unit price cell empty, so spreadsheets keep the column numeric.
+                sb.AppendLine("Produkt;Menge;Einzelpreis in €;Umsatz in €");
                 foreach (var row in Breakdown)
-                    sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.Revenue.ToString("0.00", German)}");
-                sb.AppendLine($"Gesamt;{TotalAmount};{TotalRevenue.ToString("0.00", German)}");
+                    sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.UnitPrice?.ToString("0.00", German)};{row.Revenue.ToString("0.00", German)}");
+                sb.AppendLine($"Gesamt;{TotalAmount};;{TotalRevenue.ToString("0.00", German)}");
 
                 // Suggest a non-colliding name up front: pick a free "… (2).csv" within the target
                 // folder and offer it as the default. The user's final choice always wins — if they
