@@ -46,6 +46,7 @@ namespace KerwaKasse.MVVM.ViewModel
         // Snapshot of the loaded analysis, so editing back to it clears the "changed" state.
         private string _originalName = string.Empty;
         private HashSet<int> _originalProductIds = new();
+        private bool _originalIncludeFreeEntries;
         private DateTime _originalFrom;
         private DateTime _originalTo;
 
@@ -222,6 +223,8 @@ namespace KerwaKasse.MVVM.ViewModel
             if (a != null && !a.AllProducts)
                 included = _service.GetProductIds(a.Id).ToHashSet();
 
+            // "Freie Eingabe" first, as in the analysis' product filter.
+            EditProducts.Add(ProductFilterItem.FreeEntries(a != null && (a.AllProducts || a.IncludeFreeEntries), OnProductToggled));
             foreach (var p in _products)
             {
                 bool isOn = a != null && (a.AllProducts || (included?.Contains(p.Id) ?? false));
@@ -268,7 +271,8 @@ namespace KerwaKasse.MVVM.ViewModel
         private void CaptureOriginals()
         {
             _originalName = (_editName ?? string.Empty).Trim();
-            _originalProductIds = EditProducts.Where(p => p.IsSelected).Select(p => p.ProductId).ToHashSet();
+            _originalProductIds = SelectedProductIds().ToHashSet();
+            _originalIncludeFreeEntries = IncludesFreeEntries();
             _originalFrom = CurrentFrom();
             _originalTo = CurrentTo();
         }
@@ -281,23 +285,29 @@ namespace KerwaKasse.MVVM.ViewModel
 
             var name = (_editName ?? string.Empty).Trim();
             bool nameChanged = name.Length > 0 && name != _originalName;
-            var currentIds = EditProducts.Where(p => p.IsSelected).Select(p => p.ProductId).ToHashSet();
-            bool productsChanged = !currentIds.SetEquals(_originalProductIds);
+            bool productsChanged = !SelectedProductIds().ToHashSet().SetEquals(_originalProductIds)
+                                   || IncludesFreeEntries() != _originalIncludeFreeEntries;
             bool rangeChanged = CurrentFrom() != _originalFrom || CurrentTo() != _originalTo;
 
             IsDirty = nameChanged || productsChanged || rangeChanged;
         }
 
+        private IEnumerable<int> SelectedProductIds() =>
+            EditProducts.Where(p => p.IsSelected && !p.IsFreeEntries).Select(p => p.ProductId);
+
+        private bool IncludesFreeEntries() => EditProducts.Any(p => p.IsSelected && p.IsFreeEntries);
+
         private SavedAnalysis BuildFromBuffer(int id)
         {
-            var included = EditProducts.Where(p => p.IsSelected).Select(p => p.ProductId).ToList();
-            bool all = EditProducts.Count > 0 && included.Count == EditProducts.Count;
+            var included = SelectedProductIds().ToList();
+            bool all = EditProducts.Count > 0 && EditProducts.All(p => p.IsSelected);
             return new SavedAnalysis
             {
                 Id = id,
                 Name = (_editName ?? string.Empty).Trim(),
                 AllProducts = all,
                 ProductIds = all ? new List<int>() : included,
+                IncludeFreeEntries = all || IncludesFreeEntries(),
                 ProductCount = included.Count, // so the list summary updates correctly right after Save
                 From = CurrentFrom(),
                 To = CurrentTo()
@@ -316,6 +326,7 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 cached.Name = a.Name;
                 cached.AllProducts = a.AllProducts;
+                cached.IncludeFreeEntries = a.IncludeFreeEntries;
                 cached.ProductCount = a.ProductIds.Count;
                 cached.From = a.From;
                 cached.To = a.To;
@@ -365,6 +376,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 Name = UniqueName(src.Name + " (Kopie)"),
                 AllProducts = src.AllProducts,
                 ProductIds = src.AllProducts ? new List<int>() : _service.GetProductIds(src.Id),
+                IncludeFreeEntries = src.IncludeFreeEntries,
                 From = src.From,
                 To = src.To
             };
@@ -445,7 +457,10 @@ namespace KerwaKasse.MVVM.ViewModel
 
         public static string Summarize(SavedAnalysis a)
         {
-            string products = a.AllProducts ? "alle Produkte" : $"{a.ProductCount} Produkte";
+            string products = a.AllProducts ? "alle Produkte"
+                : !a.IncludeFreeEntries ? $"{a.ProductCount} Produkte"
+                : a.ProductCount == 0 ? "Freie Eingabe"
+                : $"{a.ProductCount} Produkte + Freie Eingabe";
             string period;
             if (a.From.HasValue && a.To.HasValue)
                 period = a.From.Value.Date == a.To.Value.Date
