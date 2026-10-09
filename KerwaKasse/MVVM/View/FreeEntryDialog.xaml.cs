@@ -15,7 +15,8 @@ namespace KerwaKasse.MVVM.View
     /// <summary>
     /// "Freie Eingabe" in two steps: first the amount on the number pad, then what it is for, a
     /// description and/or an existing product the amount is a special price for. Neither is required
-    /// as such, but adding without both takes a second, deliberate tap. <see cref="Result"/> is null
+    /// as such, but adding without both takes a second, deliberate tap. With an existing entry passed
+    /// in, only the second step is shown, to change what the entry is for. <see cref="Result"/> is null
     /// when the dialog was closed without adding.
     /// </summary>
     public partial class FreeEntryDialog : ContentDialog
@@ -28,13 +29,20 @@ namespace KerwaKasse.MVVM.View
 
         public FreeEntryResult Result { get; private set; }
 
-        public FreeEntryDialog(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
+        public FreeEntryDialog(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products, FreeEntryResult existing = null)
         {
             InitializeComponent();
             _recentNotes = recentNotes ?? Array.Empty<string>();
 
+            // A special price only makes sense for a product with a fixed price; a variable one has its
+            // own price at every sale anyway.
+            var choices = (products ?? Array.Empty<ProductModel>()).Where(p => !p.VariablePrice).ToList();
+            // The product of an existing entry stays selectable, even when it is no longer offered.
+            if (existing?.Product != null && choices.All(p => p.ProductID != existing.Product.ProductID))
+                choices.Insert(0, existing.Product);
+
             var options = new List<ProductOption> { new(null, "Kein Produkt") };
-            options.AddRange((products ?? Array.Empty<ProductModel>()).Select(p => new ProductOption(p,
+            options.AddRange(choices.Select(p => new ProductOption(p,
                 $"{p.Name} (sonst {(p.VariablePrice ? "ca. " : "")}{p.Price.ToString("C", CultureInfo.CurrentCulture)})")));
             ProductBox.ItemsSource = options;
             ProductBox.SelectedIndex = 0;
@@ -43,9 +51,27 @@ namespace KerwaKasse.MVVM.View
             NoteBox.TextChanged += (_, _) => { Hurdle.Visibility = Visibility.Collapsed; RefreshSuggestions(); };
             ProductBox.SelectionChanged += (_, _) => Hurdle.Visibility = Visibility.Collapsed;
 
-            Opened += (_, _) => { PlaceNearTop(); Pad.Focus(); };
+            Opened += (_, _) =>
+            {
+                PlaceNearTop();
+                if (_onPurposeStep) NoteBox.Focus();
+                else Pad.Focus();
+            };
             PreviewTextInput += (_, e) => { if (!_onPurposeStep) e.Handled = Pad.HandleTextInput(e.Text); };
             PreviewKeyDown += OnPreviewKeyDown;
+
+            if (existing != null)
+            {
+                Pad.SetSuggestion(existing.Amount);
+                NoteBox.Text = existing.Note ?? string.Empty;
+                NoteBox.CaretIndex = NoteBox.Text.Length;
+                ProductBox.SelectedItem = options.FirstOrDefault(o => o.Product?.ProductID == existing.Product?.ProductID);
+                ShowPurposeStep();
+                // Only what it is for can be changed here, so there is no way back to the amount.
+                BackButton.Visibility = Visibility.Collapsed;
+                PrimaryText.Text = "Übernehmen";
+                WithoutDescriptionButton.Content = "Trotzdem ohne Angabe übernehmen";
+            }
 
             RefreshSuggestions();
         }

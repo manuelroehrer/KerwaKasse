@@ -4,16 +4,18 @@ using System.Windows.Input;
 
 namespace KerwaKasse.MVVM.View
 {
-    /// <summary>Asks for the price of a product with a variable price, starting from its suggested price.
-    /// <see cref="Result"/> holds the entered price, or null when the dialog was closed without it.</summary>
+    /// <summary>Asks for the price of a product with a variable price, starting from its suggested price,
+    /// or with <c>change</c> for a new price of a position that is already there. <see cref="Result"/>
+    /// holds the entered price, or null when the dialog was closed without it.</summary>
     public partial class PriceEntryDialog : ContentDialog
     {
         public decimal? Result { get; private set; }
 
-        public PriceEntryDialog(string productName, decimal suggestion)
+        public PriceEntryDialog(string title, decimal suggestion, bool change = false)
         {
             InitializeComponent();
-            TitleText.Text = productName;
+            TitleText.Text = title;
+            AcceptText.Text = change ? "Übernehmen" : "Hinzufügen";
             Pad.SetSuggestion(suggestion);
             Pad.ValueChanged += (_, _) => ErrorText.Visibility = Visibility.Collapsed;
 

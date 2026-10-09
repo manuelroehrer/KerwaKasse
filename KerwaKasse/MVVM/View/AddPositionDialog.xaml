@@ -7,21 +7,37 @@
              xmlns:helper="clr-namespace:KerwaKasse.Helper"
              xmlns:ui="http://schemas.modernwpf.com/2019"
              mc:Ignorable="d"
-             Title="Produkt hinzufügen"
-             PrimaryButtonText="Hinzufügen"
-             CloseButtonText="Abbrechen"
-             DefaultButton="Primary"
-             IsPrimaryButtonEnabled="False">
+             Padding="0">
     <ui:ContentDialog.Resources>
+        <!-- The content brings its own inset, so the X can sit close to the corner without being clipped. -->
+        <Thickness x:Key="ContentDialogPadding">0</Thickness>
         <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
         <helper:ProductPriceTextConverter x:Key="ProductPriceText"/>
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </ui:ContentDialog.Resources>
-    <Grid Width="360">
-        <ListBox x:Name="ProductList" MaxHeight="400" BorderThickness="0" Background="Transparent"
+
+    <!-- No ContentDialog buttons: the dialog brings its own, touch-sized one (on the right) and closes
+         with the X, Escape or a tap next to it, like the till's dialogs. -->
+    <Grid Width="408">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="24,18,12,10">
+            <TextBlock Text="Position nachtragen" FontSize="21" FontWeight="SemiBold" Foreground="#1B1E24"
+                       VerticalAlignment="Center" Margin="0,0,48,0"/>
+            <Button Click="Close_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Padding="0"
+                    HorizontalAlignment="Right" Cursor="Hand" ToolTip="Schließen" AutomationProperties.Name="Schließen">
+                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#586070"/>
+            </Button>
+        </Grid>
+
+        <ListBox x:Name="OptionList" Grid.Row="1" Margin="12,0,6,0" MaxHeight="400" BorderThickness="0" Background="Transparent"
                  HorizontalContentAlignment="Stretch" Padding="0,0,18,0"
-                 SelectionChanged="ProductList_SelectionChanged"
-                 MouseDoubleClick="ProductList_MouseDoubleClick">
+                 SelectionChanged="OptionList_SelectionChanged"
+                 MouseDoubleClick="OptionList_MouseDoubleClick">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -30,11 +46,18 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
-                                        Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter/>
-                                </Border>
+                                <StackPanel>
+                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <!-- "Freie Eingabe" comes first and is set apart from the products. -->
+                                    <Border x:Name="Divider" Height="1" Background="#E3E6EA" Margin="0,6,0,4" Visibility="Collapsed"/>
+                                </StackPanel>
                                 <ControlTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsFreeEntry}" Value="True">
+                                        <Setter TargetName="Divider" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Bd" Property="Background" Value="#E2E5EA"/>
                                     </Trigger>
@@ -59,13 +82,14 @@
                                 Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center"
                                 BorderBrush="{Binding Color, Converter={StaticResource FixedColorBorder}}"/>
                         <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <!-- Empty for "Freie Eingabe": its amount is entered next. -->
                         <TextBlock Grid.Column="2" FontSize="15"
                                    FontFamily="{StaticResource PriceFont}"
                                    Foreground="#707070" VerticalAlignment="Center" Margin="12,0,0,0">
                             <TextBlock.Text>
                                 <MultiBinding Converter="{StaticResource ProductPriceText}">
-                                    <Binding Path="Price"/>
-                                    <Binding Path="VariablePrice"/>
+                                    <Binding Path="Product.Price"/>
+                                    <Binding Path="Product.VariablePrice"/>
                                 </MultiBinding>
                             </TextBlock.Text>
                         </TextBlock>
@@ -73,5 +97,18 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <Grid Grid.Row="2" Height="50" Margin="24,18,24,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <!-- Available once an entry is selected. -->
+            <Button x:Name="AddButton" Grid.Column="2" Style="{StaticResource SidebarActionButton}" Click="Add_Click"
+                    IsEnabled="False">
+                <TextBlock Text="Hinzufügen" FontSize="18" FontWeight="SemiBold" Foreground="White"/>
+            </Button>
+        </Grid>
     </Grid>
 </ui:ContentDialog>

@@ -5,17 +5,22 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ctrl="clr-namespace:KerwaKasse.Controls"
              xmlns:ui="http://schemas.modernwpf.com/2019"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             Padding="0">
+    <ui:ContentDialog.Resources>
+        <!-- The content brings its own inset, so the X can sit close to the corner without being clipped. -->
+        <Thickness x:Key="ContentDialogPadding">0</Thickness>
+    </ui:ContentDialog.Resources>
     <!-- No ContentDialog buttons: the dialog brings its own, touch-sized ones (main action on the right) and
          closes with the X, Escape or a tap next to it, like the management dialogs. -->
-    <Grid Width="320">
+    <Grid Width="368">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,-6,-12,10">
+        <Grid Margin="24,18,12,10">
             <TextBlock x:Name="TitleText" FontSize="21" FontWeight="SemiBold" Foreground="#1B1E24"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,48,0"/>
             <Button Click="Close_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Padding="0"
@@ -24,21 +29,21 @@
             </Button>
         </Grid>
 
-        <StackPanel Grid.Row="1">
+        <StackPanel Grid.Row="1" Margin="24,0">
             <TextBlock Text="Preis eingeben" FontSize="14" Foreground="#6B7178" Margin="0,0,0,10"/>
             <ctrl:PricePad x:Name="Pad"/>
             <TextBlock x:Name="ErrorText" Text="Bitte einen Betrag eingeben." FontSize="13" Foreground="#C42B1C"
                        Margin="2,6,0,0" Visibility="Collapsed"/>
         </StackPanel>
 
-        <Grid Grid.Row="2" Height="50" Margin="0,18,0,0">
+        <Grid Grid.Row="2" Height="50" Margin="24,18,24,24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="10"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <Button Grid.Column="2" Style="{StaticResource SidebarActionButton}" Click="Add_Click">
-                <TextBlock Text="Hinzufügen" FontSize="18" FontWeight="SemiBold" Foreground="White"/>
+                <TextBlock x:Name="AcceptText" Text="Hinzufügen" FontSize="18" FontWeight="SemiBold" Foreground="White"/>
             </Button>
         </Grid>
     </Grid>

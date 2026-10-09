@@ -412,9 +412,9 @@ namespace KerwaKasse.Helper
             return dialog.Result;
         }
 
-        public async Task<decimal?> ShowPriceEntryAsync(string productName, decimal suggestion)
+        public async Task<decimal?> ShowPriceEntryAsync(string title, decimal suggestion, bool change = false)
         {
-            var dialog = new PriceEntryDialog(productName, suggestion);
+            var dialog = new PriceEntryDialog(title, suggestion, change);
             await dialog.ShowAsync();
             return dialog.Result;
         }
@@ -422,6 +422,20 @@ namespace KerwaKasse.Helper
         public async Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
         {
             var dialog = new FreeEntryDialog(recentNotes, products);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<AddPositionChoice> ShowAddPositionAsync(IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new AddPositionDialog(products);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<FreeEntryResult> ShowFreeEntryPurposeAsync(FreeEntryResult existing, IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new FreeEntryDialog(recentNotes, products, existing);
             await dialog.ShowAsync();
             return dialog.Result;
         }

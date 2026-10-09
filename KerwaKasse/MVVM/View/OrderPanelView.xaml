@@ -502,18 +502,14 @@
                                         <TextBlock Grid.Column="1" Text="{Binding Amount}"
                                                    FontSize="22" FontWeight="Bold" Foreground="#333"
                                                    VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                        <!-- Name, and for a free entry a second line with its description -->
+                                        <!-- Name, and for anything but a regular position a second line with its kind -->
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="6,9,6,9">
-                                            <TextBlock Text="{Binding DisplayName}"
-                                                       FontSize="16" FontWeight="SemiBold" Foreground="#222"
-                                                       TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding Subline}" FontSize="13" TextWrapping="Wrap" Margin="0,1,0,0"
-                                                       Visibility="{Binding HasSubline, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#6B7178"/>
+                                                        <Setter Property="Foreground" Value="#222"/>
                                                         <Style.Triggers>
-                                                            <!-- Added without description: stands out a little. -->
+                                                            <!-- "Ohne Angabe": added without description, stands out a little. -->
                                                             <DataTrigger Binding="{Binding IsWithoutDescription}" Value="True">
                                                                 <Setter Property="Foreground" Value="#B26A00"/>
                                                             </DataTrigger>
@@ -521,6 +517,8 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
+                                            <TextBlock Text="{Binding Subline}" FontSize="13" Foreground="#6B7178" TextWrapping="Wrap" Margin="0,1,0,0"
+                                                       Visibility="{Binding HasSubline, Converter={StaticResource BoolToVisibility}}"/>
                                         </StackPanel>
                                         <!-- Unit price -->
                                         <TextBlock Grid.Column="3" Text="{Binding UnitPrice, StringFormat={}{0:C}}"

@@ -63,24 +63,39 @@ namespace KerwaKasse.MVVM.Model
         public decimal? ListPrice { get; set; }
         public string Note { get; set; }
 
-        /// <summary>The row's main line: the product, or for a free entry without product its description.</summary>
-        public string DisplayName => !string.IsNullOrEmpty(Product?.Name) ? Product.Name : Note ?? "Freie Eingabe";
+        /// <summary>The row's main line, what was sold: the product (with the description of a special
+        /// price), the description of a free entry, or "Ohne Angabe" for one without either.</summary>
+        public string DisplayName => DisplayNameOf(Product?.Name, Note);
 
-        /// <summary>The row's second line, only for free entries: the description of a special price
-        /// ("Sonderpreis" without one), "Freie Eingabe" under a described entry, or "ohne Angabe".</summary>
-        public string Subline => Kind != OrderPositionKind.FreeEntry ? null
-            : ProductId != null ? Note ?? "Sonderpreis"
-            : Note != null ? "Freie Eingabe" : "ohne Angabe";
+        /// <summary>The row's second line, the kind of position for everything but a regular one:
+        /// "Variabler Preis", "Sonderpreis" or "Freie Eingabe".</summary>
+        public string Subline => SublineOf(Kind, ProductId);
 
         public bool HasSubline => Subline != null;
 
         /// <summary>A free entry added without description or product; highlighted so it gets noticed.</summary>
-        public bool IsWithoutDescription => Kind == OrderPositionKind.FreeEntry && ProductId == null && Note == null;
+        public bool IsWithoutDescription => IsWithoutDescriptionOf(Kind, ProductId, Note);
 
         /// <summary>The colour strip: the product's colour, a neutral grey for a free entry without product.</summary>
         public Brush ColorBrush => Product?.Color ?? FreeEntryBrush;
 
-        private static readonly Brush FreeEntryBrush = CreateFreeEntryBrush();
+        // Shared with the history's edit rows, so a position reads the same at the till and in the history.
+        public static string DisplayNameOf(string productName, string note) =>
+            string.IsNullOrEmpty(productName) ? note ?? "Ohne Angabe"
+            : note == null ? productName
+            : $"{productName} · {note}";
+
+        public static string SublineOf(OrderPositionKind kind, int? productId) => kind switch
+        {
+            OrderPositionKind.VariablePrice => "Variabler Preis",
+            OrderPositionKind.FreeEntry => productId != null ? "Sonderpreis" : "Freie Eingabe",
+            _ => null
+        };
+
+        public static bool IsWithoutDescriptionOf(OrderPositionKind kind, int? productId, string note) =>
+            kind == OrderPositionKind.FreeEntry && productId == null && note == null;
+
+        public static readonly Brush FreeEntryBrush = CreateFreeEntryBrush();
 
         private static Brush CreateFreeEntryBrush()
         {

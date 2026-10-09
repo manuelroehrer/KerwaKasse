@@ -257,6 +257,8 @@ public class OrderPanelViewModelTests
         Assert.Equal(8.50m, position.UnitPrice);
         Assert.Equal(7.00m, position.ListPrice);
         Assert.Equal(8.50m, _sut.Total);
+        Assert.Equal("Makrele", position.DisplayName);
+        Assert.Equal("Variabler Preis", position.Subline);
     }
 
     [Fact]
@@ -311,8 +313,9 @@ public class OrderPanelViewModelTests
         Assert.Equal(1, position.ProductId);
         Assert.Equal(5.00m, position.UnitPrice);
         Assert.Equal(3.50m, position.ListPrice);
-        Assert.Equal("Bratwurst", position.DisplayName);
-        Assert.Equal("3 statt 2", position.Subline);
+        // The main line says what was sold, the second line only the kind.
+        Assert.Equal("Bratwurst · 3 statt 2", position.DisplayName);
+        Assert.Equal("Sonderpreis", position.Subline);
     }
 
     [Fact]
@@ -340,8 +343,8 @@ public class OrderPanelViewModelTests
         await _sut.AddFreeEntry();
 
         var position = Assert.Single(_sut.OrderPositions);
-        Assert.Equal("Freie Eingabe", position.DisplayName);
-        Assert.Equal("ohne Angabe", position.Subline);
+        Assert.Equal("Ohne Angabe", position.DisplayName);
+        Assert.Equal("Freie Eingabe", position.Subline);
         Assert.True(position.IsWithoutDescription);
     }
 

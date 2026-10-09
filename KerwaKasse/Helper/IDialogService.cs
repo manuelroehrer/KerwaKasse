@@ -28,6 +28,13 @@ namespace KerwaKasse.Helper
     /// null when it was added without a description.</summary>
     public record FreeEntryResult(decimal Amount, string Note, ProductModel Product);
 
+    /// <summary>What was picked in the history's "Position nachtragen" dialog: a <paramref name="Product"/>,
+    /// or "Freie Eingabe" when it is null.</summary>
+    public record AddPositionChoice(ProductModel Product)
+    {
+        public bool IsFreeEntry => Product == null;
+    }
+
     public interface IDialogService
     {
         void ShowMessage(string message);
@@ -72,13 +79,22 @@ namespace KerwaKasse.Helper
         Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion);
 
         /// <summary>Asks for the price of a product whose price is entered at the sale, starting from
-        /// <paramref name="suggestion"/>. Returns null when cancelled.</summary>
-        Task<decimal?> ShowPriceEntryAsync(string productName, decimal suggestion);
+        /// <paramref name="suggestion"/>; with <paramref name="change"/> for a new price of a position that
+        /// is already there. Returns null when cancelled.</summary>
+        Task<decimal?> ShowPriceEntryAsync(string title, decimal suggestion, bool change = false);
 
         /// <summary>"Freie Eingabe": asks for the amount, then what it is for, offering
         /// <paramref name="recentNotes"/> as suggestions and <paramref name="products"/> for a special
         /// price. Returns null when cancelled.</summary>
         Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products);
+
+        /// <summary>"Position nachtragen" in the history: offers <paramref name="products"/> and "Freie
+        /// Eingabe". Returns null when cancelled.</summary>
+        Task<AddPositionChoice> ShowAddPositionAsync(IReadOnlyList<ProductModel> products);
+
+        /// <summary>Changes what the free entry <paramref name="existing"/> is for: its description and/or
+        /// product. Returns the entry with the new values, or null when cancelled.</summary>
+        Task<FreeEntryResult> ShowFreeEntryPurposeAsync(FreeEntryResult existing, IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products);
 
         /// <summary>Runs <paramref name="download"/> behind a modal progress dialog whose only button
         /// cancels it. Returns the downloaded file's path, or null when the user cancelled.</summary>

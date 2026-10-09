@@ -200,6 +200,71 @@
             </Setter>
         </Style>
 
+        <!-- A position's name; "Ohne Angabe" (added without description) stands out a little, as at the till. -->
+        <Style x:Key="PositionNameText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsWithoutDescription}" Value="True">
+                    <Setter Property="Foreground" Value="#B26A00"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Second line with the kind of position ("Variabler Preis", "Sonderpreis", "Freie Eingabe"), as at the till. -->
+        <Style x:Key="SublineText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,1,0,0"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Foreground" Value="#6B7178"/>
+        </Style>
+
+        <!-- What can be changed in an edit row besides the amount (an entered price, what a free entry is
+             for) looks like a field and opens the till's dialog. Disabled, it is plain text in the same
+             place, so editable and fixed rows line up. -->
+        <Style x:Key="EditFieldButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="White"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#C9D1DA"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsPressed" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bd" Property="Background" Value="#EEF3F9"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="True">
+                    <Setter Property="Cursor" Value="Hand"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Sale row in the table presentation: adjoining rows with a bottom divider; selection adds
              a left accent bar (matches the products view). -->
         <Style x:Key="SaleTableRowStyle" TargetType="ListBoxItem">
@@ -593,23 +658,31 @@
                                             <ItemsControl ItemsSource="{Binding SelectedOrder.OrderPositions}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Height="46">
+                                                        <Grid MinHeight="46">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="70"/>
                                                                 <ColumnDefinition Width="96"/>
                                                                 <ColumnDefinition Width="96"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Grid Grid.Column="0" VerticalAlignment="Center">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
                                                                 <Border Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                                                        Background="{Binding Product.Color}" BorderThickness="1"
-                                                                        BorderBrush="{Binding Product.Color, Converter={StaticResource FixedColorBorder}}"/>
-                                                                <TextBlock Text="{Binding Product.Name}" FontSize="16" VerticalAlignment="Center"
-                                                                           TextTrimming="CharacterEllipsis"/>
-                                                            </StackPanel>
+                                                                        Background="{Binding ColorBrush}" BorderThickness="1"
+                                                                        BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"/>
+                                                                <!-- Name, and for anything but a regular position a second line with its kind -->
+                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource PositionNameText}"/>
+                                                                    <TextBlock Text="{Binding Subline}" Style="{StaticResource SublineText}"
+                                                                               Visibility="{Binding HasSubline, Converter={StaticResource BoolToVis}}"/>
+                                                                </StackPanel>
+                                                            </Grid>
                                                             <TextBlock Grid.Column="1" Text="{Binding Amount}" FontSize="16"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            <TextBlock Grid.Column="2" Text="{Binding Product.Price, StringFormat={}{0:C}}"
+                                                            <TextBlock Grid.Column="2" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
                                                                        FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
                                                                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                             <TextBlock Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
@@ -638,12 +711,14 @@
                                             <TextBlock Grid.Column="3" Text="GESAMT" Style="{StaticResource CaptionText}" HorizontalAlignment="Right" Margin="0,0,10,0"/>
                                         </Grid>
 
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <!-- Starts a little left of the header, so the highlight of a changed row keeps
+                                             some space to a field in it; the rows take it back as padding. -->
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="-6,0,0,0">
                                             <StackPanel>
                                                 <ItemsControl ItemsSource="{Binding EditPositions}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                            <Border x:Name="rowBorder" CornerRadius="4" Margin="0,3" Padding="8,5" BorderThickness="1">
+                                                            <Border x:Name="rowBorder" CornerRadius="4" Margin="0,3" Padding="14,5,8,5" BorderThickness="1">
                                                                 <Border.Style>
                                                                     <Style TargetType="Border">
                                                                         <Setter Property="Background" Value="Transparent"/>
@@ -665,13 +740,30 @@
                                                                             <ColumnDefinition Width="90"/>
                                                                         </Grid.ColumnDefinitions>
 
-                                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                            <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
-                                                                                    Background="{Binding ColorBrush}" BorderThickness="1"
-                                                                                    BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"/>
-                                                                            <TextBlock x:Name="nameText" Text="{Binding ProductName}" FontSize="16"
-                                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                        </StackPanel>
+                                                                        <!-- Name (+ second line); for a free entry a field to change what it is for.
+                                                                             The negative margin keeps the text in line with the header. -->
+                                                                        <Button Grid.Column="0" Style="{StaticResource EditFieldButton}" Padding="8,3"
+                                                                                Margin="-9,0,10,0" HorizontalContentAlignment="Stretch"
+                                                                                IsEnabled="{Binding CanEditPurpose}"
+                                                                                ToolTip="Beschreibung oder Produkt ändern"
+                                                                                AutomationProperties.Name="Beschreibung oder Produkt ändern"
+                                                                                Command="{Binding DataContext.EditPurposeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding}">
+                                                                            <Grid>
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="Auto"/>
+                                                                                    <ColumnDefinition Width="*"/>
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <Border x:Name="swatch" Width="14" Height="14" CornerRadius="4" Margin="0,0,12,0"
+                                                                                        Background="{Binding ColorBrush}" BorderThickness="1"
+                                                                                        BorderBrush="{Binding ColorBrush, Converter={StaticResource FixedColorBorder}}"/>
+                                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                                    <TextBlock x:Name="nameText" Text="{Binding DisplayName}" Style="{StaticResource PositionNameText}"/>
+                                                                                    <TextBlock x:Name="sublineText" Text="{Binding Subline}" Style="{StaticResource SublineText}"
+                                                                                               Visibility="{Binding HasSubline, Converter={StaticResource BoolToVis}}"/>
+                                                                                </StackPanel>
+                                                                            </Grid>
+                                                                        </Button>
 
                                                                         <!-- Reusable touch stepper -->
                                                                         <ctrl:NumberStepper Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -679,9 +771,17 @@
                                                                                             Value="{Binding Amount, Mode=TwoWay}"
                                                                                             IsEnabled="{Binding IsActive}"/>
 
-                                                                        <TextBlock x:Name="editUnit" Grid.Column="2" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
-                                                                                   FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"
-                                                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                        <!-- An entered price is a field that opens the number pad; the negative
+                                                                             margin keeps the amount in line with the header. -->
+                                                                        <Button Grid.Column="2" Style="{StaticResource EditFieldButton}" Width="90" Margin="0,0,-9,0"
+                                                                                HorizontalAlignment="Right" HorizontalContentAlignment="Right" VerticalAlignment="Center"
+                                                                                IsEnabled="{Binding CanEditPrice}"
+                                                                                ToolTip="Preis ändern" AutomationProperties.Name="Preis ändern"
+                                                                                Command="{Binding DataContext.EditPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding}">
+                                                                            <TextBlock x:Name="editUnit" Text="{Binding UnitPrice, StringFormat={}{0:C}}"
+                                                                                       FontFamily="{StaticResource PriceFont}" FontSize="15" Foreground="#555555"/>
+                                                                        </Button>
                                                                         <TextBlock x:Name="editLineTotal" Grid.Column="3" Text="{Binding Total, StringFormat={}{0:C}}"
                                                                                    FontFamily="{StaticResource PriceFont}" FontSize="15"
                                                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
@@ -711,7 +811,7 @@
                                                                     <Setter TargetName="rowBorder" Property="Background" Value="#EAF7EE"/>
                                                                     <Setter TargetName="rowBorder" Property="BorderBrush" Value="#BFE3CB"/>
                                                                 </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsAmountChanged}" Value="True">
+                                                                <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                                     <Setter TargetName="rowBorder" Property="Background" Value="#FFF7E6"/>
                                                                     <Setter TargetName="rowBorder" Property="BorderBrush" Value="#F0DDA8"/>
                                                                 </DataTrigger>
@@ -722,6 +822,7 @@
                                                                     <Setter TargetName="swatch" Property="Opacity" Value="0.4"/>
                                                                     <Setter TargetName="nameText" Property="Opacity" Value="0.5"/>
                                                                     <Setter TargetName="nameText" Property="TextDecorations" Value="Strikethrough"/>
+                                                                    <Setter TargetName="sublineText" Property="Opacity" Value="0.5"/>
                                                                     <Setter TargetName="editUnit" Property="Opacity" Value="0.5"/>
                                                                     <Setter TargetName="editLineTotal" Property="Opacity" Value="0.5"/>
                                                                 </DataTrigger>
@@ -730,7 +831,7 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
                                                 <Button Command="{Binding AddPositionCommand}" Style="{StaticResource AddPositionInlineButton}"
-                                                        HorizontalAlignment="Left" Margin="0,11,0,2" Height="42" Padding="16,0">
+                                                        HorizontalAlignment="Left" Margin="6,11,0,2" Height="42" Padding="16,0">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                                    VerticalAlignment="Center" Margin="0,0,8,0"/>

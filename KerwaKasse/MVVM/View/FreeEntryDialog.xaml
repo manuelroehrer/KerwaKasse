@@ -5,8 +5,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ctrl="clr-namespace:KerwaKasse.Controls"
              xmlns:ui="http://schemas.modernwpf.com/2019"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             Padding="0">
     <ui:ContentDialog.Resources>
+        <!-- The content brings its own inset, so the X can sit close to the corner without being clipped. -->
+        <Thickness x:Key="ContentDialogPadding">0</Thickness>
+
         <!-- The two ways to say what the entry is for, each in its own quiet box. -->
         <Style x:Key="SectionBox" TargetType="Border">
             <Setter Property="Background" Value="#F4F5F7"/>
@@ -23,14 +27,14 @@
 
     <!-- No ContentDialog buttons: the dialog brings its own, touch-sized ones (main action on the right) and
          closes with the X, Escape or a tap next to it, like the management dialogs. -->
-    <Grid Width="340">
+    <Grid Width="388">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,-6,-12,10">
+        <Grid Margin="24,18,12,10">
             <TextBlock x:Name="TitleText" Text="Freie Eingabe" FontSize="21" FontWeight="SemiBold" Foreground="#1B1E24"
                        VerticalAlignment="Center" Margin="0,0,48,0"/>
             <Button Click="Close_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Padding="0"
@@ -41,7 +45,7 @@
 
         <!-- Both steps share this area; it keeps the height of the first one, so the dialog does not
              shrink on "Weiter" (the hint in step 2 may still make it grow). -->
-        <Grid x:Name="StepArea" Grid.Row="1">
+        <Grid x:Name="StepArea" Grid.Row="1" Margin="24,0">
             <!-- Step 1: the amount -->
             <StackPanel x:Name="AmountStep">
                 <TextBlock Text="Betrag eingeben" FontSize="14" Foreground="#6B7178" Margin="0,0,0,10"/>
@@ -77,14 +81,14 @@
                     <StackPanel>
                         <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#7A5200"
                                    Text="Bitte eine Beschreibung eingeben oder ein Produkt wählen. Ohne Angabe lässt sich die Eingabe später kaum nachvollziehen."/>
-                        <Button Content="Trotzdem ohne Angabe hinzufügen" Margin="0,10,0,0" HorizontalAlignment="Left"
-                                Click="WithoutDescription_Click"/>
+                        <Button x:Name="WithoutDescriptionButton" Content="Trotzdem ohne Angabe hinzufügen" Margin="0,10,0,0"
+                                HorizontalAlignment="Left" Click="WithoutDescription_Click"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" Height="50" Margin="0,18,0,0">
+        <Grid Grid.Row="2" Height="50" Margin="24,18,24,24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="10"/>

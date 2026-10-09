@@ -1,10 +1,8 @@
 using KerwaKasse.Helper;
-using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.ViewModel;
 using ModernWpf.Controls;
 using ModernWpf.Controls.Primitives;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -56,7 +54,6 @@ namespace KerwaKasse.MVVM.View
             if (e.NewValue is OrderHistoryViewModel vm)
             {
                 _vm = vm;
-                vm.ShowAddPositionPicker = ShowAddPositionPicker;
                 vm.PropertyChanged += Vm_PropertyChanged;
             }
         }
@@ -88,16 +85,6 @@ namespace KerwaKasse.MVVM.View
 
             if (_vm != null)
                 _vm.HasInputError = _validationErrors > 0;
-        }
-
-        // Opens the add-product dialog and reports the chosen product back to the view model.
-        private async void ShowAddPositionPicker(IReadOnlyList<ProductModel> candidates, Action<ProductModel> onPicked)
-        {
-            var dialog = new AddPositionDialog(candidates);
-            var result = await dialog.ShowAsync();
-
-            if ((result == ContentDialogResult.Primary || dialog.Confirmed) && dialog.SelectedProduct != null)
-                onPicked(dialog.SelectedProduct);
         }
 
         // Clicking empty space keeps WPF keyboard focus where it is, so a control's own LostFocus
