@@ -736,8 +736,9 @@
                         <!-- Weitere Einstellungen: options most products never need, folded away so they are
                              not switched on in passing. Unfolded right away for a product that uses one. -->
                         <StackPanel>
+                            <!-- The caption lives in the template, so screen readers get the name explicitly. -->
                             <ToggleButton IsChecked="{Binding DetailPanel.ShowMoreSettings, Mode=TwoWay}"
-                                          HorizontalAlignment="Left" Cursor="Hand">
+                                          HorizontalAlignment="Left" Cursor="Hand" AutomationProperties.Name="Weitere Einstellungen">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border Background="Transparent" Padding="0,4">
@@ -766,7 +767,8 @@
                                 <StackPanel>
                                     <DockPanel>
                                         <ui:ToggleSwitch DockPanel.Dock="Left" IsOn="{Binding DetailPanel.VariablePrice, Mode=TwoWay}"
-                                                         OnContent="" OffContent="" MinWidth="0" Width="44" VerticalAlignment="Center"/>
+                                                         OnContent="" OffContent="" MinWidth="0" Width="44" VerticalAlignment="Center"
+                                                         AutomationProperties.Name="Variabler Preis"/>
                                         <TextBlock Text="Variabler Preis" FontSize="15" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </DockPanel>
                                     <TextBlock FontSize="12.5" Foreground="#6B7178" TextWrapping="Wrap" Margin="54,4,0,0"
