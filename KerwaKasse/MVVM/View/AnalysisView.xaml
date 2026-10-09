@@ -577,8 +577,8 @@
                                                                     <ColumnDefinition Width="100"/>
                                                                     <ColumnDefinition Width="105"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <!-- Indented to the name above (swatch + gap). -->
-                                                                <TextBlock Text="{Binding Name}" FontSize="13.5" Margin="23,0,8,0" VerticalAlignment="Center"
+                                                                <!-- Indented a little further than the name above (swatch + gap + 12), as in the PDF. -->
+                                                                <TextBlock Text="{Binding Name}" FontSize="13.5" Margin="35,0,8,0" VerticalAlignment="Center"
                                                                            TextWrapping="Wrap">
                                                                     <TextBlock.Style>
                                                                         <Style TargetType="TextBlock">
