@@ -460,4 +460,26 @@ public class AnalysisViewModelTests
         sut.ProductFilter.Single(p => p.IsFreeEntries).IsSelected = true;
         Assert.False(sut.HasActiveAnalysis);
     }
+
+    [Fact]
+    public void ExportPdf_OffersTheDetailsPage_WhenThereAreSpecialPricesOrFreeEntries()
+    {
+        WithAllKinds();
+        var sut = CreateSut();
+
+        sut.ExportPdfCommand.Execute(null);
+
+        _dialog.Received(1).ShowPdfExportAsync("Benutzerdefiniert", true);
+    }
+
+    [Fact]
+    public void ExportPdf_WithoutSpecialPricesOrFreeEntries_DoesNotOfferTheDetailsPage()
+    {
+        WithFigures(new SalesFigure { ProductId = 1, ProductName = "Bratwurst", TotalAmount = 10, TotalRevenue = 30.00m });
+        var sut = CreateSut();
+
+        sut.ExportPdfCommand.Execute(null);
+
+        _dialog.Received(1).ShowPdfExportAsync("Benutzerdefiniert", false);
+    }
 }

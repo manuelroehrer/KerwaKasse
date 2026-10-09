@@ -174,6 +174,47 @@ namespace KerwaKasse.Helper
             return value.Length == 0 ? null : value;
         }
 
+        public async Task<PdfExportOptions> ShowPdfExportAsync(string title, bool offerDetails)
+        {
+            var titleBox = new TextBox
+            {
+                Text = title ?? string.Empty,
+                MaxLength = 40,
+                FontSize = 15,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            var detailsBox = new CheckBox
+            {
+                Content = "Sonderpreise und Freie Eingaben einzeln auflisten",
+                FontSize = 14.5,
+                Margin = new Thickness(0, 14, 0, 0)
+            };
+
+            var panel = new StackPanel { MinWidth = 320 };
+            panel.Children.Add(new TextBlock { Text = "Titel (erscheint als Überschrift im PDF)", FontSize = 13, Foreground = System.Windows.Media.Brushes.Gray });
+            panel.Children.Add(titleBox);
+            // Only offered when the analysis has special prices or free entries to list.
+            if (offerDetails)
+                panel.Children.Add(detailsBox);
+
+            var dialog = new ContentDialog
+            {
+                Title = "PDF exportieren",
+                Content = panel,
+                PrimaryButtonText = "Exportieren",
+                CloseButtonText = "Abbrechen",
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            titleBox.Loaded += (_, _) => { titleBox.SelectAll(); titleBox.Focus(); };
+
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                return null;
+
+            var value = titleBox.Text?.Trim() ?? string.Empty;
+            return value.Length == 0 ? null : new PdfExportOptions(value, offerDetails && detailsBox.IsChecked == true);
+        }
+
         public async Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, DatabaseFileCheck> checkBackup)
         {
             var errorBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));

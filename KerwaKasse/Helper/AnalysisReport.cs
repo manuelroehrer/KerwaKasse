@@ -20,6 +20,9 @@ namespace KerwaKasse.Helper
         /// <summary>The table rows in the currently chosen sort order.</summary>
         public IReadOnlyList<AnalysisSalesRow> Rows { get; init; } = Array.Empty<AnalysisSalesRow>();
 
+        /// <summary>Whether a page with the details of the special price and free entries rows is appended.</summary>
+        public bool IncludeDetails { get; init; }
+
         public int TotalAmount { get; init; }
         public decimal TotalRevenue { get; init; }
 

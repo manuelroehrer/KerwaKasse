@@ -28,6 +28,10 @@ namespace KerwaKasse.Helper
     /// null when it was added without a description.</summary>
     public record FreeEntryResult(decimal Amount, string Note, ProductModel Product);
 
+    /// <summary>What was chosen in the PDF export dialog: the document's <paramref name="Title"/> and whether
+    /// the special prices and free entries are appended in detail.</summary>
+    public record PdfExportOptions(string Title, bool IncludeDetails);
+
     /// <summary>What was picked in the history's "Position nachtragen" dialog: a <paramref name="Product"/>,
     /// or "Freie Eingabe" when it is null.</summary>
     public record AddPositionChoice(ProductModel Product)
@@ -51,6 +55,11 @@ namespace KerwaKasse.Helper
         /// warning box used on the info page, below an optional <paramref name="message"/> and above an
         /// optional <paramref name="question"/> shown after the box. Returns true if confirmed.</summary>
         Task<bool> ShowWarningConfirmationAsync(string title, string message, string warning, string question = null);
+
+        /// <summary>Asks for the title of the analysis PDF, starting from <paramref name="title"/>, and, when
+        /// <paramref name="offerDetails"/> is set, whether to append the special prices and free entries in
+        /// detail (off by default). Returns null when cancelled or the title was left empty.</summary>
+        Task<PdfExportOptions> ShowPdfExportAsync(string title, bool offerDetails);
 
         /// <summary>Shows the Speisekarten management dialog for the given view model.</summary>
         Task ShowMenuManagementAsync(MenuManagementViewModel viewModel);

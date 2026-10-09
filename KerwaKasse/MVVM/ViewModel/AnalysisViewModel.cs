@@ -807,8 +807,9 @@ namespace KerwaKasse.MVVM.ViewModel
         // ── PDF export (QuestPDF writes the .pdf file directly) ──
 
         /// <summary>Asks for a report title (pre-filled with the active analysis' name, or
-        /// "Benutzerdefiniert"), then exports the shown breakdown to a PDF via the save dialog and
-        /// opens it. The chosen title is both the document's heading and the suggested file name.</summary>
+        /// "Benutzerdefiniert") and, when there are special prices or free entries, whether to append
+        /// them in detail; then exports the shown breakdown to a PDF via the save dialog and opens it.
+        /// The chosen title is both the document's heading and the suggested file name.</summary>
         private async Task ExportPdfAsync()
         {
             if (Breakdown.Count == 0)
@@ -817,9 +818,9 @@ namespace KerwaKasse.MVVM.ViewModel
                 return;
             }
 
-            var title = await _dialogService.ShowTextInputAsync(
-                "PDF exportieren", "Titel (erscheint als Überschrift im PDF)", ActiveAnalysisText);
-            if (string.IsNullOrEmpty(title)) return; // cancelled or left empty
+            var options = await _dialogService.ShowPdfExportAsync(ActiveAnalysisText, Breakdown.Any(r => r.HasDetails));
+            if (options == null) return; // cancelled or left empty
+            string title = options.Title;
 
             try
             {
@@ -830,7 +831,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", suggestedName, dir);
                 if (string.IsNullOrEmpty(path)) return;
 
-                AnalysisQuestPdfExporter.Export(BuildReport(title), path);
+                AnalysisQuestPdfExporter.Export(BuildReport(title, options.IncludeDetails), path);
                 _logger.LogInformation("Analysis exported to PDF: {FilePath}", path);
 
                 // Open the fresh PDF in the default viewer right away — after "save as PDF" the
@@ -845,7 +846,7 @@ namespace KerwaKasse.MVVM.ViewModel
         }
 
         /// <summary>Snapshot of the shown breakdown (current sort order) with the user-chosen title.</summary>
-        private AnalysisReport BuildReport(string title)
+        private AnalysisReport BuildReport(string title, bool includeDetails)
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             return new AnalysisReport
@@ -854,6 +855,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 Period = $"{_currentFrom.ToString("dd.MM.yyyy HH:mm", German)} – {_currentTo.ToString("dd.MM.yyyy HH:mm", German)} Uhr",
                 ProductSummary = ProductFilterSummary,
                 Rows = Breakdown.ToList(),
+                IncludeDetails = includeDetails,
                 TotalAmount = TotalAmount,
                 TotalRevenue = TotalRevenue,
                 AppVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "?"
