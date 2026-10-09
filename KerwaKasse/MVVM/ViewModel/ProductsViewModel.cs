@@ -225,7 +225,7 @@ namespace KerwaKasse.MVVM.ViewModel
             foreach (var p in coreProducts)
             {
                 Products.Add(new ProductListItemViewModel(
-                    p.Id, p.Name, p.Price, p.Color, p.Available,
+                    p.Id, p.Name, p.Price, p.VariablePrice, p.Color, p.Available,
                     OnProductAvailabilityToggled));
             }
 
@@ -281,7 +281,7 @@ namespace KerwaKasse.MVVM.ViewModel
             var p = _productService.GetAll().First(x => x.Id == productId);
             int usageCount = _productService.GetUsageCount(productId);
             DetailPanel = new ProductDetailViewModel(
-                p.Id, p.Name, p.Price, p.Color, p.Available, usageCount, isNew: false);
+                p.Id, p.Name, p.Price, p.Color, p.Available, usageCount, isNew: false, variablePrice: p.VariablePrice);
         }
 
         /// <summary>Returns to the "no product selected" placeholder.</summary>
@@ -324,6 +324,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 {
                     Name = DetailPanel.Name.Trim(),
                     Price = price,
+                    VariablePrice = DetailPanel.VariablePrice,
                     Available = DetailPanel.Available,
                     Color = DetailPanel.ColorAsString
                 });
@@ -339,6 +340,7 @@ namespace KerwaKasse.MVVM.ViewModel
                     Id = DetailPanel.ProductId,
                     Name = DetailPanel.Name.Trim(),
                     Price = price,
+                    VariablePrice = DetailPanel.VariablePrice,
                     Available = DetailPanel.Available,
                     Color = DetailPanel.ColorAsString,
                     SortOrder = sortOrder

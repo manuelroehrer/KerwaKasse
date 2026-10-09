@@ -299,6 +299,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 ProductID = p.Id,
                 Name = p.Name,
                 Price = p.Price,
+                VariablePrice = p.VariablePrice,
                 Available = p.Available,
                 ColorAsString = p.Color,
                 PositionNumber = p.SortOrder

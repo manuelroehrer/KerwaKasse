@@ -14,6 +14,7 @@
              IsPrimaryButtonEnabled="False">
     <ui:ContentDialog.Resources>
         <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
+        <helper:ProductPriceTextConverter x:Key="ProductPriceText"/>
         <FontFamily x:Key="PriceFont">Cascadia Mono, Consolas</FontFamily>
     </ui:ContentDialog.Resources>
     <Grid Width="360">
@@ -58,9 +59,16 @@
                                 Background="{Binding Color}" BorderThickness="1" VerticalAlignment="Center"
                                 BorderBrush="{Binding Color, Converter={StaticResource FixedColorBorder}}"/>
                         <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Grid.Column="2" Text="{Binding Price, StringFormat={}{0:C}}" FontSize="15"
+                        <TextBlock Grid.Column="2" FontSize="15"
                                    FontFamily="{StaticResource PriceFont}"
-                                   Foreground="#707070" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                   Foreground="#707070" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource ProductPriceText}">
+                                    <Binding Path="Price"/>
+                                    <Binding Path="VariablePrice"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>

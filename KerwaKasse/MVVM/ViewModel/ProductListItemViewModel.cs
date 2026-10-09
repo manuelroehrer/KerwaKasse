@@ -14,6 +14,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public int ProductId { get; }
         public string Name { get; }
         public decimal Price { get; }
+        public bool VariablePrice { get; }
         public string ColorAsString { get; }
         public Brush ColorBrush { get; }
 
@@ -36,6 +37,7 @@ namespace KerwaKasse.MVVM.ViewModel
             int productId,
             string description,
             decimal price,
+            bool variablePrice,
             string colorAsString,
             bool available,
             Action<int, bool> onAvailableChanged)
@@ -43,6 +45,7 @@ namespace KerwaKasse.MVVM.ViewModel
             ProductId = productId;
             Name = description;
             Price = price;
+            VariablePrice = variablePrice;
             ColorAsString = colorAsString ?? "#CCCCCC";
             ColorBrush = ParseBrush(ColorAsString);
             _available = available;

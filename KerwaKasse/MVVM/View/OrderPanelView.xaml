@@ -13,6 +13,7 @@
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"/>
         <helper:BrushColoredBorderConverter x:Key="BrushColoredBorderConverter"/>
         <helper:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <helper:ProductPriceTextConverter x:Key="ProductPriceText"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Captures this view's DataContext so the tiles' ScaleTransform (not in the visual tree,
@@ -63,11 +64,17 @@
                                    helper:AutoFitTextBlock.Enabled="True"
                                    helper:AutoFitTextBlock.MaxFontSize="20"
                                    helper:AutoFitTextBlock.MinFontSize="11"/>
-                        <TextBlock Text="{Binding Price, StringFormat={}{0:C}}"
-                                   Foreground="#606060"
+                        <TextBlock Foreground="#606060"
                                    FontFamily="{StaticResource PriceFont}"
                                    Margin="0,4,0,0"
-                                   FontSize="13"/>
+                                   FontSize="13">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource ProductPriceText}">
+                                    <Binding Path="Price"/>
+                                    <Binding Path="VariablePrice"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                     </StackPanel>
                 </Grid>
             </Border>

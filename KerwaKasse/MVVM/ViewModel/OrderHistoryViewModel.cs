@@ -43,7 +43,7 @@ namespace KerwaKasse.MVVM.ViewModel
             _productService = productService;
 
             _allProducts = _productService.GetAll()
-                .Select(p => new ProductModel { ProductID = p.Id, Name = p.Name, Price = p.Price, ColorAsString = p.Color })
+                .Select(p => new ProductModel { ProductID = p.Id, Name = p.Name, Price = p.Price, VariablePrice = p.VariablePrice, ColorAsString = p.Color })
                 .ToList();
 
             Orders = new ObservableCollection<OrderModel>();

@@ -13,6 +13,7 @@
         <helper:DoubleToGridLengthConverter x:Key="DoubleToGridLength"/>
         <helper:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
         <helper:FixedColorBorderConverter x:Key="FixedColorBorder"/>
+        <helper:ProductPriceTextConverter x:Key="ProductPriceText"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Validation: keep the field in place, show errors manually below -->
@@ -73,12 +74,13 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Table row content: colour swatch + name, price, availability toggle. -->
+        <!-- Table row content: colour swatch + name, price, availability toggle. The price column (also in
+             the header) is wide enough for "ca. 100,00 €" of a product whose price is entered at the sale. -->
         <DataTemplate x:Key="ProductRowTemplate">
             <Grid Height="52">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="96"/>
+                    <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="120"/>
                 </Grid.ColumnDefinitions>
 
@@ -98,10 +100,17 @@
                 </Grid>
 
                 <!-- Price -->
-                <TextBlock x:Name="PriceText" Grid.Column="1" Text="{Binding Price, StringFormat={}{0:C}}"
+                <TextBlock x:Name="PriceText" Grid.Column="1"
                            FontFamily="{StaticResource PriceFont}"
                            FontSize="15" Foreground="#555555" VerticalAlignment="Center"
-                           HorizontalAlignment="Right" Margin="0,0,10,0"/>
+                           HorizontalAlignment="Right" Margin="0,0,10,0">
+                    <TextBlock.Text>
+                        <MultiBinding Converter="{StaticResource ProductPriceText}">
+                            <Binding Path="Price"/>
+                            <Binding Path="VariablePrice"/>
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
 
                 <!-- Availability toggle (never greyed out), centered under the column -->
                 <ui:ToggleSwitch Grid.Column="2" IsOn="{Binding Available, Mode=TwoWay}"
@@ -337,7 +346,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="96"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="120"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="PRODUKT" Style="{StaticResource CaptionText}"
@@ -566,7 +575,7 @@
 
                         <!-- Price -->
                         <StackPanel Margin="0,0,0,18">
-                            <TextBlock Text="PREIS" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding DetailPanel.PriceLabel}" Style="{StaticResource FieldLabel}"/>
                             <Grid>
                                 <TextBox x:Name="PriceTextBox"
                                          Text="{Binding DetailPanel.PriceText, Mode=TwoWay,
@@ -587,6 +596,10 @@
                                        Text="{Binding (Validation.Errors)/ErrorContent, ElementName=PriceTextBox}"
                                        Visibility="{Binding (Validation.HasError), ElementName=PriceTextBox,
                                                             Converter={StaticResource BoolToVisibility}}"/>
+                            <!-- Points to where the option lives, since the price above is only a suggestion then. -->
+                            <TextBlock FontSize="12" Foreground="{DynamicResource AppAccentBrush}" Margin="0,5,0,0"
+                                       Text="Variabler Preis, siehe Weitere Einstellungen"
+                                       Visibility="{Binding DetailPanel.VariablePrice, Converter={StaticResource BoolToVisibility}}"/>
                         </StackPanel>
 
                         <!-- Colour -->
@@ -676,7 +689,8 @@
                         </StackPanel>
 
                         <!-- Sort order (hidden when adding a new product) -->
-                        <StackPanel Visibility="{Binding IsAddingNew, Converter={StaticResource InverseBoolToVisibility}}">
+                        <StackPanel Margin="0,0,0,18"
+                                    Visibility="{Binding IsAddingNew, Converter={StaticResource InverseBoolToVisibility}}">
                             <TextBlock Text="REIHENFOLGE" Style="{StaticResource FieldLabel}"/>
                             <Grid>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -717,6 +731,48 @@
                                              LostFocus="PositionInputBox_LostFocus"/>
                                 </Grid>
                             </Grid>
+                        </StackPanel>
+
+                        <!-- Weitere Einstellungen: options most products never need, folded away so they are
+                             not switched on in passing. Unfolded right away for a product that uses one. -->
+                        <StackPanel>
+                            <ToggleButton IsChecked="{Binding DetailPanel.ShowMoreSettings, Mode=TwoWay}"
+                                          HorizontalAlignment="Left" Cursor="Hand">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent" Padding="0,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="11" Foreground="#5A6270" VerticalAlignment="Center" Margin="0,1,8,0"/>
+                                                <TextBlock x:Name="Caption" Text="Weitere Einstellungen" FontSize="14"
+                                                           Foreground="#5A6270" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Chevron" Property="Foreground" Value="#1B1E24"/>
+                                                <Setter TargetName="Caption" Property="Foreground" Value="#1B1E24"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <Border BorderBrush="#E4E6E9" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,12,0,0"
+                                    Visibility="{Binding DetailPanel.ShowMoreSettings, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <ui:ToggleSwitch DockPanel.Dock="Left" IsOn="{Binding DetailPanel.VariablePrice, Mode=TwoWay}"
+                                                         OnContent="" OffContent="" MinWidth="0" Width="44" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Variabler Preis" FontSize="15" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    </DockPanel>
+                                    <TextBlock FontSize="12.5" Foreground="#6B7178" TextWrapping="Wrap" Margin="54,4,0,0"
+                                               Text="Der konkrete Preis muss bei jedem Verkauf an der Kasse eingegeben werden. Der Preis oben wird dabei vorgeschlagen."/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
 
                     </StackPanel>
