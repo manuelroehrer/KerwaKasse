@@ -250,6 +250,18 @@ public class AnalysisViewModelTests
     }
 
     [Fact]
+    public void TimeCourseYAxis_UsesWholeNumberSteps()
+    {
+        var sut = CreateSut();
+
+        // A fractional auto step (e.g. 0.5 for a few pieces) printed through the integer labeler
+        // showed repeated labels like "0, 0, 1, 2, 2".
+        var axis = Assert.Single(sut.TimeCourseYAxes);
+        Assert.Equal(1, axis.MinStep);
+        Assert.False(axis.ForceStepToMin); // large counts keep their wider auto step
+    }
+
+    [Fact]
     public void SaveCurrent_PersistsAnalysisFromCurrentState()
     {
         _dialog.ShowTextInputAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())

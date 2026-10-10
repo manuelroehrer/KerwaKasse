@@ -307,7 +307,9 @@ namespace KerwaKasse.MVVM.ViewModel
         // column chart animates smoothly instead of resetting to zero each time it is shown again.
         private readonly ColumnSeries<double> _timeCourseColumn;
         private readonly Axis _timeCourseXAxis = new() { TextSize = 12 };
-        private readonly Axis _timeCourseYAxis = new() { MinLimit = 0, TextSize = 12, Labeler = v => ((int)Math.Round(v)).ToString() };
+        // Quantities are whole pieces: MinStep keeps LiveCharts from picking a fractional step for
+        // small counts, which the integer labeler would otherwise print as repeated labels (0, 0, 1, 2, 2 …).
+        private readonly Axis _timeCourseYAxis = new() { MinLimit = 0, MinStep = 1, TextSize = 12, Labeler = v => ((int)Math.Round(v)).ToString() };
         public ISeries[] TimeCourseSeries { get; }
         public Axis[] TimeCourseXAxes { get; }
         public Axis[] TimeCourseYAxes { get; }
