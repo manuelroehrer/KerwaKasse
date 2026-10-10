@@ -31,6 +31,49 @@ public class ProductDetailViewModelTests
     }
 
     [Fact]
+    public void VariablePrice_CountsAsChange_AndRenamesThePriceField()
+    {
+        var vm = ExistingProduct();
+        Assert.Equal("PREIS", vm.PriceLabel);
+
+        vm.VariablePrice = true;
+
+        Assert.True(vm.IsDirty);
+        Assert.Equal("VORSCHLAGSPREIS", vm.PriceLabel);
+    }
+
+    [Fact]
+    public void MoreSettings_AreFoldedByDefault_AndOpenForAVariablePriceProduct()
+    {
+        Assert.False(ExistingProduct().ShowMoreSettings);
+        Assert.False(NewProduct().ShowMoreSettings);
+
+        var variable = new ProductDetailViewModel(productId: 2, description: "Makrele", price: 7m,
+            colorAsString: "#00FF00", available: true, usageCount: 0, isNew: false, variablePrice: true);
+        Assert.True(variable.ShowMoreSettings);
+
+        // Switching the option off leaves the section open, so the switch doesn't jump away.
+        variable.VariablePrice = false;
+        Assert.True(variable.ShowMoreSettings);
+    }
+
+    [Fact]
+    public void VariablePrice_NeedsASuggestionAboveZero()
+    {
+        var vm = NewProduct();
+        vm.Name = "Makrele";
+        Assert.False(vm.HasErrors); // zero is fine for a fixed price
+
+        vm.VariablePrice = true;
+        Assert.True(vm.HasErrors);
+        Assert.NotEqual(string.Empty, vm["PriceText"]);
+
+        vm.PriceText = "7,00";
+        Assert.False(vm.HasErrors);
+        Assert.Equal(string.Empty, vm["PriceText"]);
+    }
+
+    [Fact]
     public void ValidProduct_HasNoErrors()
     {
         var vm = ExistingProduct();

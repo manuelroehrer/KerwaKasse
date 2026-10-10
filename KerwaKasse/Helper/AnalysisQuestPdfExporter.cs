@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using KerwaKasse.MVVM.Model;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -19,6 +21,7 @@ namespace KerwaKasse.Helper
         private const string TextGray = "#6B7280";
         private const string LineGray = "#D5D9DE";
         private const string ZebraGray = "#F4F6F8";
+        private const string WithoutDescription = "#B26A00";
 
         static AnalysisQuestPdfExporter()
         {
@@ -40,6 +43,15 @@ namespace KerwaKasse.Helper
                 {
                     col.Item().Element(c => ComposeHeader(c, report));
                     col.Item().PaddingTop(16).Element(c => ComposeTable(c, report));
+
+                    // The details of the special price and free entries rows on a page of their own.
+                    var detailed = report.Rows.Where(r => r.HasDetails).ToList();
+                    if (report.IncludeDetails && detailed.Count > 0)
+                    {
+                        col.Item().PageBreak();
+                        col.Item().Element(c => ComposeDetailsHeader(c, report));
+                        col.Item().PaddingTop(16).Element(c => ComposeDetailsTable(c, detailed));
+                    }
                 });
                 page.Footer().Element(c => ComposeFooter(c, report));
             })).GeneratePdf(path);
@@ -66,6 +78,7 @@ namespace KerwaKasse.Helper
                     columns.ConstantColumn(22);  // colour swatch
                     columns.RelativeColumn();    // product name
                     columns.ConstantColumn(70);  // amount
+                    columns.ConstantColumn(75);  // unit price
                     columns.ConstantColumn(95);  // revenue
                 });
 
@@ -74,6 +87,7 @@ namespace KerwaKasse.Helper
                     header.Cell().Element(HeaderCell);
                     header.Cell().Element(HeaderCell).Text("Produkt").SemiBold();
                     header.Cell().Element(HeaderCell).AlignRight().Text("Menge").SemiBold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Einzelpreis").SemiBold();
                     header.Cell().Element(HeaderCell).AlignRight().Text("Umsatz").SemiBold();
                 });
 
@@ -88,13 +102,71 @@ namespace KerwaKasse.Helper
                         .Border(0.8f).BorderColor(Hex(row.ColorBorderBrush, LineGray));
                     table.Cell().Element(c => BodyCell(c, zebra)).Text(row.Name);
                     table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.Amount.ToString(German));
+                    table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.UnitPriceText);
                     table.Cell().Element(c => BodyCell(c, zebra)).AlignRight().Text(row.Revenue.ToString("C", German));
                 }
 
                 table.Cell().Element(TotalCell);
                 table.Cell().Element(TotalCell).Text("Gesamt").SemiBold();
                 table.Cell().Element(TotalCell).AlignRight().Text(report.TotalAmount.ToString(German)).SemiBold();
+                table.Cell().Element(TotalCell);
                 table.Cell().Element(TotalCell).AlignRight().Text(report.TotalRevenue.ToString("C", German)).SemiBold();
+            });
+        }
+
+        // A section heading, deliberately quieter than the document's title on the first page.
+        private static void ComposeDetailsHeader(IContainer container, AnalysisReport report)
+        {
+            container.Column(col =>
+            {
+                col.Item().Text("Sonderpreise und Freie Eingaben").FontSize(12.5f).SemiBold();
+                col.Item().PaddingTop(2).Text($"{report.AnalysisName} · {report.Period}").FontSize(9.5f).FontColor(TextGray);
+            });
+        }
+
+        /// <summary>Each special price and free entries row as a heading, followed by its descriptions and
+        /// prices (as when the row is expanded in the app). The headings and the page carry no totals: those
+        /// stay in the table on the first page, so nothing reads as if it came on top.</summary>
+        private static void ComposeDetailsTable(IContainer container, IReadOnlyList<AnalysisSalesRow> rows)
+        {
+            container.Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(22);  // colour swatch
+                    columns.RelativeColumn();    // name / description
+                    columns.ConstantColumn(70);  // amount
+                    columns.ConstantColumn(75);  // unit price
+                    columns.ConstantColumn(95);  // revenue
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Element(HeaderCell);
+                    header.Cell().Element(HeaderCell).Text("Beschreibung").SemiBold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Menge").SemiBold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Einzelpreis").SemiBold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Umsatz").SemiBold();
+                });
+
+                foreach (var row in rows)
+                {
+                    table.Cell().Element(GroupCell).AlignMiddle()
+                        .Width(9).Height(9)
+                        .Background(Hex(row.ColorBrush, "#D3D3D3"))
+                        .Border(0.8f).BorderColor(Hex(row.ColorBorderBrush, LineGray));
+                    table.Cell().ColumnSpan(4).Element(GroupCell).Text(row.Name).SemiBold();
+
+                    foreach (var detail in row.Details)
+                    {
+                        table.Cell().Element(DetailCell);
+                        table.Cell().Element(DetailCell).PaddingLeft(10).Text(detail.Name)
+                            .FontColor(detail.IsWithoutDescription ? WithoutDescription : TextDark);
+                        table.Cell().Element(DetailCell).AlignRight().Text(detail.Amount.ToString(German));
+                        table.Cell().Element(DetailCell).AlignRight().Text(detail.UnitPriceText);
+                        table.Cell().Element(DetailCell).AlignRight().Text(detail.Revenue.ToString("C", German));
+                    }
+                }
             });
         }
 
@@ -124,6 +196,13 @@ namespace KerwaKasse.Helper
             if (zebra) c = c.Background(ZebraGray);
             return c.PaddingVertical(4.5f).PaddingHorizontal(3);
         }
+
+        // A row of the details page: a line above each group, the descriptions below it without one.
+        private static IContainer GroupCell(IContainer c) =>
+            c.BorderTop(0.8f).BorderColor(LineGray).PaddingTop(7).PaddingBottom(3).PaddingHorizontal(3);
+
+        private static IContainer DetailCell(IContainer c) =>
+            c.PaddingVertical(3).PaddingHorizontal(3);
 
         private static IContainer TotalCell(IContainer c) =>
             c.BorderTop(1).BorderColor(LineGray).PaddingVertical(6).PaddingHorizontal(3);

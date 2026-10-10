@@ -10,6 +10,7 @@ public class SqliteOrderServiceTests : IDisposable
     private readonly SqliteConnection _keepAlive;
     private readonly SqliteOrderService _sut;
     private readonly SqliteProductService _productService;
+    private readonly SqliteAnalyticsService _analytics;
     private readonly string _connectionString;
 
     public SqliteOrderServiceTests()
@@ -20,6 +21,7 @@ public class SqliteOrderServiceTests : IDisposable
         DatabaseInitializer.Initialize(_connectionString);
         _sut = new SqliteOrderService(_connectionString, NullLogger<SqliteOrderService>.Instance);
         _productService = new SqliteProductService(_connectionString, NullLogger<SqliteProductService>.Instance);
+        _analytics = new SqliteAnalyticsService(_connectionString);
     }
 
     private Product AddTestProduct(string desc = "Bratwurst", decimal price = 3.50m)
@@ -130,7 +132,7 @@ public class SqliteOrderServiceTests : IDisposable
 
         var from = DateTime.Today;
         var to = DateTime.Today.AddDays(1);
-        var figures = _sut.GetSalesFigures(from, to);
+        var figures = _analytics.GetSalesFigures(from, to, null);
 
         var bratwurst = figures.First(f => f.ProductName == "Bratwurst");
         Assert.Equal(5, bratwurst.TotalAmount);       // 2 + 3
@@ -146,7 +148,7 @@ public class SqliteOrderServiceTests : IDisposable
     {
         var from = DateTime.Today;
         var to = DateTime.Today.AddDays(1);
-        var figures = _sut.GetSalesFigures(from, to);
+        var figures = _analytics.GetSalesFigures(from, to, null);
 
         Assert.Empty(figures);
     }
@@ -189,7 +191,7 @@ public class SqliteOrderServiceTests : IDisposable
             p => Assert.Equal("Currywurst und Pommes", p.ProductName));
 
         // Statistics aggregate into a single row per ProductId (not split by name).
-        var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1));
+        var figures = _analytics.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1), null);
         var row = Assert.Single(figures);
         Assert.Equal(product.Id, row.ProductId);
         Assert.Equal("Currywurst und Pommes", row.ProductName);
@@ -206,7 +208,7 @@ public class SqliteOrderServiceTests : IDisposable
         for (int i = 0; i < 3; i++)
             _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = product.Price } });
 
-        var figures = _sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1));
+        var figures = _analytics.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1), null);
         var row = Assert.Single(figures);
         Assert.Equal(3, row.TotalAmount);
         Assert.Equal(0.30m, row.TotalRevenue);
@@ -273,7 +275,7 @@ public class SqliteOrderServiceTests : IDisposable
 
         Assert.Empty(_sut.GetOrdersByDate(DateTime.Today));
         // The deleted order no longer contributes to the sales figures either.
-        Assert.Empty(_sut.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1)));
+        Assert.Empty(_analytics.GetSalesFigures(DateTime.Today, DateTime.Today.AddDays(1), null));
     }
 
     [Fact]
@@ -289,6 +291,97 @@ public class SqliteOrderServiceTests : IDisposable
         var remaining = _sut.GetOrdersByDate(DateTime.Today);
         Assert.Single(remaining);
         Assert.Equal(orders[1].Id, remaining[0].Id);
+    }
+
+    [Fact]
+    public void PlaceOrder_RegularPosition_StoresKindAndListPrice()
+    {
+        var product = AddTestProduct("Bratwurst", 3.50m);
+
+        _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = 3.50m, ListPrice = 3.50m } });
+
+        var position = _sut.GetOrdersByDate(DateTime.Today)[0].Positions[0];
+        Assert.Equal(OrderPositionKind.Regular, position.Kind);
+        Assert.Equal(3.50m, position.ListPrice);
+        Assert.Null(position.Note);
+        Assert.True(position.Id > 0);
+    }
+
+    [Fact]
+    public void PlaceOrder_SameProductAtDifferentPrices_KeepsSeparatePositions()
+    {
+        // A variable-price product sold twice in one order: one position per price.
+        var mackerel = AddTestProduct("Makrele", 7.00m);
+
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = mackerel.Id, Kind = OrderPositionKind.VariablePrice, Amount = 1, UnitPrice = 8.50m, ListPrice = 7.00m },
+            new OrderPosition { ProductId = mackerel.Id, Kind = OrderPositionKind.VariablePrice, Amount = 2, UnitPrice = 9.00m, ListPrice = 7.00m }
+        });
+
+        var positions = _sut.GetOrdersByDate(DateTime.Today)[0].Positions;
+        Assert.Equal(2, positions.Count);
+        Assert.All(positions, p => Assert.Equal(OrderPositionKind.VariablePrice, p.Kind));
+        Assert.Equal(new[] { 8.50m, 9.00m }, positions.Select(p => p.UnitPrice));
+        Assert.Equal(26.50m, _sut.GetOrdersByDate(DateTime.Today)[0].Total);
+    }
+
+    [Fact]
+    public void PlaceOrder_FreeEntryWithoutProduct_RoundTrips()
+    {
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.50m, Note = "  Kuchen " } });
+
+        var position = _sut.GetOrdersByDate(DateTime.Today)[0].Positions[0];
+        Assert.Null(position.ProductId);
+        Assert.Equal(OrderPositionKind.FreeEntry, position.Kind);
+        Assert.Equal(string.Empty, position.ProductName);
+        Assert.Equal("Kuchen", position.Note); // trimmed
+        Assert.Null(position.ListPrice);
+        Assert.Equal(2.50m, position.UnitPrice);
+    }
+
+    [Fact]
+    public void PlaceOrder_FreeEntryWithoutDescription_StoresNoNote()
+    {
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.50m, Note = "   " } });
+
+        Assert.Null(_sut.GetOrdersByDate(DateTime.Today)[0].Positions[0].Note);
+    }
+
+    [Fact]
+    public void ReplaceOrderPositions_KeepsKindListPriceAndNote()
+    {
+        var product = AddTestProduct("Käsespätzle", 7.50m);
+        _sut.PlaceOrder(new[]
+        {
+            new OrderPosition { ProductId = product.Id, Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 4.00m, ListPrice = 7.50m, Note = "halbe Portion" }
+        });
+
+        var order = _sut.GetOrdersByDate(DateTime.Today)[0];
+        order.Positions[0].Amount = 2;
+        _sut.ReplaceOrderPositions(order);
+
+        var position = _sut.GetOrdersByDate(DateTime.Today)[0].Positions[0];
+        Assert.Equal(2, position.Amount);
+        Assert.Equal(OrderPositionKind.FreeEntry, position.Kind);
+        Assert.Equal(4.00m, position.UnitPrice);
+        Assert.Equal(7.50m, position.ListPrice);
+        Assert.Equal("halbe Portion", position.Note);
+    }
+
+    [Fact]
+    public void GetRecentNotes_ReturnsEachFreeEntryTextOnce_NewestFirst()
+    {
+        var product = AddTestProduct("Bratwurst", 3.50m);
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.00m, Note = "Kuchen" } });
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.00m, Note = "Käse extra" } });
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.00m, Note = "kuchen" } });
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.00m } });
+        _sut.PlaceOrder(new[] { new OrderPosition { ProductId = product.Id, Amount = 1, UnitPrice = 3.50m, Note = "not a free entry" } });
+        _sut.PlaceOrder(new[] { new OrderPosition { Kind = OrderPositionKind.FreeEntry, Amount = 1, UnitPrice = 2.00m, Note = "KÄSE EXTRA" } });
+
+        Assert.Equal(new[] { "KÄSE EXTRA", "kuchen" }, _sut.GetRecentNotes(5));
+        Assert.Equal(new[] { "KÄSE EXTRA" }, _sut.GetRecentNotes(1));
     }
 
     public void Dispose()

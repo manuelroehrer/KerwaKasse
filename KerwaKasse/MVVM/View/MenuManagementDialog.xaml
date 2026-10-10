@@ -8,6 +8,7 @@
              xmlns:helper="clr-namespace:KerwaKasse.Helper"
              mc:Ignorable="d"
              Padding="0"
+             helper:DialogLightDismiss.KeepOpen="{Binding HasUnsavedChanges}"
              d:DesignHeight="800" d:DesignWidth="600">
 
     <ui:ContentDialog.Resources>

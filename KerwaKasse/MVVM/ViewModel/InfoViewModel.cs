@@ -304,10 +304,15 @@ namespace KerwaKasse.MVVM.ViewModel
                 return;
             }
 
-            if (!_backupService.IsValidDatabaseFile(sourcePath))
+            switch (_backupService.CheckDatabaseFile(sourcePath))
             {
-                _dialogService.ShowError("Die gewählte Datei ist keine gültige KerwaKasse-Datenbank.");
-                return;
+                case DatabaseFileCheck.Invalid:
+                    _dialogService.ShowError("Die gewählte Datei ist keine gültige KerwaKasse-Datenbank.");
+                    return;
+                case DatabaseFileCheck.NewerVersion:
+                    _dialogService.ShowError("Die gewählte Sicherung stammt aus einer neueren Version von KerwaKasse " +
+                                             "und kann mit dieser Version nicht wiederhergestellt werden. Bitte KerwaKasse aktualisieren.");
+                    return;
             }
 
             var summary = _backupService.GetSummary();

@@ -35,6 +35,17 @@ public class DatabaseInitializerTests : IDisposable
     }
 
     [Fact]
+    public void Initialize_WritesTheCurrentSchemaVersion()
+    {
+        DatabaseInitializer.Initialize(_connectionString);
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "PRAGMA user_version;";
+
+        Assert.Equal((long)DatabaseMigrator.CurrentVersion, (long)cmd.ExecuteScalar()!);
+    }
+
+    [Fact]
     public void Initialize_IsIdempotent()
     {
         DatabaseInitializer.Initialize(_connectionString);
@@ -83,13 +94,15 @@ public class DatabaseInitializerTests : IDisposable
     [Fact]
     public void Initialize_BackfillsNullProductColor()
     {
-        // Simulates a row imported from outside the app (e.g. the MySQL migration tool), which the
-        // app itself never produces since it always assigns a colour on product creation.
-        DatabaseInitializer.Initialize(_connectionString);
-        using (var insert = _connection.CreateCommand())
+        // Simulates a row imported from outside the app (e.g. the MySQL migration tool) into a database
+        // without a schema version; the app itself always assigns a colour on product creation.
+        using (var setup = _connection.CreateCommand())
         {
-            insert.CommandText = "INSERT INTO Products (Name, PriceCents, Color) VALUES ('Kinderkrenfleisch', 100, NULL)";
-            insert.ExecuteNonQuery();
+            setup.CommandText = """
+                CREATE TABLE Products (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, PriceCents INTEGER NOT NULL, Available INTEGER NOT NULL DEFAULT 1, Color TEXT, SortOrder INTEGER NOT NULL DEFAULT 0);
+                INSERT INTO Products (Name, PriceCents, Color) VALUES ('Kinderkrenfleisch', 100, NULL);
+                """;
+            setup.ExecuteNonQuery();
         }
 
         DatabaseInitializer.Initialize(_connectionString);

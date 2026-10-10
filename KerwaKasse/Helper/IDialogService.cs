@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using KerwaKasse.Core.Services;
+using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.ViewModel;
 
 namespace KerwaKasse.Helper
@@ -22,11 +23,31 @@ namespace KerwaKasse.Helper
     /// (already validated) backup to import, or null for an empty event.</summary>
     public record NewEventRequest(string Name, string BackupFilePath);
 
+    /// <summary>What was entered in the "Freie Eingabe" dialog: the amount, and what it is for, a
+    /// <paramref name="Note"/> and/or the <paramref name="Product"/> it is a special price for. Both are
+    /// null when it was added without a description.</summary>
+    public record FreeEntryResult(decimal Amount, string Note, ProductModel Product);
+
+    /// <summary>What was chosen in the PDF export dialog: the document's <paramref name="Title"/> and whether
+    /// the special prices and free entries are appended in detail.</summary>
+    public record PdfExportOptions(string Title, bool IncludeDetails);
+
+    /// <summary>What was picked in the history's "Position nachtragen" dialog: a <paramref name="Product"/>,
+    /// or "Freie Eingabe" when it is null.</summary>
+    public record AddPositionChoice(ProductModel Product)
+    {
+        public bool IsFreeEntry => Product == null;
+    }
+
     public interface IDialogService
     {
         void ShowMessage(string message);
         void ShowError(string message);
-        string ShowSaveFileDialog(string filter, string title, string defaultFileName, string initialDirectory = null);
+        /// <summary>Shows a save dialog in the folder something was saved to last (Documents when there is
+        /// none or it is gone), suggesting "<paramref name="baseName"/><paramref name="extension"/>" or, when
+        /// that file exists there already, the same name with " (2)", " (3)", … appended. Remembers the chosen
+        /// folder. Returns the chosen path, or null when cancelled.</summary>
+        string ShowSaveFileDialog(string filter, string title, string baseName, string extension);
 
         /// <summary>Shows an open-file dialog and returns the picked path, or null when cancelled.</summary>
         string ShowOpenFileDialog(string filter, string title);
@@ -39,6 +60,11 @@ namespace KerwaKasse.Helper
         /// optional <paramref name="question"/> shown after the box. Returns true if confirmed.</summary>
         Task<bool> ShowWarningConfirmationAsync(string title, string message, string warning, string question = null);
 
+        /// <summary>Asks for the title of the analysis PDF, starting from <paramref name="title"/>, and, when
+        /// <paramref name="offerDetails"/> is set, whether to append the special prices and free entries in
+        /// detail (off by default). Returns null when cancelled or the title was left empty.</summary>
+        Task<PdfExportOptions> ShowPdfExportAsync(string title, bool offerDetails);
+
         /// <summary>Shows the Speisekarten management dialog for the given view model.</summary>
         Task ShowMenuManagementAsync(MenuManagementViewModel viewModel);
 
@@ -47,9 +73,9 @@ namespace KerwaKasse.Helper
         Task<string> ShowTextInputAsync(string title, string label, string initialValue);
 
         /// <summary>Asks for the name of a new event and whether it starts empty or from a backup file,
-        /// which is picked inside the dialog and checked right away with <paramref name="isValidBackup"/>.
+        /// which is picked inside the dialog and checked right away with <paramref name="checkBackup"/>.
         /// Names already in <paramref name="existingNames"/> are refused. Returns null when cancelled.</summary>
-        Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, bool> isValidBackup);
+        Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, DatabaseFileCheck> checkBackup);
 
         /// <summary>Confirmation for deleting the event <paramref name="eventName"/>: a prominent backup
         /// warning with a button that runs <paramref name="createBackup"/> (returns the saved file's path,
@@ -64,6 +90,24 @@ namespace KerwaKasse.Helper
         /// <summary>Tells the user that <paramref name="update"/> is available (with its release notes)
         /// and lets them install now, skip this version or decide later.</summary>
         Task<UpdateDialogResult> ShowUpdateAvailableAsync(UpdateInfo update, string installedVersion);
+
+        /// <summary>Asks for the price of a product whose price is entered at the sale, starting from
+        /// <paramref name="suggestion"/>; with <paramref name="change"/> for a new price of a position that
+        /// is already there. Returns null when cancelled.</summary>
+        Task<decimal?> ShowPriceEntryAsync(string title, decimal suggestion, bool change = false);
+
+        /// <summary>"Freie Eingabe": asks for the amount, then what it is for, offering
+        /// <paramref name="recentNotes"/> as suggestions and <paramref name="products"/> for a special
+        /// price. Returns null when cancelled.</summary>
+        Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products);
+
+        /// <summary>"Position nachtragen" in the history: offers <paramref name="products"/> and "Freie
+        /// Eingabe". Returns null when cancelled.</summary>
+        Task<AddPositionChoice> ShowAddPositionAsync(IReadOnlyList<ProductModel> products);
+
+        /// <summary>Changes what the free entry <paramref name="existing"/> is for: its description and/or
+        /// product. Returns the entry with the new values, or null when cancelled.</summary>
+        Task<FreeEntryResult> ShowFreeEntryPurposeAsync(FreeEntryResult existing, IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products);
 
         /// <summary>Runs <paramref name="download"/> behind a modal progress dialog whose only button
         /// cancels it. Returns the downloaded file's path, or null when the user cancelled.</summary>

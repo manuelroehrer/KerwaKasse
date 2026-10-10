@@ -22,6 +22,7 @@ namespace KerwaKasse.MVVM.ViewModel
         private readonly string _origName;
         private readonly string _origPriceText;
         private readonly string _origColor;
+        private readonly bool _origVariablePrice;
         private bool _origAvailable;
 
         // ── Name ────────────────────────────────────────────────
@@ -102,6 +103,37 @@ namespace KerwaKasse.MVVM.ViewModel
             }
         }
 
+        private bool _variablePrice;
+        /// <summary>"Preis beim Verkauf eingeben": the till asks for the price at every sale, starting from
+        /// the price above as a suggestion, which therefore has to be above zero.</summary>
+        public bool VariablePrice
+        {
+            get => _variablePrice;
+            set
+            {
+                _variablePrice = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PriceLabel));
+                // Re-validates the price field: zero is fine for a fixed price, not for a suggestion.
+                OnPropertyChanged(nameof(PriceText));
+                OnPropertyChanged(nameof(HasErrors));
+                OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
+        }
+
+        /// <summary>Caption above the price field.</summary>
+        public string PriceLabel => _variablePrice ? "VORSCHLAGSPREIS" : "PREIS";
+
+        private bool _showMoreSettings;
+        /// <summary>Whether "Weitere Einstellungen" (rarely needed options such as the variable price) is
+        /// unfolded. Folded by default; opened right away for a product that uses one of them.</summary>
+        public bool ShowMoreSettings
+        {
+            get => _showMoreSettings;
+            set { _showMoreSettings = value; OnPropertyChanged(); }
+        }
+
         /// <summary>
         /// Parses a price accepting both ',' and '.' as the decimal separator (touch keypads vary);
         /// '.' is never treated as a thousands separator.
@@ -161,6 +193,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public bool IsDirty =>
             _name != _origName ||
             _priceText != _origPriceText ||
+            _variablePrice != _origVariablePrice ||
             _available != _origAvailable ||
             !SameColor(_colorAsString, _origColor);
 
@@ -179,6 +212,7 @@ namespace KerwaKasse.MVVM.ViewModel
         /// </summary>
         public bool HasErrors =>
             ParsedPrice == null ||
+            (_variablePrice && ParsedPrice == 0m) ||
             string.IsNullOrWhiteSpace(_name) ||
             (_name?.Length ?? 0) > MaxNameLength;
 
@@ -197,6 +231,8 @@ namespace KerwaKasse.MVVM.ViewModel
                         return "Preis darf nicht negativ sein";
                     if (decimal.Round(val, 2) != val)
                         return "Höchstens zwei Nachkommastellen";
+                    if (_variablePrice && val == 0m)
+                        return "Der Vorschlag muss größer als 0 sein";
                 }
                 if (columnName == nameof(Name))
                 {
@@ -217,7 +253,8 @@ namespace KerwaKasse.MVVM.ViewModel
             string colorAsString,
             bool available,
             int usageCount,
-            bool isNew)
+            bool isNew,
+            bool variablePrice = false)
         {
             ProductId = productId;
             IsNew = isNew;
@@ -228,11 +265,14 @@ namespace KerwaKasse.MVVM.ViewModel
             _priceText = price.ToString("F2", CultureInfo.CurrentCulture);
             _colorAsString = colorAsString;
             _available = available;
+            _variablePrice = variablePrice;
+            _showMoreSettings = variablePrice;
 
             _origName = _name;
             _origPriceText = _priceText;
             _origColor = _colorAsString;
             _origAvailable = _available;
+            _origVariablePrice = _variablePrice;
 
             // New products have their name field editable from the start
             _nameUnlocked = isNew;

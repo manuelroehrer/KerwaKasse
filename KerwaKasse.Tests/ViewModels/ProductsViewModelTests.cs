@@ -120,6 +120,35 @@ public class ProductsViewModelTests
     }
 
     [Fact]
+    public void SaveNewProduct_WithVariablePrice_StoresTheFlag()
+    {
+        _sut.AddProductCommand.Execute(null);
+        _sut.DetailPanel!.Name = "Makrele";
+        _sut.DetailPanel.PriceText = "7,00";
+        _sut.DetailPanel.VariablePrice = true;
+
+        _sut.SaveDetailCommand.Execute(null);
+
+        _productService.Received(1).Add(Arg.Is<Product>(p => p.Name == "Makrele" && p.Price == 7.00m && p.VariablePrice));
+    }
+
+    [Fact]
+    public void SelectingAVariablePriceProduct_ShowsItInListAndPanel()
+    {
+        _productService.GetAll().Returns(_ => new List<Product>
+        {
+            new() { Id = 1, Name = "Makrele", Price = 7.00m, VariablePrice = true, Available = true, Color = "#00FF00", SortOrder = 1 }
+        });
+        _sut.LoadData();
+
+        _sut.SelectedProduct = _sut.Products[0];
+
+        Assert.True(_sut.Products[0].VariablePrice);
+        Assert.True(_sut.DetailPanel!.VariablePrice);
+        Assert.False(_sut.DetailPanel.IsDirty);
+    }
+
+    [Fact]
     public void SaveExistingProduct_CallsUpdate()
     {
         _sut.SelectedProduct = _sut.Products[0];

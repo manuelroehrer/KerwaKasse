@@ -68,22 +68,12 @@ namespace KerwaKasse.MVVM.Model
             decimal calc = 0.0m;
             foreach(OrderPositionModel orderPos in OrderPositions)
             {
-                orderPos.Total = orderPos.Amount * orderPos.Product.Price;
+                orderPos.Total = orderPos.Amount * orderPos.UnitPrice;
                 calc += orderPos.Total;
             }
             Total = calc;
 
-            ShortDescription = "";
-
-            for (int i = 0; i < OrderPositions.Count; i++)
-            {
-                ShortDescription += OrderPositions[i].Product.Name;
-                
-                if (i < OrderPositions.Count-1)
-                {
-                    ShortDescription += ", ";
-                }
-            }
+            ShortDescription = string.Join(", ", OrderPositions.Select(p => p.DisplayName));
         }
 
         public OrderModel()

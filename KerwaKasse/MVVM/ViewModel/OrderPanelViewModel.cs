@@ -17,6 +17,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DecreaseOrderPositionCommand { get; }
         public RelayCommand DiscardOrderCommand { get; }
         public RelayCommand SaveOrderCommand { get; }
+        public RelayCommand FreeEntryCommand { get; }
         public RelayCommand StartArrangingCommand { get; }
         public RelayCommand FinishArrangingCommand { get; }
         public RelayCommand MoveProductCommand { get; }
@@ -100,7 +101,8 @@ namespace KerwaKasse.MVVM.ViewModel
             _dialogService = dialogService;
             _logger = logger;
 
-            AddOrderPositionCommand = new RelayCommand(o => AddOrderPosition(o as ProductModel));
+            AddOrderPositionCommand = new RelayCommand(async o => await AddOrderPosition(o as ProductModel));
+            FreeEntryCommand = new RelayCommand(async _ => await AddFreeEntry());
             DecreaseOrderPositionCommand = new RelayCommand(o => DecreaseOrderPosition(o as OrderPositionModel));
             DiscardOrderCommand = new RelayCommand(o => DiscardOrder());
             SaveOrderCommand = new RelayCommand(o => SaveOrder());
@@ -250,23 +252,55 @@ namespace KerwaKasse.MVVM.ViewModel
             return Math.Clamp(best, MinFactor, Math.Max(MinFactor, maxFactor));
         }
 
-        public void AddOrderPosition(ProductModel product)
+        /// <summary>Tapping a tile: adds the product at its price, or for a product with a variable price
+        /// first asks for the price (nothing is added when that is cancelled).</summary>
+        public async Task AddOrderPosition(ProductModel product)
         {
-            bool productAlreadyOrdered = false;
+            if (product == null) return;
 
-            foreach (OrderPositionModel order in OrderPositions)
+            if (!product.VariablePrice)
             {
-                if (order.Product.ProductID == product.ProductID)
+                AddPosition(product, OrderPositionKind.Regular, product.Price, product.Price, note: null);
+                return;
+            }
+
+            if (await _dialogService.ShowPriceEntryAsync(product.Name, product.Price) is decimal price)
+                AddPosition(product, OrderPositionKind.VariablePrice, price, product.Price, note: null);
+        }
+
+        // Number of recent descriptions the free entry dialog offers as suggestions.
+        private const int RecentNoteCount = 5;
+
+        /// <summary>"Freie Eingabe": an amount entered at the till, described and/or as a special price
+        /// for one of the available products.</summary>
+        public async Task AddFreeEntry()
+        {
+            var entry = await _dialogService.ShowFreeEntryAsync(_orderService.GetRecentNotes(RecentNoteCount), Products);
+            if (entry == null) return;
+
+            AddPosition(entry.Product, OrderPositionKind.FreeEntry, entry.Amount, entry.Product?.Price, entry.Note);
+        }
+
+        /// <summary>Adds one piece: to the row that matches in everything that is saved with it, otherwise
+        /// as a new row. So two fish at the same price share a row, at different prices they don't.</summary>
+        private void AddPosition(ProductModel product, OrderPositionKind kind, decimal unitPrice, decimal? listPrice, string note)
+        {
+            int? productId = product?.ProductID;
+            var existing = OrderPositions.FirstOrDefault(o =>
+                o.ProductId == productId && o.Kind == kind && o.UnitPrice == unitPrice && o.Note == note);
+
+            if (existing != null)
+                existing.Amount++;
+            else
+                OrderPositions.Add(new OrderPositionModel
                 {
-                    productAlreadyOrdered = true;
-                    order.Amount++;
-                }
-            }
-
-            if (!productAlreadyOrdered)
-            {
-                OrderPositions.Add(new OrderPositionModel() { Product = product });
-            }
+                    Product = product,
+                    ProductId = productId,
+                    Kind = kind,
+                    UnitPrice = unitPrice,
+                    ListPrice = listPrice,
+                    Note = note
+                });
 
             RecalculateTotal();
         }
@@ -288,7 +322,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private void RecalculateTotal()
         {
-            Total = OrderPositions.Sum(o => o.Amount * o.Product.Price);
+            Total = OrderPositions.Sum(o => o.Amount * o.UnitPrice);
         }
 
         private void LoadData()
@@ -299,6 +333,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 ProductID = p.Id,
                 Name = p.Name,
                 Price = p.Price,
+                VariablePrice = p.VariablePrice,
                 Available = p.Available,
                 ColorAsString = p.Color,
                 PositionNumber = p.SortOrder
@@ -342,9 +377,12 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 var positions = OrderPositions.Select(op => new OrderPosition
                 {
-                    ProductId = op.Product.ProductID,
+                    ProductId = op.ProductId,
+                    Kind = op.Kind,
                     Amount = op.Amount,
-                    UnitPrice = op.Product.Price
+                    UnitPrice = op.UnitPrice,
+                    ListPrice = op.ListPrice,
+                    Note = op.Note
                 });
                 _orderService.PlaceOrder(positions);
                 Notification();

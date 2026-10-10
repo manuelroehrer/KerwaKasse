@@ -157,4 +157,38 @@ public class SavedAnalysisManagementViewModelTests
         product.IsSelected = true; // back to the original selection
         Assert.False(sut.IsDirty);
     }
+
+    [Fact]
+    public void FreeEntries_AreAnEntryOfTheProductList_AndSavedAsFlag()
+    {
+        var sut = CreateSut();
+        sut.Selected = sut.Items.First(i => i.Id == 1);
+
+        var free = sut.EditProducts[0];
+        Assert.True(free.IsFreeEntries);
+        Assert.True(free.IsSelected); // "alle Produkte" includes them
+
+        free.IsSelected = false;
+        Assert.True(sut.IsDirty);
+        sut.SaveCommand.Execute(null);
+
+        _service.Received(1).Update(Arg.Is<SavedAnalysis>(a =>
+            a.Id == 1 && !a.AllProducts && !a.IncludeFreeEntries && a.ProductIds.Count == 2));
+        Assert.Equal($"2 Produkte · {DateTime.Today:dd.MM.yyyy}", sut.Selected.Summary);
+    }
+
+    [Theory]
+    [InlineData(true, 0, true, "alle Produkte")]
+    [InlineData(false, 3, false, "3 Produkte")]
+    [InlineData(false, 3, true, "3 Produkte + Freie Eingabe")]
+    [InlineData(false, 0, true, "Freie Eingabe")]
+    public void Summarize_NamesTheFreeEntries(bool allProducts, int productCount, bool includeFreeEntries, string expected)
+    {
+        var summary = SavedAnalysisManagementViewModel.Summarize(new SavedAnalysis
+        {
+            AllProducts = allProducts, ProductCount = productCount, IncludeFreeEntries = includeFreeEntries
+        });
+
+        Assert.Equal(expected + " · ohne Zeitraum", summary);
+    }
 }

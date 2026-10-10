@@ -2,6 +2,7 @@ using Dapper;
 using KerwaKasse.Core.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KerwaKasse.Core.Data;
 
@@ -29,9 +30,9 @@ public class DatabaseBackupService : IDatabaseBackupService
         return new DatabaseSummary(Count("Products"), Count("Orders"), Count("Menus"), Count("SavedAnalyses"));
     }
 
-    public bool IsValidDatabaseFile(string filePath)
+    public DatabaseFileCheck CheckDatabaseFile(string filePath)
     {
-        if (!File.Exists(filePath)) return false;
+        if (!File.Exists(filePath)) return DatabaseFileCheck.Invalid;
 
         // Validate a private local copy, never the user's selected file directly. Opening a WAL-mode backup would
         // otherwise create -wal/-shm sidecars. It also may live on a network share, a UNC path or an on-demand location
@@ -56,29 +57,42 @@ public class DatabaseBackupService : IDatabaseBackupService
             if (!source.ContainsKey("Products") || !source.ContainsKey("Orders"))
             {
                 _logger.LogWarning("File {FilePath} rejected: core tables (Products/Orders) missing", filePath);
-                return false;
+                return DatabaseFileCheck.Invalid;
             }
 
-            // Every table the file shares with the current schema has to carry all columns the app reads
-            // and writes. Tables the file lacks entirely are fine — the migration on restore creates them.
-            // Extra columns are fine too, because every query names its columns explicitly. A missing
-            // column, however, would only surface as a crash after the irreversible restore (the migration
-            // adds missing tables, but never columns to an existing one), so reject such a file up front.
-            foreach (var (table, expectedColumns) in GetExpectedSchema())
+            // A file of a newer app version would only be written in part by this one.
+            int version = connection.ExecuteScalar<int>("PRAGMA user_version;");
+            if (version > DatabaseMigrator.CurrentVersion)
             {
-                if (source.TryGetValue(table, out var actualColumns) && !expectedColumns.IsSubsetOf(actualColumns))
+                _logger.LogWarning("File {FilePath} rejected: schema version {SchemaVersion} is newer than {SupportedVersion}",
+                    filePath, version, DatabaseMigrator.CurrentVersion);
+                return DatabaseFileCheck.NewerVersion;
+            }
+
+            // A file with a version was written by the app itself, and the migration after the restore takes
+            // it from there. Files without one (2.11 and older) are checked against the baseline schema the
+            // migration starts from: every table the file shares with it has to carry all its columns. Tables
+            // the file lacks entirely are fine, the migration creates them. Extra columns are fine too, because
+            // every query names its columns explicitly. A missing column, however, would only surface as a
+            // crash after the irreversible restore, so reject such a file up front.
+            if (version == 0)
+            {
+                foreach (var (table, expectedColumns) in GetBaselineSchema())
                 {
-                    _logger.LogWarning("File {FilePath} rejected: table {Table} is missing expected columns", filePath, table);
-                    return false;
+                    if (source.TryGetValue(table, out var actualColumns) && !expectedColumns.IsSubsetOf(actualColumns))
+                    {
+                        _logger.LogWarning("File {FilePath} rejected: table {Table} is missing expected columns", filePath, table);
+                        return DatabaseFileCheck.Invalid;
+                    }
                 }
             }
 
-            return true;
+            return DatabaseFileCheck.Valid;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "File {FilePath} rejected: not a readable SQLite database", filePath);
-            return false;
+            return DatabaseFileCheck.Invalid;
         }
         finally
         {
@@ -93,16 +107,16 @@ public class DatabaseBackupService : IDatabaseBackupService
         }
     }
 
-    /// <summary>Table name → column names of the current schema, derived from <see cref="DatabaseInitializer"/>
-    /// itself so the validation can never drift from the real schema.</summary>
-    private static Dictionary<string, HashSet<string>> GetExpectedSchema()
+    /// <summary>Table name → column names of the baseline schema, built by the migration's own baseline step
+    /// so the validation can never drift from it.</summary>
+    private static Dictionary<string, HashSet<string>> GetBaselineSchema()
     {
         // A shared-cache in-memory database lives as long as one connection to it stays open; keep this one
         // open while the initializer (which opens and closes its own connection) builds the schema in it.
         string referenceConnectionString = $"Data Source=schema-reference-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         using var connection = new SqliteConnection(referenceConnectionString);
         connection.Open();
-        DatabaseInitializer.Initialize(referenceConnectionString);
+        DatabaseMigrator.Migrate(referenceConnectionString, NullLogger.Instance, targetVersion: DatabaseMigrator.BaselineVersion);
         return ReadSchema(connection);
     }
 
@@ -141,7 +155,8 @@ public class DatabaseBackupService : IDatabaseBackupService
             if (File.Exists(path)) File.Delete(path);
         }
 
-        // The restored file may come from an older app version: create any missing tables/columns.
+        // The restored file may come from an older app version: bring it up to date. No extra copy is
+        // needed, the chosen backup itself stays as it is.
         DatabaseInitializer.Initialize(_connectionString, _logger);
         WriteMetadata(metadata);
 

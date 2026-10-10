@@ -206,6 +206,24 @@ namespace KerwaKasse.Helper
     }
 
     /// <summary>
+    /// A product's price as shown on tiles and in lists: the plain price, or "ca. 7,00 €" when the price
+    /// is entered at every sale and the stored one is only the suggestion.
+    /// values[0] = the price (decimal), values[1] = whether it is variable (bool).
+    /// </summary>
+    public class ProductPriceTextConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 2 || values[0] is not decimal price) return string.Empty;
+            string text = price.ToString("C", culture);
+            return values[1] is true ? "ca. " + text : text;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
     /// Returns Collapsed when the value is true, Visible when false.
     /// Inverse of the built-in BooleanToVisibilityConverter.
     /// </summary>

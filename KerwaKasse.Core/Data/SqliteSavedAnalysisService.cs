@@ -26,7 +26,7 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         using var connection = new SqliteConnection(_connectionString);
         return connection.Query<SavedAnalysisRow>(
             """
-            SELECT a.Id, a.Name, a.AllProducts, a.FromTime, a.ToTime, a.SortOrder,
+            SELECT a.Id, a.Name, a.AllProducts, a.IncludeFreeEntries, a.FromTime, a.ToTime, a.SortOrder,
                    (SELECT COUNT(*) FROM SavedAnalysisProducts sp WHERE sp.SavedAnalysisId = a.Id) AS ProductCount
             FROM SavedAnalyses a
             ORDER BY a.SortOrder, a.Name
@@ -50,8 +50,8 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
 
         connection.Execute(
             """
-            INSERT INTO SavedAnalyses (Name, AllProducts, FromTime, ToTime, SortOrder)
-            VALUES (@Name, @AllProducts, @FromTime, @ToTime,
+            INSERT INTO SavedAnalyses (Name, AllProducts, IncludeFreeEntries, FromTime, ToTime, SortOrder)
+            VALUES (@Name, @AllProducts, @IncludeFreeEntries, @FromTime, @ToTime,
                     (SELECT COALESCE(MAX(SortOrder), 0) + 1 FROM SavedAnalyses))
             """,
             ToParams(analysis), transaction);
@@ -74,7 +74,7 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         connection.Execute(
             """
             UPDATE SavedAnalyses
-            SET Name = @Name, AllProducts = @AllProducts, FromTime = @FromTime, ToTime = @ToTime
+            SET Name = @Name, AllProducts = @AllProducts, IncludeFreeEntries = @IncludeFreeEntries, FromTime = @FromTime, ToTime = @ToTime
             WHERE Id = @Id
             """,
             ToParams(analysis), transaction);
@@ -144,6 +144,7 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         a.Id,
         a.Name,
         AllProducts = a.AllProducts ? 1 : 0,
+        IncludeFreeEntries = a.IncludeFreeEntries ? 1 : 0,
         FromTime = a.From.HasValue ? a.From.Value.ToString(SqliteDateFormat) : null,
         ToTime = a.To.HasValue ? a.To.Value.ToString(SqliteDateFormat) : null
     };
@@ -153,6 +154,7 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         Id = r.Id,
         Name = r.Name,
         AllProducts = r.AllProducts != 0,
+        IncludeFreeEntries = r.IncludeFreeEntries != 0,
         From = ParseNullable(r.FromTime),
         To = ParseNullable(r.ToTime),
         SortOrder = r.SortOrder,
@@ -167,6 +169,7 @@ public class SqliteSavedAnalysisService : ISavedAnalysisService
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public long AllProducts { get; set; }
+        public long IncludeFreeEntries { get; set; }
         public string? FromTime { get; set; }
         public string? ToTime { get; set; }
         public int SortOrder { get; set; }

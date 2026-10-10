@@ -42,6 +42,18 @@ namespace KerwaKasse.MVVM.Model
             }
         }
 
+        private bool variablePrice;
+        /// <summary>The price is entered at every sale; <see cref="Price"/> is the suggestion.</summary>
+        public bool VariablePrice
+        {
+            get { return variablePrice; }
+            set
+            {
+                variablePrice = value;
+                OnPropertyChanged();
+            }
+        }
+
         private bool available;
         public bool Available
         {

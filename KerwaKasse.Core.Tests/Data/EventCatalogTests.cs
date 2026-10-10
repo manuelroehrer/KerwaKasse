@@ -1,3 +1,4 @@
+using Dapper;
 using KerwaKasse.Core.Data;
 using KerwaKasse.Core.Models;
 using KerwaKasse.Core.Services;
@@ -34,6 +35,19 @@ public class EventCatalogTests : IDisposable
     private void CreateLegacyDatabase()
     {
         DatabaseInitializer.Initialize(ConnectionString(_legacyPath));
+        SqliteConnection.ClearAllPools();
+    }
+
+    private static int SchemaVersion(string dbPath)
+    {
+        using var connection = new SqliteConnection(ConnectionString(dbPath) + ";Pooling=False");
+        return connection.ExecuteScalar<int>("PRAGMA user_version;");
+    }
+
+    private static void SetSchemaVersion(string dbPath, int version)
+    {
+        using (var connection = new SqliteConnection(ConnectionString(dbPath)))
+            connection.Execute($"PRAGMA user_version = {version};");
         SqliteConnection.ClearAllPools();
     }
 
@@ -123,6 +137,53 @@ public class EventCatalogTests : IDisposable
         var later = NewCatalog();
         Assert.False(File.Exists(_legacyPath));
         Assert.Equal(Path.Combine(_databaseDir, "kerwa.db"), later.ActiveFilePath);
+    }
+
+    // ── Schema migration at startup ──
+
+    [Fact]
+    public void Startup_BringsEveryEventUpToDate_AndKeepsACopyOutsideTheEventList()
+    {
+        NewCatalog();
+        // An event file without a schema version, as release 2.11 and older wrote them.
+        string older = Path.Combine(_databaseDir, "sommerfest.db");
+        using (var connection = new SqliteConnection(ConnectionString(older)))
+            connection.Execute("""
+                CREATE TABLE Products (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, PriceCents INTEGER NOT NULL, Available INTEGER NOT NULL DEFAULT 1, Color TEXT, SortOrder INTEGER NOT NULL DEFAULT 0);
+                CREATE TABLE Orders (Id INTEGER PRIMARY KEY AUTOINCREMENT, OrderTime TEXT NOT NULL);
+                """);
+        SqliteConnection.ClearAllPools();
+
+        var sut = NewCatalog();
+
+        Assert.Equal(DatabaseMigrator.CurrentVersion, SchemaVersion(older));
+        var backup = Assert.Single(Directory.GetFiles(Path.Combine(_databaseDir, EventCatalog.BackupFolderName)));
+        Assert.StartsWith("sommerfest.schema0.", Path.GetFileName(backup));
+        Assert.Equal(2, sut.GetAll().Count);
+    }
+
+    [Fact]
+    public void Startup_ActiveEventOfANewerVersion_IsReported()
+    {
+        var first = NewCatalog();
+        SetSchemaVersion(first.ActiveFilePath, DatabaseMigrator.CurrentVersion + 1);
+
+        Assert.Throws<DatabaseTooNewException>(() => NewCatalog());
+    }
+
+    [Fact]
+    public void Startup_InactiveEventOfANewerVersion_IsListedAsSuchButCannotBeActivated()
+    {
+        var first = NewCatalog();
+        var newer = first.Create("Sommerfest");
+        SetSchemaVersion(newer.FilePath, DatabaseMigrator.CurrentVersion + 1);
+
+        var sut = NewCatalog();
+
+        Assert.True(sut.GetAll().Single(e => e.FilePath == newer.FilePath).RequiresNewerVersion);
+        Assert.False(sut.GetAll().Single(e => e.FilePath == sut.ActiveFilePath).RequiresNewerVersion);
+        Assert.Throws<DatabaseTooNewException>(() => sut.SetActive(newer.FilePath));
+        Assert.Equal(DatabaseMigrator.CurrentVersion + 1, SchemaVersion(newer.FilePath));
     }
 
     // ── Active event ──

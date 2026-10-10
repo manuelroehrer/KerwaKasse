@@ -69,7 +69,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
             OrderPanelViewCommand = new RelayCommand(o => CurrentView = CreateOrderPanelViewModel());
             ProductsViewCommand = new RelayCommand(o => CurrentView = new ProductsViewModel(_productService, _menuService, _settingsService, _dialogService));
-            OrderHistoryViewCommand = new RelayCommand(o => CurrentView = new OrderHistoryViewModel(_orderService, _productService));
+            OrderHistoryViewCommand = new RelayCommand(o => CurrentView = new OrderHistoryViewModel(_orderService, _productService, _dialogService));
             AnalysisViewCommand = new RelayCommand(o => CurrentView = new AnalysisViewModel(_analyticsService, _productService, _savedAnalysisService, _dialogService, _loggerFactory.CreateLogger<AnalysisViewModel>()));
             // The info page shows the events' key figures, which the other pages change (products,
             // sales), so they are reloaded every time the page is shown.

@@ -37,7 +37,7 @@ public interface IEventCatalog
     EventDatabase Create(string name);
 
     /// <summary>Adds a copy of an existing KerwaKasse database file (e.g. a backup) as a new event.
-    /// The file must have been validated before (see <see cref="IDatabaseBackupService.IsValidDatabaseFile"/>).</summary>
+    /// The file must have been validated before (see <see cref="IDatabaseBackupService.CheckDatabaseFile"/>).</summary>
     EventDatabase Import(string sourceFilePath, string name);
 
     void Rename(string filePath, string newName);

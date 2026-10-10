@@ -39,11 +39,14 @@ public class MainWindowViewModelTests
         _productService.GetAvailable().Returns(new List<Product>());
         _productService.GetAll().Returns(new List<Product>());
         _orderService.GetOrdersByDate(Arg.Any<DateTime>()).Returns(new List<Order>());
-        _orderService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>()).Returns(new List<SalesFigure>());
         _menuService.GetAll().Returns(new List<Menu>());
         _savedAnalysisService.GetAll().Returns(new List<SavedAnalysis>());
-        _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+        _analyticsService.GetSalesFigures(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<bool>())
             .Returns(new List<SalesFigure>());
+        _analyticsService.GetPricePeriods(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>())
+            .Returns(new List<ProductPricePeriod>());
+        _analyticsService.GetFreeEntryGroups(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<bool>())
+            .Returns(new List<FreeEntryGroup>());
 
         _sut = new MainWindowViewModel(_dialogService, _productService, _orderService, _settings, "test.db", _menuService, _analyticsService, _savedAnalysisService, _backupService, _updateService, _eventCatalog, NullLoggerFactory.Instance);
     }

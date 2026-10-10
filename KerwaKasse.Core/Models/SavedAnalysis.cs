@@ -15,6 +15,10 @@ public class SavedAnalysis
     /// <summary>Explicit product selection used when <see cref="AllProducts"/> is false.</summary>
     public List<int> ProductIds { get; set; } = new();
 
+    /// <summary>Whether an explicit selection also covers the free entries without product (they belong to
+    /// no product id). Ignored when <see cref="AllProducts"/> is true, which always includes them.</summary>
+    public bool IncludeFreeEntries { get; set; } = true;
+
     public DateTime? From { get; set; }
     public DateTime? To { get; set; }
 

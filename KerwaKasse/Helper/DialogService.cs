@@ -1,4 +1,5 @@
 using KerwaKasse.Core.Services;
+using KerwaKasse.MVVM.Model;
 using KerwaKasse.MVVM.View;
 using KerwaKasse.MVVM.ViewModel;
 using Microsoft.Win32;
@@ -17,6 +18,13 @@ namespace KerwaKasse.Helper
 {
     public class DialogService : IDialogService
     {
+        private readonly SaveLocation _saveLocation;
+
+        public DialogService(ISettingsService settings)
+        {
+            _saveLocation = new SaveLocation(settings);
+        }
+
         public void ShowMessage(string message)
         {
             MessageBox.Show(message);
@@ -27,20 +35,26 @@ namespace KerwaKasse.Helper
             MessageBox.Show(message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        public string ShowSaveFileDialog(string filter, string title, string defaultFileName, string initialDirectory = null)
+        public string ShowSaveFileDialog(string filter, string title, string baseName, string extension)
         {
+            // The suggested name is free in the folder the dialog opens in, so it fits the usual case of
+            // saving to the same place as last time.
+            string folder = _saveLocation.InitialFolder();
             var dialog = new SaveFileDialog
             {
                 Filter = filter,
                 Title = title,
-                FileName = defaultFileName
+                InitialDirectory = folder,
+                FileName = SaveLocation.UniqueFileName(folder, baseName, extension)
                 // OverwritePrompt stays at its default (true): if the user deliberately picks an
                 // existing file, Windows shows the standard "replace?" warning — their choice wins.
             };
-            if (!string.IsNullOrEmpty(initialDirectory))
-                dialog.InitialDirectory = initialDirectory;
 
-            return dialog.ShowDialog() == true ? dialog.FileName : null;
+            if (dialog.ShowDialog() != true)
+                return null;
+
+            _saveLocation.Remember(dialog.FileName);
+            return dialog.FileName;
         }
 
         public string ShowOpenFileDialog(string filter, string title)
@@ -173,7 +187,48 @@ namespace KerwaKasse.Helper
             return value.Length == 0 ? null : value;
         }
 
-        public async Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, bool> isValidBackup)
+        public async Task<PdfExportOptions> ShowPdfExportAsync(string title, bool offerDetails)
+        {
+            var titleBox = new TextBox
+            {
+                Text = title ?? string.Empty,
+                MaxLength = 40,
+                FontSize = 15,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            var detailsBox = new CheckBox
+            {
+                Content = "Sonderpreise und Freie Eingaben einzeln auflisten",
+                FontSize = 14.5,
+                Margin = new Thickness(0, 14, 0, 0)
+            };
+
+            var panel = new StackPanel { MinWidth = 320 };
+            panel.Children.Add(new TextBlock { Text = "Titel (erscheint als Überschrift im PDF)", FontSize = 13, Foreground = System.Windows.Media.Brushes.Gray });
+            panel.Children.Add(titleBox);
+            // Only offered when the analysis has special prices or free entries to list.
+            if (offerDetails)
+                panel.Children.Add(detailsBox);
+
+            var dialog = new ContentDialog
+            {
+                Title = "PDF exportieren",
+                Content = panel,
+                PrimaryButtonText = "Exportieren",
+                CloseButtonText = "Abbrechen",
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            titleBox.Loaded += (_, _) => { titleBox.SelectAll(); titleBox.Focus(); };
+
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                return null;
+
+            var value = titleBox.Text?.Trim() ?? string.Empty;
+            return value.Length == 0 ? null : new PdfExportOptions(value, offerDetails && detailsBox.IsChecked == true);
+        }
+
+        public async Task<NewEventRequest> ShowNewEventDialogAsync(IReadOnlyList<string> existingNames, Func<string, DatabaseFileCheck> checkBackup)
         {
             var errorBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
             var nameBox = new TextBox
@@ -273,9 +328,15 @@ namespace KerwaKasse.Helper
                 if (string.IsNullOrEmpty(path)) return;
 
                 backupPath = path;
-                backupValid = isValidBackup(path);
+                var check = checkBackup(path);
+                backupValid = check == DatabaseFileCheck.Valid;
                 string fileName = System.IO.Path.GetFileName(path);
-                fileStatus.Text = backupValid ? fileName : $"„{fileName}“ ist keine gültige KerwaKasse-Datenbank.";
+                fileStatus.Text = check switch
+                {
+                    DatabaseFileCheck.Valid => fileName,
+                    DatabaseFileCheck.NewerVersion => $"„{fileName}“ stammt aus einer neueren Version von KerwaKasse.",
+                    _ => $"„{fileName}“ ist keine gültige KerwaKasse-Datenbank."
+                };
                 fileStatus.Foreground = backupValid ? System.Windows.Media.Brushes.Gray : errorBrush;
                 fileStatus.ToolTip = path;
                 fileStatus.Visibility = Visibility.Visible;
@@ -405,6 +466,34 @@ namespace KerwaKasse.Helper
             return dialog.Result;
         }
 
+        public async Task<decimal?> ShowPriceEntryAsync(string title, decimal suggestion, bool change = false)
+        {
+            var dialog = new PriceEntryDialog(title, suggestion, change);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<FreeEntryResult> ShowFreeEntryAsync(IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new FreeEntryDialog(recentNotes, products);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<AddPositionChoice> ShowAddPositionAsync(IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new AddPositionDialog(products);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
+        public async Task<FreeEntryResult> ShowFreeEntryPurposeAsync(FreeEntryResult existing, IReadOnlyList<string> recentNotes, IReadOnlyList<ProductModel> products)
+        {
+            var dialog = new FreeEntryDialog(recentNotes, products, existing);
+            await dialog.ShowAsync();
+            return dialog.Result;
+        }
+
         public async Task<string> ShowDownloadProgressAsync(string title, Func<IProgress<double>, CancellationToken, Task<string>> download)
         {
             var bar = new System.Windows.Controls.ProgressBar
@@ -423,6 +512,8 @@ namespace KerwaKasse.Helper
                 Content = panel,
                 CloseButtonText = "Abbrechen"
             };
+            // A stray tap next to it must not cancel the download.
+            DialogLightDismiss.SetKeepOpen(dialog, true);
 
             using var cancellation = new CancellationTokenSource();
             // Progress is created on the UI thread, so its callbacks are marshalled back here.

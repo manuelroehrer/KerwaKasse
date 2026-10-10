@@ -116,6 +116,20 @@
             </Setter>
         </Style>
 
+        <!-- A table row as a plain hit area: a click (or tap) expands a row with details; other rows
+             ignore it. A button rather than a mouse binding, so the keyboard-less touch and UI Automation
+             (screen readers) can use it as well. -->
+        <Style x:Key="TableRowButton" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Saved-analysis row: like FlyoutRowButton, but tinted when it is the active analysis. -->
         <Style x:Key="SavedRowButton" TargetType="Button" BasedOn="{StaticResource FlyoutRowButton}">
             <Style.Triggers>
@@ -303,15 +317,20 @@
                                             <ItemsControl ItemsSource="{Binding FilteredProductFilter}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" MinHeight="35"
-                                                                  VerticalContentAlignment="Center" Margin="6,1" Padding="8,0,0,0">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <Border Width="12" Height="12" CornerRadius="3" Background="{Binding ColorBrush}"
-                                                                        BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
-                                                                        Margin="0,0,9,0" VerticalAlignment="Center"/>
-                                                                <TextBlock Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </CheckBox>
+                                                        <StackPanel>
+                                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" MinHeight="35"
+                                                                      VerticalContentAlignment="Center" Margin="6,1" Padding="8,0,0,0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Border Width="12" Height="12" CornerRadius="3" Background="{Binding ColorBrush}"
+                                                                            BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
+                                                                            Margin="0,0,9,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </CheckBox>
+                                                            <!-- "Freie Eingabe" comes first and is set apart from the products. -->
+                                                            <Border Height="1" Background="#E3E6EA" Margin="6,3,6,4"
+                                                                    Visibility="{Binding IsFreeEntries, Converter={StaticResource BoolToVisibility}}"/>
+                                                        </StackPanel>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -374,7 +393,7 @@
                 <Grid Visibility="{Binding IsBreakdown, Converter={StaticResource BoolToVisibility}}">
                     <Grid Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="480"/>
+                            <ColumnDefinition Width="545"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -384,8 +403,9 @@
                                 <Grid Margin="16,0,32,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="125"/>
+                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="105"/>
                                     </Grid.ColumnDefinitions>
                                     <!-- Clickable headers: first click sorts the column, a second click flips the
                                          direction. The transparent borders carry the header row's vertical padding,
@@ -406,7 +426,11 @@
                                             <Run Text="MENGE"/><Run Text="{Binding AmountSortIndicator, Mode=OneWay}"/>
                                         </TextBlock>
                                     </Border>
-                                    <Border Grid.Column="2" Background="Transparent" Padding="0,12" Cursor="Hand">
+                                    <!-- Not sortable: a unit price says little across products sold in different amounts. -->
+                                    <Border Grid.Column="2" Padding="0,12">
+                                        <TextBlock Text="EINZELPREIS" Style="{StaticResource CaptionText}" HorizontalAlignment="Right"/>
+                                    </Border>
+                                    <Border Grid.Column="3" Background="Transparent" Padding="0,12" Cursor="Hand">
                                         <Border.InputBindings>
                                             <MouseBinding MouseAction="LeftClick" Command="{Binding SortBreakdownCommand}" CommandParameter="Revenue"/>
                                         </Border.InputBindings>
@@ -422,14 +446,15 @@
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="125"/>
+                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="105"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Gesamt" FontSize="15" FontWeight="SemiBold"
                                                Foreground="#1B2430" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{Binding TotalAmount}" FontSize="14" Foreground="#5F6875"
                                                HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding TotalRevenue, StringFormat={}{0:C}}" FontSize="16"
+                                    <TextBlock Grid.Column="3" Text="{Binding TotalRevenue, StringFormat={}{0:C}}" FontSize="16"
                                                FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}"
                                                HorizontalAlignment="Right" VerticalAlignment="Center"
                                                FontFamily="{StaticResource PriceFont}"/>
@@ -440,9 +465,13 @@
                                 <ItemsControl ItemsSource="{Binding Breakdown}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
+                                            <StackPanel>
                                             <!-- Transparent background so the whole row (not just its texts) hit-tests
-                                                 for the price-history tooltip. -->
-                                            <Border BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9"
+                                                 for the price-history tooltip and, on rows with details, the click. -->
+                                            <Button Style="{StaticResource TableRowButton}" AutomationProperties.Name="{Binding Name}"
+                                                    Command="{Binding DataContext.ToggleRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                            <Border x:Name="RowBorder" BorderBrush="#F3F5F7" BorderThickness="0,0,0,1" Padding="16,9,32,9"
                                                     Background="Transparent"
                                                     ToolTipService.IsEnabled="{Binding HasPriceDetails}"
                                                     ToolTipService.InitialShowDelay="400">
@@ -468,61 +497,134 @@
                                                                     </DataTemplate>
                                                                 </ItemsControl.ItemTemplate>
                                                             </ItemsControl>
+                                                            <!-- A variable price: what was actually entered. -->
+                                                            <StackPanel Visibility="{Binding HasEnteredPrices, Converter={StaticResource BoolToVisibility}}">
+                                                                <TextBlock Text="Eingegebene Preise" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                                                                <TextBlock Text="{Binding EnteredPrices}" FontFamily="Consolas"/>
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </ToolTip>
                                                 </Border.ToolTip>
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="80"/>
-                                                        <ColumnDefinition Width="125"/>
+                                                        <ColumnDefinition Width="65"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="105"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                    <Grid Grid.Column="0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
                                                         <Border Width="13" Height="13" CornerRadius="3" Background="{Binding ColorBrush}"
                                                                 BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
                                                                 Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
+                                                        <!-- Wraps instead of being cut, so "(Sonderpreis)" of a long name stays readable. -->
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"
+                                                                   TextWrapping="Wrap"/>
+                                                        <!-- Special prices and free entries open into their details. -->
+                                                        <TextBlock x:Name="Chevron" Grid.Column="2" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                   Foreground="#8A8F96" VerticalAlignment="Center" Margin="8,1,4,0"
+                                                                   Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}"/>
+                                                    </Grid>
                                                     <TextBlock Grid.Column="1" Text="{Binding Amount}" FontSize="14.5" Foreground="#3A4453"
                                                                HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Revenue, StringFormat={}{0:C}}" FontSize="14.5"
+                                                    <TextBlock Grid.Column="2" Text="{Binding UnitPriceText}" FontSize="14.5" Foreground="#5F6875"
+                                                               HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                               FontFamily="{StaticResource PriceFont}">
+                                                        <!-- "var." is underlined as a hint that the tooltip holds the
+                                                             individual prices, with a little gap below the letters. -->
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsUnitPriceVariable}" Value="True">
+                                                                        <Setter Property="TextDecorations">
+                                                                            <Setter.Value>
+                                                                                <TextDecorationCollection>
+                                                                                    <TextDecoration Location="Underline" PenOffset="1.5" PenOffsetUnit="Pixel"
+                                                                                                    PenThicknessUnit="Pixel">
+                                                                                        <TextDecoration.Pen>
+                                                                                            <Pen Brush="#5F6875" Thickness="0.8"/>
+                                                                                        </TextDecoration.Pen>
+                                                                                    </TextDecoration>
+                                                                                </TextDecorationCollection>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Revenue, StringFormat={}{0:C}}" FontSize="14.5"
                                                                Foreground="#3A4453" HorizontalAlignment="Right" VerticalAlignment="Center"
                                                                FontFamily="{StaticResource PriceFont}"/>
                                                 </Grid>
                                             </Border>
+                                            </Button>
+
+                                            <!-- Details of an expanded row: per description and price, in the table's columns. -->
+                                            <ItemsControl ItemsSource="{Binding Details}" Background="#F8F9FA"
+                                                          Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border BorderBrush="#EEF0F3" BorderThickness="0,0,0,1" Padding="16,6,32,6">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="65"/>
+                                                                    <ColumnDefinition Width="100"/>
+                                                                    <ColumnDefinition Width="105"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <!-- Indented a little further than the name above (swatch + gap + 12), as in the PDF. -->
+                                                                <TextBlock Text="{Binding Name}" FontSize="13.5" Margin="35,0,8,0" VerticalAlignment="Center"
+                                                                           TextWrapping="Wrap">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Foreground" Value="#4B5563"/>
+                                                                            <Style.Triggers>
+                                                                                <!-- "Ohne Angabe" stands out a little, as at the till. -->
+                                                                                <DataTrigger Binding="{Binding IsWithoutDescription}" Value="True">
+                                                                                    <Setter Property="Foreground" Value="#B26A00"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Amount}" FontSize="13.5" Foreground="#5F6875"
+                                                                           HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding UnitPriceText}" FontSize="13.5" Foreground="#5F6875"
+                                                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                           FontFamily="{StaticResource PriceFont}"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding Revenue, StringFormat={}{0:C}}" FontSize="13.5"
+                                                                           Foreground="#5F6875" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                           FontFamily="{StaticResource PriceFont}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            </StackPanel>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding HasDetails}" Value="True">
+                                                    <Setter TargetName="RowBorder" Property="Cursor" Value="Hand"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                    <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
                         </DockPanel>
 
-                        <!-- Donut + own scrollable legend (the built-in legend grew unbounded and
-                             squeezed/clipped the chart when there were many products). -->
-                        <Grid Grid.Column="1" Margin="8,0,4,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <lvc:PieChart Grid.Column="0" x:Name="DonutChart" Series="{Binding PieSeries}" LegendPosition="Hidden"
-                                          SizeChanged="DonutChart_SizeChanged"
-                                          Margin="4,12,8,12" Background="Transparent" MaxHeight="520" MinWidth="160"/>
-                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="0,12,2,12">
-                                <ItemsControl ItemsSource="{Binding Breakdown}" Width="196">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,3">
-                                                <Border Width="11" Height="11" CornerRadius="3" Background="{Binding ColorBrush}"
-                                                        BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
-                                                        Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#3A4453"
-                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="168"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
+                        <!-- Donut only, no legend: the table next to it already lists every product with its
+                             colour, and hovering a slice names its product. -->
+                        <lvc:PieChart Grid.Column="1" x:Name="DonutChart" Series="{Binding PieSeries}" LegendPosition="Hidden"
+                                      SizeChanged="DonutChart_SizeChanged"
+                                      Margin="12" Background="Transparent" MaxHeight="520" MinWidth="100"/>
                     </Grid>
                 </Grid>
 

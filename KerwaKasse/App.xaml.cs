@@ -96,7 +96,25 @@ namespace KerwaKasse
             // Which event (= which database file) to open comes from the settings, so both are needed
             // before anything touches a database.
             var settingsService = new JsonSettingsService(Path.Combine(appDir, "settings.json"), _loggerFactory.CreateLogger<JsonSettingsService>());
-            var eventCatalog = new EventCatalog(appDir, settingsService, _loggerFactory.CreateLogger<EventCatalog>(), RecycleBin.SendFile);
+
+            // The catalog also brings every event database up to the current schema; the active one has to
+            // succeed, otherwise the app cannot work and says why.
+            EventCatalog eventCatalog;
+            try
+            {
+                eventCatalog = new EventCatalog(appDir, settingsService, _loggerFactory.CreateLogger<EventCatalog>(), RecycleBin.SendFile);
+            }
+            catch (Exception ex) when (ex is DatabaseTooNewException or DatabaseMigrationException)
+            {
+                // A file of a newer version is a known situation, not a bug: no stack trace for it.
+                if (ex is DatabaseTooNewException)
+                    _logger.LogError("The active event database could not be opened: {Reason}", ex.Message);
+                else
+                    _logger.LogError(ex, "The active event database could not be opened");
+                MessageBox.Show(StartupDatabaseErrorText(ex), "KerwaKasse", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown();
+                return;
+            }
             string dbFilePath = eventCatalog.ActiveFilePath;
 
             var version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -105,11 +123,12 @@ namespace KerwaKasse
 
             RegisterGlobalExceptionLogging();
 
+            // Before the main window: it may already show a dialog on startup.
+            DialogLightDismiss.Register();
+
             // Remove the installer a previous one-click update left behind (this run may be the
             // relaunch after such an update).
             GitHubUpdateService.CleanupDownloadedInstallers(_loggerFactory.CreateLogger(typeof(GitHubUpdateService)));
-
-            DatabaseInitializer.Initialize($"Data Source={dbFilePath}", _loggerFactory.CreateLogger(typeof(DatabaseInitializer)));
 
             new MainWindow(_loggerFactory, settingsService, eventCatalog).Show();
 
@@ -117,6 +136,21 @@ namespace KerwaKasse
 
             base.OnStartup(e);
         }
+
+        private static string StartupDatabaseErrorText(Exception ex) => ex switch
+        {
+            DatabaseTooNewException =>
+                "Die zuletzt geöffnete Veranstaltung wurde mit einer neueren Version von KerwaKasse gespeichert " +
+                "und kann mit dieser Version nicht geöffnet werden.\n\n" +
+                "Bitte die aktuelle Version von KerwaKasse installieren.",
+            DatabaseMigrationException { BackupPath: string backup } =>
+                "Die Datenbank der zuletzt geöffneten Veranstaltung konnte nicht auf den aktuellen Stand gebracht " +
+                "werden. Sie ist dabei unverändert geblieben.\n\n" +
+                $"Vorher wurde eine Sicherungskopie angelegt:\n{backup}\n\nDetails stehen in der Logdatei.",
+            _ =>
+                "Die Datenbank der zuletzt geöffneten Veranstaltung konnte nicht auf den aktuellen Stand gebracht " +
+                "werden. Sie ist dabei unverändert geblieben.\n\nDetails stehen in der Logdatei."
+        };
 
         // Lets a second, exiting instance ask this one to surface. A background thread waits for the
         // signal and brings the main window to the front on the UI thread.

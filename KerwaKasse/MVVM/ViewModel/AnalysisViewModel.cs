@@ -57,13 +57,18 @@ namespace KerwaKasse.MVVM.ViewModel
         private DateTime _currentFrom;
         private DateTime _currentTo;
         private IReadOnlyCollection<int> _currentIds;
+        private bool _currentIncludeFreeEntries = true;
         private List<SavedAnalysis> _savedCache = new();
         private readonly Dictionary<int, HashSet<int>> _savedProductSets = new();
 
-        // Loaded figures plus their per-product price lines, kept so re-sorting the table only
-        // rebuilds rows/pie without hitting the database again.
+        // Loaded figures plus their per-product price lines and free entries, kept so re-sorting the
+        // table only rebuilds rows/pie without hitting the database again.
         private List<SalesFigure> _currentFigures = new();
         private Dictionary<int, IReadOnlyList<PriceDetailLine>> _priceDetailsByProduct = new();
+        private ILookup<int?, FreeEntryGroup> _freeEntryGroups = Array.Empty<FreeEntryGroup>().ToLookup(g => g.ProductId);
+
+        // Rows the user expanded (by AnalysisSalesRow.Key); they stay open across re-sorts and reloads.
+        private readonly HashSet<string> _expandedRows = new();
         private string _sortColumn = "Amount";
         private bool _sortDescending = true;
 
@@ -129,7 +134,8 @@ namespace KerwaKasse.MVVM.ViewModel
             TimeCourseXAxes = new[] { _timeCourseXAxis };
             TimeCourseYAxes = new[] { _timeCourseYAxis };
 
-            ProductFilter = new ObservableCollection<ProductFilterItem>();
+            // "Freie Eingabe" first (like in the history's "Position nachtragen"), then the products.
+            ProductFilter = new ObservableCollection<ProductFilterItem> { ProductFilterItem.FreeEntries(isSelected: true, OnProductToggled) };
             foreach (var p in _productService.GetAll())
                 ProductFilter.Add(new ProductFilterItem(p.Id, p.Name, p.Color, isSelected: true, OnProductToggled));
             UpdateFilteredProducts();
@@ -144,6 +150,7 @@ namespace KerwaKasse.MVVM.ViewModel
             ExportCsvCommand = new RelayCommand(o => ExportCsv());
             ExportPdfCommand = new RelayCommand(async o => await ExportPdfAsync());
             SortBreakdownCommand = new RelayCommand(o => SortBreakdown(o as string));
+            ToggleRowCommand = new RelayCommand(o => ToggleRow(o as AnalysisSalesRow));
             SaveCurrentCommand = new RelayCommand(async o => await SaveCurrentAsync(), o => !HasActiveAnalysis);
             ApplySavedCommand = new RelayCommand(o => ApplySaved(ToId(o)));
             ManageCommand = new RelayCommand(async o => await ManageAsync());
@@ -263,9 +270,14 @@ namespace KerwaKasse.MVVM.ViewModel
 
         private List<SalesFigure> SortFigures(List<SalesFigure> figures) => (_sortColumn switch
         {
-            "Name" => _sortDescending
-                ? figures.OrderByDescending(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase)
-                : figures.OrderBy(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase),
+            // By name a product's special prices follow it directly, and the free entries come last.
+            "Name" => (_sortDescending
+                    ? figures.OrderBy(f => f.Kind == SalesFigureKind.FreeEntries)
+                        .ThenByDescending(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase)
+                    : figures.OrderBy(f => f.Kind == SalesFigureKind.FreeEntries)
+                        .ThenBy(f => f.ProductName, StringComparer.CurrentCultureIgnoreCase))
+                .ThenBy(f => f.ProductId)
+                .ThenBy(f => f.Kind),
             "Revenue" => _sortDescending
                 ? figures.OrderByDescending(f => f.TotalRevenue)
                 : figures.OrderBy(f => f.TotalRevenue),
@@ -319,6 +331,7 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand ExportCsvCommand { get; }
         public RelayCommand ExportPdfCommand { get; }
         public RelayCommand SortBreakdownCommand { get; }
+        public RelayCommand ToggleRowCommand { get; }
         public RelayCommand SaveCurrentCommand { get; }
         public RelayCommand ApplySavedCommand { get; }
         public RelayCommand ManageCommand { get; }
@@ -380,7 +393,7 @@ namespace KerwaKasse.MVVM.ViewModel
             // The breakdown is always current (rebuilt on every reload); the time course is built
             // lazily, so catch up now if reloads happened while its tab was hidden.
             if (timeCourse && _timeCourseIsStale)
-                BuildTimeCourse(_currentFrom, _currentTo, _currentIds);
+                BuildTimeCourse();
         }
 
         private void SelectResolution(AnalysisSegmentItem item)
@@ -388,7 +401,7 @@ namespace KerwaKasse.MVVM.ViewModel
             if (item == null) return;
             _resolution = (AnalysisTimeResolution)item.Value;
             foreach (var r in Resolutions) r.IsSelected = ReferenceEquals(r, item);
-            BuildTimeCourse(_currentFrom, _currentTo, _currentIds);
+            BuildTimeCourse();
         }
 
         // ── Product filter ──
@@ -423,21 +436,21 @@ namespace KerwaKasse.MVVM.ViewModel
             _currentFrom = from;
             _currentTo = to;
 
-            var selected = ProductFilter.Where(p => p.IsSelected).ToList();
-            bool all = ProductFilter.Count > 0 && selected.Count == ProductFilter.Count;
-            bool none = selected.Count == 0;
-            var currentIds = selected.Select(p => p.ProductId).ToHashSet();
+            var (all, currentIds, includeFreeEntries) = CurrentSelection();
+            int selectedCount = ProductFilter.Count(p => p.IsSelected);
+            bool none = selectedCount == 0;
 
             ProductFilterSummary = none
                 ? "keine Produkte"
-                : all ? $"alle ({ProductFilter.Count})" : $"{selected.Count} von {ProductFilter.Count}";
+                : all ? $"alle ({ProductFilter.Count})" : $"{selectedCount} von {ProductFilter.Count}";
 
-            UpdateActiveMatch(all, currentIds, from, to);
+            UpdateActiveMatch(all, currentIds, includeFreeEntries, from, to);
 
             if (none)
             {
                 _currentFigures = new List<SalesFigure>();
                 _priceDetailsByProduct = new Dictionary<int, IReadOnlyList<PriceDetailLine>>();
+                _freeEntryGroups = Array.Empty<FreeEntryGroup>().ToLookup(g => g.ProductId);
                 Breakdown = new ObservableCollection<AnalysisSalesRow>();
                 TotalRevenue = 0m;
                 TotalAmount = 0;
@@ -447,9 +460,11 @@ namespace KerwaKasse.MVVM.ViewModel
                 return;
             }
 
-            IReadOnlyCollection<int> ids = all ? null : currentIds.ToList();
+            // All products: no id list, so products added later are part of it as well.
+            bool allProducts = ProductFilter.Where(p => !p.IsFreeEntries).All(p => p.IsSelected);
+            IReadOnlyCollection<int> ids = allProducts ? null : currentIds.ToList();
 
-            _currentFigures = _analytics.GetSalesFigures(from, to, ids)
+            _currentFigures = _analytics.GetSalesFigures(from, to, ids, includeFreeEntries)
                 .Where(f => f.TotalAmount > 0)
                 .ToList();
 
@@ -457,16 +472,30 @@ namespace KerwaKasse.MVVM.ViewModel
                 .GroupBy(p => p.ProductId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<PriceDetailLine>)g.Select(FormatPricePeriod).ToList());
 
+            _freeEntryGroups = _analytics.GetFreeEntryGroups(from, to, ids, includeFreeEntries).ToLookup(g => g.ProductId);
+
             ApplyBreakdown();
 
             TotalRevenue = _currentFigures.Sum(f => f.TotalRevenue);
             TotalAmount = _currentFigures.Sum(f => f.TotalAmount);
 
             _currentIds = ids;
+            _currentIncludeFreeEntries = includeFreeEntries;
             if (IsTimeCourse)
-                BuildTimeCourse(from, to, ids);
+                BuildTimeCourse();
             else
                 _timeCourseIsStale = true;
+        }
+
+        /// <summary>The filter as it is ticked: whether everything is selected (products and free
+        /// entries), the selected product ids, and whether the free entries are included.</summary>
+        private (bool all, HashSet<int> productIds, bool includeFreeEntries) CurrentSelection()
+        {
+            var selected = ProductFilter.Where(p => p.IsSelected).ToList();
+            bool all = ProductFilter.Count > 0 && selected.Count == ProductFilter.Count;
+            return (all,
+                selected.Where(p => !p.IsFreeEntries).Select(p => p.ProductId).ToHashSet(),
+                selected.Any(p => p.IsFreeEntries));
         }
 
         /// <summary>(Re)builds the table rows and the pie from the loaded figures in the chosen sort
@@ -478,32 +507,87 @@ namespace KerwaKasse.MVVM.ViewModel
             var rows = new List<AnalysisSalesRow>();
             foreach (var f in sorted)
             {
-                var fill = ColorBorderHelper.ParseBrush(f.ProductColor);
-                rows.Add(new AnalysisSalesRow
+                var fill = ColorBorderHelper.ParseBrush(ColorOf(f));
+                bool isProduct = f.Kind == SalesFigureKind.Product;
+                var row = new AnalysisSalesRow
                 {
-                    Name = f.ProductName,
+                    Kind = f.Kind,
+                    ProductId = f.ProductId,
+                    Name = NameOf(f),
                     Amount = f.TotalAmount,
                     Revenue = f.TotalRevenue,
+                    UnitPrice = f.MinUnitPrice == f.MaxUnitPrice ? f.MinUnitPrice : null,
                     ColorBrush = fill,
                     ColorBorderBrush = ColorBorderHelper.Border(fill),
-                    PriceDetails = _priceDetailsByProduct.TryGetValue(f.ProductId, out var details)
+                    // A product's tooltip shows its own prices; special prices and free entries are
+                    // listed when the row is expanded instead.
+                    PriceDetails = isProduct && f.ProductId is int id && _priceDetailsByProduct.TryGetValue(id, out var details)
                         ? details
-                        : Array.Empty<PriceDetailLine>()
-                });
+                        : Array.Empty<PriceDetailLine>(),
+                    EnteredPrices = isProduct && f.VariablePriceAmount > 0 ? FormatEnteredPrices(f) : null,
+                    Details = isProduct
+                        ? Array.Empty<AnalysisDetailRow>()
+                        : _freeEntryGroups[f.ProductId].Select(ToDetailRow).ToList()
+                };
+                row.IsExpanded = row.HasDetails && _expandedRows.Contains(row.Key);
+                rows.Add(row);
             }
 
             Breakdown = new ObservableCollection<AnalysisSalesRow>(rows);
             PieSeries = BuildPie(sorted);
         }
 
-        /// <summary>One tooltip line: "3,50 €" plus "24.07.2023 – 01.08.2025" (a single date when the
-        /// first and last sale of the segment share the day).</summary>
+        /// <summary>Expands a special price or free entries row into its details, or collapses it.</summary>
+        private void ToggleRow(AnalysisSalesRow row)
+        {
+            if (row == null || !row.HasDetails) return;
+            row.IsExpanded = !row.IsExpanded;
+            if (row.IsExpanded) _expandedRows.Add(row.Key);
+            else _expandedRows.Remove(row.Key);
+        }
+
+        /// <summary>The row's name: the product, "&lt;product&gt; (Sonderpreis)" or "Freie Eingabe".</summary>
+        private static string NameOf(SalesFigure f) => f.Kind switch
+        {
+            SalesFigureKind.SpecialPrice => $"{f.ProductName} (Sonderpreis)",
+            SalesFigureKind.FreeEntries => "Freie Eingabe",
+            _ => f.ProductName
+        };
+
+        /// <summary>Special prices keep the product's colour; the free entries are grey, as at the till.</summary>
+        private static string ColorOf(SalesFigure f) =>
+            f.Kind == SalesFigureKind.FreeEntries ? ProductFilterItem.FreeEntriesColor : f.ProductColor;
+
+        private static AnalysisDetailRow ToDetailRow(FreeEntryGroup g) => new()
+        {
+            Name = g.Note ?? "Ohne Angabe",
+            IsWithoutDescription = g.Note == null,
+            Amount = g.TotalAmount,
+            UnitPrice = g.UnitPrice,
+            Revenue = g.TotalRevenue
+        };
+
+        /// <summary>One tooltip line: "3,50 €" (or "ca. 3,50 €" for the suggestion of a variable price)
+        /// plus "24.07.2023 – 01.08.2025" (a single date when the first and last sale of the segment
+        /// share the day).</summary>
         private static PriceDetailLine FormatPricePeriod(ProductPricePeriod p)
         {
             string range = p.From.Date == p.To.Date
                 ? p.From.ToString("dd.MM.yyyy", German)
                 : $"{p.From.ToString("dd.MM.yyyy", German)} – {p.To.ToString("dd.MM.yyyy", German)}";
-            return new PriceDetailLine(p.UnitPrice.ToString("C", German), range);
+            string price = p.UnitPrice.ToString("C", German);
+            return new PriceDetailLine(p.IsVariablePrice ? "ca. " + price : price, range);
+        }
+
+        /// <summary>The prices entered for a product with a variable price: "6,00 – 8,50 € · Ø 7,67 €",
+        /// or just the price when all were the same.</summary>
+        private static string FormatEnteredPrices(SalesFigure f)
+        {
+            if (f.VariablePriceMin == f.VariablePriceMax)
+                return f.VariablePriceMin.ToString("C", German);
+
+            decimal average = Math.Round(f.VariablePriceRevenue / f.VariablePriceAmount, 2);
+            return $"{f.VariablePriceMin.ToString("N2", German)} – {f.VariablePriceMax.ToString("C", German)} · Ø {average.ToString("C", German)}";
         }
 
         private ISeries[] BuildPie(List<SalesFigure> figures)
@@ -514,10 +598,10 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 var pie = new PieSeries<double>
                 {
-                    Name = f.ProductName,
+                    Name = NameOf(f),
                     Values = new[] { byRevenue ? (double)f.TotalRevenue : f.TotalAmount },
                     InnerRadius = _pieInnerRadius,
-                    Stroke = StrokePaint(f.ProductColor),
+                    Stroke = StrokePaint(ColorOf(f)),
                     DataLabelsPaint = null,
                     // The tooltip already shows the series Name; only add the metric value here.
                     ToolTipLabelFormatter = _ => byRevenue
@@ -528,7 +612,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 // Fill from the same parsed brush as the table swatch (including its LightGray
                 // fallback). Without an explicit fill, LiveCharts assigns an index-based palette
                 // colour to products lacking a colour — which then changes on every re-sort.
-                if (ColorBorderHelper.ParseBrush(f.ProductColor) is System.Windows.Media.SolidColorBrush fillBrush)
+                if (ColorBorderHelper.ParseBrush(ColorOf(f)) is System.Windows.Media.SolidColorBrush fillBrush)
                     pie.Fill = new SolidColorPaint(new SKColor(fillBrush.Color.R, fillBrush.Color.G, fillBrush.Color.B));
 
                 series.Add(pie);
@@ -543,9 +627,10 @@ namespace KerwaKasse.MVVM.ViewModel
             return new SolidColorPaint(SKColors.Gray) { StrokeThickness = 2 };
         }
 
-        private void BuildTimeCourse(DateTime from, DateTime to, IReadOnlyCollection<int> ids)
+        private void BuildTimeCourse()
         {
-            var buckets = _analytics.GetSalesOverTime(from, to, ids, _resolution);
+            var (from, to) = (_currentFrom, _currentTo);
+            var buckets = _analytics.GetSalesOverTime(from, to, _currentIds, _resolution, _currentIncludeFreeEntries);
             bool multiDay = (to - from).TotalDays > 1.0;
 
             // Day buckets carry no meaningful time-of-day, so label them by date only.
@@ -581,7 +666,7 @@ namespace KerwaKasse.MVVM.ViewModel
 
         /// <summary>Lights up the matching saved analysis (if the current products + period equal a
         /// stored one), otherwise shows "Benutzerdefiniert". View mode is intentionally not compared.</summary>
-        private void UpdateActiveMatch(bool all, HashSet<int> currentIds, DateTime from, DateTime to)
+        private void UpdateActiveMatch(bool all, HashSet<int> currentIds, bool includeFreeEntries, DateTime from, DateTime to)
         {
             string match = null;
             int? matchId = null;
@@ -589,7 +674,7 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 if (a.From != from || a.To != to) continue;
                 if (a.AllProducts && all) { match = a.Name; matchId = a.Id; break; }
-                if (!a.AllProducts && !all
+                if (!a.AllProducts && !all && a.IncludeFreeEntries == includeFreeEntries
                     && _savedProductSets.TryGetValue(a.Id, out var set) && set.SetEquals(currentIds))
                 {
                     match = a.Name;
@@ -605,21 +690,20 @@ namespace KerwaKasse.MVVM.ViewModel
         private void RecomputeActive()
         {
             var (from, to) = EffectiveRange();
-            var selected = ProductFilter.Where(p => p.IsSelected).ToList();
-            bool all = ProductFilter.Count > 0 && selected.Count == ProductFilter.Count;
-            UpdateActiveMatch(all, selected.Select(p => p.ProductId).ToHashSet(), from, to);
+            var (all, productIds, includeFreeEntries) = CurrentSelection();
+            UpdateActiveMatch(all, productIds, includeFreeEntries, from, to);
         }
 
         private SavedAnalysis BuildCurrentAnalysis(string name)
         {
-            var selected = ProductFilter.Where(p => p.IsSelected).ToList();
-            bool all = ProductFilter.Count > 0 && selected.Count == ProductFilter.Count;
+            var (all, productIds, includeFreeEntries) = CurrentSelection();
             var (from, to) = EffectiveRange();
             return new SavedAnalysis
             {
                 Name = name,
                 AllProducts = all,
-                ProductIds = all ? new List<int>() : selected.Select(p => p.ProductId).ToList(),
+                ProductIds = all ? new List<int>() : productIds.ToList(),
+                IncludeFreeEntries = all || includeFreeEntries,
                 From = from,
                 To = to
             };
@@ -640,7 +724,8 @@ namespace KerwaKasse.MVVM.ViewModel
             else
             {
                 var set = _savedAnalysisService.GetProductIds(id).ToHashSet();
-                foreach (var p in ProductFilter) p.IsSelected = set.Contains(p.ProductId);
+                foreach (var p in ProductFilter)
+                    p.IsSelected = p.IsFreeEntries ? a.IncludeFreeEntries : set.Contains(p.ProductId);
             }
 
             if (a.From.HasValue && a.To.HasValue)
@@ -692,19 +777,16 @@ namespace KerwaKasse.MVVM.ViewModel
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("Produkt;Menge;Umsatz in €");
+                // Several prices leave the unit price cell empty, so spreadsheets keep the column numeric.
+                sb.AppendLine("Produkt;Menge;Einzelpreis in €;Umsatz in €");
                 foreach (var row in Breakdown)
-                    sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.Revenue.ToString("0.00", German)}");
-                sb.AppendLine($"Gesamt;{TotalAmount};{TotalRevenue.ToString("0.00", German)}");
+                    sb.AppendLine($"{CsvEscape(row.Name)};{row.Amount};{row.UnitPrice?.ToString("0.00", German)};{row.Revenue.ToString("0.00", German)}");
+                sb.AppendLine($"Gesamt;{TotalAmount};;{TotalRevenue.ToString("0.00", German)}");
 
-                // Suggest a non-colliding name up front: pick a free "… (2).csv" within the target
-                // folder and offer it as the default. The user's final choice always wins — if they
-                // deliberately keep an existing name, the dialog's own overwrite prompt handles it.
-                var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                // The dialog suggests a name that is still free in its folder ("… (2).csv"); the user's
+                // final choice always wins, an existing file gets the dialog's own overwrite prompt.
                 var baseName = SanitizeFileName($"KerwaKasse Auswertung - {ActiveAnalysisText}");
-                var suggestedName = UniqueFileName(dir, baseName, ".csv");
-
-                var path = _dialogService.ShowSaveFileDialog("CSV-Datei (*.csv)|*.csv", "Auswertung exportieren", suggestedName, dir);
+                var path = _dialogService.ShowSaveFileDialog("CSV-Datei (*.csv)|*.csv", "Auswertung exportieren", baseName, ".csv");
                 if (string.IsNullOrEmpty(path)) return;
 
                 File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
@@ -721,8 +803,9 @@ namespace KerwaKasse.MVVM.ViewModel
         // ── PDF export (QuestPDF writes the .pdf file directly) ──
 
         /// <summary>Asks for a report title (pre-filled with the active analysis' name, or
-        /// "Benutzerdefiniert"), then exports the shown breakdown to a PDF via the save dialog and
-        /// opens it. The chosen title is both the document's heading and the suggested file name.</summary>
+        /// "Benutzerdefiniert") and, when there are special prices or free entries, whether to append
+        /// them in detail; then exports the shown breakdown to a PDF via the save dialog and opens it.
+        /// The chosen title is both the document's heading and the suggested file name.</summary>
         private async Task ExportPdfAsync()
         {
             if (Breakdown.Count == 0)
@@ -731,20 +814,17 @@ namespace KerwaKasse.MVVM.ViewModel
                 return;
             }
 
-            var title = await _dialogService.ShowTextInputAsync(
-                "PDF exportieren", "Titel (erscheint als Überschrift im PDF)", ActiveAnalysisText);
-            if (string.IsNullOrEmpty(title)) return; // cancelled or left empty
+            var options = await _dialogService.ShowPdfExportAsync(ActiveAnalysisText, Breakdown.Any(r => r.HasDetails));
+            if (options == null) return; // cancelled or left empty
+            string title = options.Title;
 
             try
             {
-                var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 var baseName = SanitizeFileName($"KerwaKasse Auswertung - {title}");
-                var suggestedName = UniqueFileName(dir, baseName, ".pdf");
-
-                var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", suggestedName, dir);
+                var path = _dialogService.ShowSaveFileDialog("PDF-Datei (*.pdf)|*.pdf", "Auswertung als PDF exportieren", baseName, ".pdf");
                 if (string.IsNullOrEmpty(path)) return;
 
-                AnalysisQuestPdfExporter.Export(BuildReport(title), path);
+                AnalysisQuestPdfExporter.Export(BuildReport(title, options.IncludeDetails), path);
                 _logger.LogInformation("Analysis exported to PDF: {FilePath}", path);
 
                 // Open the fresh PDF in the default viewer right away — after "save as PDF" the
@@ -759,7 +839,7 @@ namespace KerwaKasse.MVVM.ViewModel
         }
 
         /// <summary>Snapshot of the shown breakdown (current sort order) with the user-chosen title.</summary>
-        private AnalysisReport BuildReport(string title)
+        private AnalysisReport BuildReport(string title, bool includeDetails)
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             return new AnalysisReport
@@ -768,6 +848,7 @@ namespace KerwaKasse.MVVM.ViewModel
                 Period = $"{_currentFrom.ToString("dd.MM.yyyy HH:mm", German)} – {_currentTo.ToString("dd.MM.yyyy HH:mm", German)} Uhr",
                 ProductSummary = ProductFilterSummary,
                 Rows = Breakdown.ToList(),
+                IncludeDetails = includeDetails,
                 TotalAmount = TotalAmount,
                 TotalRevenue = TotalRevenue,
                 AppVersion = version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "?"
@@ -787,17 +868,6 @@ namespace KerwaKasse.MVVM.ViewModel
             foreach (var c in Path.GetInvalidFileNameChars())
                 name = name.Replace(c, ' ');
             return name.Trim();
-        }
-
-        /// <summary>A file name (no path) that does not yet exist in <paramref name="dir"/>:
-        /// "<paramref name="baseName"/><paramref name="ext"/>", else " (2)", " (3)", … appended.</summary>
-        private static string UniqueFileName(string dir, string baseName, string ext)
-        {
-            var candidate = baseName + ext;
-            int n = 2;
-            while (File.Exists(Path.Combine(dir, candidate)))
-                candidate = $"{baseName} ({n++}){ext}";
-            return candidate;
         }
 
         // ── Helpers ──

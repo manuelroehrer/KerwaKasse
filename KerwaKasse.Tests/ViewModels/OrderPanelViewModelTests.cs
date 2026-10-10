@@ -235,6 +235,181 @@ public class OrderPanelViewModelTests
         Assert.Equal(0m, _sut.Total);
     }
 
+    // ── Variable prices and free entries ──
+
+    private ProductModel VariablePriceProduct()
+    {
+        var mackerel = new ProductModel { ProductID = 9, Name = "Makrele", Price = 7.00m, VariablePrice = true, ColorAsString = "#00AA00" };
+        _sut.Products.Add(mackerel);
+        return mackerel;
+    }
+
+    [Fact]
+    public async Task AddOrderPosition_VariablePrice_AsksForThePriceStartingFromTheSuggestion()
+    {
+        var mackerel = VariablePriceProduct();
+        _dialogService.ShowPriceEntryAsync("Makrele", 7.00m).Returns(8.50m);
+
+        await _sut.AddOrderPosition(mackerel);
+
+        var position = Assert.Single(_sut.OrderPositions);
+        Assert.Equal(OrderPositionKind.VariablePrice, position.Kind);
+        Assert.Equal(8.50m, position.UnitPrice);
+        Assert.Equal(7.00m, position.ListPrice);
+        Assert.Equal(8.50m, _sut.Total);
+        Assert.Equal("Makrele", position.DisplayName);
+        Assert.Equal("Variabler Preis", position.Subline);
+    }
+
+    [Fact]
+    public async Task AddOrderPosition_VariablePrice_CancelledAddsNothing()
+    {
+        var mackerel = VariablePriceProduct();
+        _dialogService.ShowPriceEntryAsync(Arg.Any<string>(), Arg.Any<decimal>()).Returns((decimal?)null);
+
+        await _sut.AddOrderPosition(mackerel);
+
+        Assert.Empty(_sut.OrderPositions);
+        Assert.Equal(0m, _sut.Total);
+    }
+
+    [Fact]
+    public async Task AddOrderPosition_VariablePrice_SamePriceSharesARow_OtherPriceGetsItsOwn()
+    {
+        var mackerel = VariablePriceProduct();
+        _dialogService.ShowPriceEntryAsync(Arg.Any<string>(), Arg.Any<decimal>()).Returns(8.50m, 8.50m, 9.00m);
+
+        await _sut.AddOrderPosition(mackerel);
+        await _sut.AddOrderPosition(mackerel);
+        await _sut.AddOrderPosition(mackerel);
+
+        Assert.Equal(2, _sut.OrderPositions.Count);
+        Assert.Equal(2, _sut.OrderPositions.Single(p => p.UnitPrice == 8.50m).Amount);
+        Assert.Equal(26.00m, _sut.Total);
+    }
+
+    [Fact]
+    public async Task AddFreeEntry_OffersRecentNotesAndTheAvailableProducts()
+    {
+        var recent = new List<string> { "Kuchen" };
+        _orderService.GetRecentNotes(5).Returns(recent);
+
+        await _sut.AddFreeEntry();
+
+        await _dialogService.Received(1).ShowFreeEntryAsync(recent, _sut.Products);
+    }
+
+    [Fact]
+    public async Task AddFreeEntry_WithProduct_IsASpecialPriceForIt()
+    {
+        var bratwurst = _sut.Products[0];
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns(new FreeEntryResult(5.00m, "3 statt 2", bratwurst));
+
+        await _sut.AddFreeEntry();
+
+        var position = Assert.Single(_sut.OrderPositions);
+        Assert.Equal(OrderPositionKind.FreeEntry, position.Kind);
+        Assert.Equal(1, position.ProductId);
+        Assert.Equal(5.00m, position.UnitPrice);
+        Assert.Equal(3.50m, position.ListPrice);
+        // The main line says what was sold, the second line only the kind.
+        Assert.Equal("Bratwurst · 3 statt 2", position.DisplayName);
+        Assert.Equal("Sonderpreis", position.Subline);
+    }
+
+    [Fact]
+    public async Task AddFreeEntry_WithoutProduct_ShowsItsDescriptionAsName()
+    {
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns(new FreeEntryResult(2.50m, "Kuchen", null));
+
+        await _sut.AddFreeEntry();
+
+        var position = Assert.Single(_sut.OrderPositions);
+        Assert.Null(position.ProductId);
+        Assert.Null(position.ListPrice);
+        Assert.Equal("Kuchen", position.DisplayName);
+        Assert.Equal("Freie Eingabe", position.Subline);
+        Assert.False(position.IsWithoutDescription);
+    }
+
+    [Fact]
+    public async Task AddFreeEntry_WithoutDescription_IsMarked()
+    {
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns(new FreeEntryResult(2.50m, null, null));
+
+        await _sut.AddFreeEntry();
+
+        var position = Assert.Single(_sut.OrderPositions);
+        Assert.Equal("Ohne Angabe", position.DisplayName);
+        Assert.Equal("Freie Eingabe", position.Subline);
+        Assert.True(position.IsWithoutDescription);
+    }
+
+    [Fact]
+    public async Task AddFreeEntry_Cancelled_AddsNothing()
+    {
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns((FreeEntryResult?)null);
+
+        await _sut.AddFreeEntry();
+
+        Assert.Empty(_sut.OrderPositions);
+    }
+
+    [Fact]
+    public async Task RegularTap_DoesNotMergeIntoASpecialPriceOfTheSameProduct()
+    {
+        var bratwurst = _sut.Products[0];
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns(new FreeEntryResult(5.00m, null, bratwurst));
+        await _sut.AddFreeEntry();
+
+        await _sut.AddOrderPosition(bratwurst);
+
+        Assert.Equal(2, _sut.OrderPositions.Count);
+        Assert.Equal(8.50m, _sut.Total);
+    }
+
+    [Fact]
+    public async Task SaveOrder_StoresFreeEntriesWithKindNoteAndListPrice()
+    {
+        _dialogService.ShowFreeEntryAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<IReadOnlyList<ProductModel>>())
+            .Returns(new FreeEntryResult(2.50m, "Kuchen", null));
+        await _sut.AddFreeEntry();
+        List<OrderPosition>? captured = null;
+        _orderService.When(x => x.PlaceOrder(Arg.Any<IEnumerable<OrderPosition>>()))
+            .Do(ci => captured = ci.Arg<IEnumerable<OrderPosition>>().ToList());
+
+        _sut.SaveOrder();
+
+        var position = Assert.Single(captured!);
+        Assert.Equal(OrderPositionKind.FreeEntry, position.Kind);
+        Assert.Null(position.ProductId);
+        Assert.Equal(2.50m, position.UnitPrice);
+        Assert.Null(position.ListPrice);
+        Assert.Equal("Kuchen", position.Note);
+    }
+
+    [Fact]
+    public void SaveOrder_StoresTheListPriceAsRegularPosition()
+    {
+        var product = _sut.Products[0];
+        _sut.AddOrderPosition(product);
+        List<OrderPosition>? captured = null;
+        _orderService.When(x => x.PlaceOrder(Arg.Any<IEnumerable<OrderPosition>>()))
+            .Do(ci => captured = ci.Arg<IEnumerable<OrderPosition>>().ToList());
+
+        _sut.SaveOrder();
+
+        var position = Assert.Single(captured!);
+        Assert.Equal(OrderPositionKind.Regular, position.Kind);
+        Assert.Equal(product.Price, position.UnitPrice);
+        Assert.Equal(product.Price, position.ListPrice);
+    }
+
     [Fact]
     public void SaveOrder_MapsPositionsCorrectly()
     {

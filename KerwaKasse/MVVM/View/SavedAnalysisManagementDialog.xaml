@@ -8,6 +8,7 @@
              xmlns:helper="clr-namespace:KerwaKasse.Helper"
              mc:Ignorable="d"
              Padding="0"
+             helper:DialogLightDismiss.KeepOpen="{Binding IsDirty}"
              d:DesignHeight="760" d:DesignWidth="780">
 
     <ui:ContentDialog.Resources>
@@ -413,15 +414,20 @@
                                 <ItemsControl ItemsSource="{Binding FilteredProducts}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" MinHeight="34"
-                                                      VerticalContentAlignment="Center" Margin="0,1" Padding="10,0,0,0">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Border Width="12" Height="12" CornerRadius="3" Background="{Binding ColorBrush}"
-                                                            BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
-                                                            Margin="0,0,9,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </CheckBox>
+                                            <StackPanel>
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" MinHeight="34"
+                                                          VerticalContentAlignment="Center" Margin="0,1" Padding="10,0,0,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Width="12" Height="12" CornerRadius="3" Background="{Binding ColorBrush}"
+                                                                BorderBrush="{Binding ColorBorderBrush}" BorderThickness="1"
+                                                                Margin="0,0,9,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Name}" FontSize="14.5" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                                <!-- "Freie Eingabe" comes first and is set apart from the products. -->
+                                                <Border Height="1" Background="#E3E6EA" Margin="0,3,6,4"
+                                                        Visibility="{Binding IsFreeEntries, Converter={StaticResource BoolToVisibility}}"/>
+                                            </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

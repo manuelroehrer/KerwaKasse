@@ -38,21 +38,7 @@ public class SqliteOrderService : IOrderService
             transaction);
 
         foreach (var pos in positionList)
-        {
-            connection.Execute(
-                """
-                INSERT INTO OrderPositions (OrderId, ProductId, Amount, UnitPriceCents)
-                VALUES (@OrderId, @ProductId, @Amount, @UnitPriceCents)
-                """,
-                new
-                {
-                    OrderId = orderId,
-                    pos.ProductId,
-                    pos.Amount,
-                    UnitPriceCents = ToCents(pos.UnitPrice)
-                },
-                transaction);
-        }
+            InsertPosition(connection, transaction, orderId, pos);
 
         transaction.Commit();
 
@@ -69,13 +55,14 @@ public class SqliteOrderService : IOrderService
 
         var rows = connection.Query<OrderPositionRow>(
             """
-            SELECT o.Id AS OrderId, o.OrderTime, op.ProductId, op.Amount, op.UnitPriceCents,
-                   COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName
+            SELECT o.Id AS OrderId, o.OrderTime, op.Id, op.ProductId, op.Kind, op.Amount, op.UnitPriceCents,
+                   op.ListPriceCents, op.Note,
+                   CASE WHEN op.ProductId IS NULL THEN '' ELSE COALESCE(p.Name, '(unbekanntes Produkt)') END AS ProductName
             FROM Orders o
             INNER JOIN OrderPositions op ON o.Id = op.OrderId
             LEFT JOIN Products p ON p.Id = op.ProductId
             WHERE o.OrderTime BETWEEN @DayStart AND @DayEnd
-            ORDER BY o.Id
+            ORDER BY o.Id, op.Id
             """,
             new { DayStart = dayStart, DayEnd = dayEnd });
 
@@ -95,11 +82,15 @@ public class SqliteOrderService : IOrderService
 
             order.Positions.Add(new OrderPosition
             {
+                Id = row.Id,
                 OrderId = row.OrderId,
                 ProductId = row.ProductId,
+                Kind = (OrderPositionKind)row.Kind,
                 ProductName = row.ProductName,
                 Amount = row.Amount,
-                UnitPrice = row.UnitPriceCents / 100m
+                UnitPrice = row.UnitPriceCents / 100m,
+                ListPrice = row.ListPriceCents / 100m,
+                Note = row.Note
             });
         }
 
@@ -113,30 +104,14 @@ public class SqliteOrderService : IOrderService
         using var transaction = connection.BeginTransaction();
 
         // Full replace: drop the order's current positions and re-insert the desired set. This
-        // covers added, removed and amount-changed positions uniformly. The (OrderId, ProductId)
-        // primary key means each product may appear at most once per order; the caller is expected
-        // to keep products unique.
+        // covers added, removed and changed positions uniformly; the positions get new ids.
         connection.Execute(
             "DELETE FROM OrderPositions WHERE OrderId = @Id",
             new { order.Id },
             transaction);
 
         foreach (var pos in order.Positions)
-        {
-            connection.Execute(
-                """
-                INSERT INTO OrderPositions (OrderId, ProductId, Amount, UnitPriceCents)
-                VALUES (@OrderId, @ProductId, @Amount, @UnitPriceCents)
-                """,
-                new
-                {
-                    OrderId = order.Id,
-                    pos.ProductId,
-                    pos.Amount,
-                    UnitPriceCents = ToCents(pos.UnitPrice)
-                },
-                transaction);
-        }
+            InsertPosition(connection, transaction, order.Id, pos);
 
         transaction.Commit();
 
@@ -164,34 +139,45 @@ public class SqliteOrderService : IOrderService
         _logger.LogInformation("Order {OrderId} deleted", orderId);
     }
 
-    public List<SalesFigure> GetSalesFigures(DateTime from, DateTime to)
+    public List<string> GetRecentNotes(int count)
     {
         using var connection = new SqliteConnection(_connectionString);
 
-        return connection.Query<SalesFigureRow>(
+        // Newest first; a generous window, since the same text usually repeats. The distinct step runs
+        // here rather than in SQL, which would treat "Käse" and "käse" as different texts.
+        var notes = connection.Query<string>(
             """
-            SELECT
-                op.ProductId,
-                COALESCE(p.Name, '(unbekanntes Produkt)') AS ProductName,
-                p.Color AS ProductColor,
-                SUM(op.Amount) AS TotalAmount,
-                SUM(op.Amount * op.UnitPriceCents) AS TotalRevenueCents
-            FROM OrderPositions op
-            INNER JOIN Orders o ON o.Id = op.OrderId
-            LEFT JOIN Products p ON p.Id = op.ProductId
-            WHERE o.OrderTime BETWEEN @From AND @To
-            GROUP BY op.ProductId
-            ORDER BY TotalAmount DESC
+            SELECT Note FROM OrderPositions
+            WHERE Kind = @FreeEntry AND Note IS NOT NULL AND TRIM(Note) <> ''
+            ORDER BY Id DESC
+            LIMIT 500
             """,
-            new { From = from.ToString(SqliteDateFormat), To = to.ToString(SqliteDateFormat) })
-            .Select(r => new SalesFigure
+            new { FreeEntry = (int)OrderPositionKind.FreeEntry });
+
+        return notes.Select(n => n.Trim())
+                    .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                    .Take(count)
+                    .ToList();
+    }
+
+    private static void InsertPosition(SqliteConnection connection, SqliteTransaction transaction, int orderId, OrderPosition pos)
+    {
+        connection.Execute(
+            """
+            INSERT INTO OrderPositions (OrderId, ProductId, Kind, Amount, UnitPriceCents, ListPriceCents, Note)
+            VALUES (@OrderId, @ProductId, @Kind, @Amount, @UnitPriceCents, @ListPriceCents, @Note)
+            """,
+            new
             {
-                ProductId = r.ProductId,
-                ProductName = r.ProductName,
-                ProductColor = r.ProductColor,
-                TotalAmount = r.TotalAmount,
-                TotalRevenue = r.TotalRevenueCents / 100m
-            }).ToList();
+                OrderId = orderId,
+                pos.ProductId,
+                Kind = (int)pos.Kind,
+                pos.Amount,
+                UnitPriceCents = ToCents(pos.UnitPrice),
+                ListPriceCents = pos.ListPrice is decimal listPrice ? ToCents(listPrice) : (long?)null,
+                Note = string.IsNullOrWhiteSpace(pos.Note) ? null : pos.Note.Trim()
+            },
+            transaction);
     }
 
     private static long ToCents(decimal price) => (long)Math.Round(price * 100m, MidpointRounding.AwayFromZero);
@@ -200,18 +186,13 @@ public class SqliteOrderService : IOrderService
     {
         public int OrderId { get; set; }
         public string OrderTime { get; set; } = "";
-        public int ProductId { get; set; }
+        public int Id { get; set; }
+        public int? ProductId { get; set; }
+        public int Kind { get; set; }
         public int Amount { get; set; }
         public long UnitPriceCents { get; set; }
+        public long? ListPriceCents { get; set; }
+        public string? Note { get; set; }
         public string ProductName { get; set; } = "";
-    }
-
-    private class SalesFigureRow
-    {
-        public int ProductId { get; set; }
-        public string ProductName { get; set; } = "";
-        public string? ProductColor { get; set; }
-        public int TotalAmount { get; set; }
-        public long TotalRevenueCents { get; set; }
     }
 }

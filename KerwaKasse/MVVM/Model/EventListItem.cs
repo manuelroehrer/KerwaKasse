@@ -18,8 +18,11 @@ namespace KerwaKasse.MVVM.Model
         public string FilePath => Source.FilePath;
         public bool IsActive { get; }
 
-        /// <summary>One line under the name: "39 Produkte · 5.058 Verkäufe · 29.07.2022 – 26.07.2026".</summary>
-        public string Details => Source.Orders == 0
+        /// <summary>One line under the name: "39 Produkte · 5.058 Verkäufe · 29.07.2022 – 26.07.2026", or why
+        /// the event cannot be opened.</summary>
+        public string Details => Source.RequiresNewerVersion
+            ? "Nur mit einer neueren Version von KerwaKasse zu öffnen"
+            : Source.Orders == 0
             ? $"{ProductsText} · noch keine Verkäufe"
             : $"{ProductsText} · {OrdersText}" + (PeriodText.Length > 0 ? $" · {PeriodText}" : "");
 

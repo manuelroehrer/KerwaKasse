@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace KerwaKasse.MVVM.ViewModel
 {
@@ -14,14 +15,19 @@ namespace KerwaKasse.MVVM.ViewModel
     /// Reworked order-history view. Shows the orders of a selected day in a master list on the left;
     /// the selected order is shown read-only in a receipt card on the right. Editing is explicit:
     /// "Bearbeiten" switches the card into edit mode where amounts can be changed, positions removed
-    /// (greyed out, not deleted from view) or added (via a dialog). Changes are highlighted and only
-    /// persisted on "Speichern"; "Abbrechen" discards them. Deleting a whole order is confirmed via a
-    /// flyout in the view, so the command itself just performs the deletion.
+    /// (greyed out, not deleted from view) or added (via a dialog). Entered prices (variable prices,
+    /// free entries) and what a free entry is for can be changed too, with the dialogs of the till.
+    /// Changes are highlighted and only persisted on "Speichern"; "Abbrechen" discards them. Deleting a
+    /// whole order is confirmed via a flyout in the view, so the command itself just performs the deletion.
     /// </summary>
     public class OrderHistoryViewModel : PropertyChangedBase
     {
+        // Number of recent descriptions the free entry dialog offers as suggestions.
+        private const int RecentNoteCount = 5;
+
         private readonly IOrderService _orderService;
         private readonly IProductService _productService;
+        private readonly IDialogService _dialogService;
 
         public RelayCommand BeginEditCommand { get; }
         public RelayCommand CancelEditCommand { get; }
@@ -29,21 +35,20 @@ namespace KerwaKasse.MVVM.ViewModel
         public RelayCommand DeleteOrderCommand { get; }
         public RelayCommand AddPositionCommand { get; }
         public RelayCommand ToggleRemovePositionCommand { get; }
-
-        /// <summary>Set by the view: shows the add-product dialog with the given candidates and
-        /// invokes the callback with the chosen product (or is never called on cancel).</summary>
-        public Action<IReadOnlyList<ProductModel>, Action<ProductModel>> ShowAddPositionPicker { get; set; }
+        public RelayCommand EditPriceCommand { get; }
+        public RelayCommand EditPurposeCommand { get; }
 
         private readonly List<ProductModel> _allProducts;
         private readonly List<OrderModel> _ordersForSelectedDay = new();
 
-        public OrderHistoryViewModel(IOrderService orderService, IProductService productService)
+        public OrderHistoryViewModel(IOrderService orderService, IProductService productService, IDialogService dialogService)
         {
             _orderService = orderService;
             _productService = productService;
+            _dialogService = dialogService;
 
             _allProducts = _productService.GetAll()
-                .Select(p => new ProductModel { ProductID = p.Id, Name = p.Name, Price = p.Price, ColorAsString = p.Color })
+                .Select(p => new ProductModel { ProductID = p.Id, Name = p.Name, Price = p.Price, VariablePrice = p.VariablePrice, ColorAsString = p.Color })
                 .ToList();
 
             Orders = new ObservableCollection<OrderModel>();
@@ -53,11 +58,21 @@ namespace KerwaKasse.MVVM.ViewModel
             CancelEditCommand = new RelayCommand(_ => CancelEdit());
             SaveCommand = new RelayCommand(_ => Save());
             DeleteOrderCommand = new RelayCommand(_ => Delete());
-            AddPositionCommand = new RelayCommand(_ => AddPosition());
+            AddPositionCommand = new RelayCommand(async _ => await AddPosition());
             ToggleRemovePositionCommand = new RelayCommand(o =>
             {
                 if (o is OrderHistoryEditPosition pos)
                     ToggleRemove(pos);
+            });
+            EditPriceCommand = new RelayCommand(async o =>
+            {
+                if (o is OrderHistoryEditPosition pos)
+                    await EditPrice(pos);
+            });
+            EditPurposeCommand = new RelayCommand(async o =>
+            {
+                if (o is OrderHistoryEditPosition pos)
+                    await EditPurpose(pos);
             });
 
             Date = DateTime.Today;
@@ -222,9 +237,11 @@ namespace KerwaKasse.MVVM.ViewModel
                    || PriceMatchesSearch(order.Total, search);
         }
 
+        // The name (with a description) and the kind ("Variabler Preis", "Sonderpreis", "Freie Eingabe").
         private static bool PositionMatchesSearch(OrderPositionModel position, string search)
         {
-            return position.Product.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+            return position.DisplayName.Contains(search, StringComparison.CurrentCultureIgnoreCase)
+                   || (position.Subline?.Contains(search, StringComparison.CurrentCultureIgnoreCase) ?? false);
         }
 
         private static bool PriceMatchesSearch(decimal price, string search)
@@ -251,15 +268,23 @@ namespace KerwaKasse.MVVM.ViewModel
                 OrderPositions = o.Positions.Select(p => new OrderPositionModel
                 {
                     Amount = p.Amount,
-                    Product = new ProductModel
-                    {
-                        ProductID = p.ProductId,
-                        Name = p.ProductName,
-                        // The order's snapshotted unit price, kept on edit.
-                        Price = p.UnitPrice,
-                        // Colour comes from the current product (the order doesn't store it).
-                        ColorAsString = ColorOf(p.ProductId)
-                    }
+                    UnitPrice = p.UnitPrice,
+                    ProductId = p.ProductId,
+                    Kind = p.Kind,
+                    ListPrice = p.ListPrice,
+                    Note = p.Note,
+                    // None for a free entry without product.
+                    Product = p.ProductId is int productId
+                        ? new ProductModel
+                        {
+                            ProductID = productId,
+                            Name = p.ProductName,
+                            // The normal price at the time of the sale.
+                            Price = p.ListPrice ?? p.UnitPrice,
+                            // Colour comes from the current product (the order doesn't store it).
+                            ColorAsString = ColorOf(productId)
+                        }
+                        : null
                 }).ToList()
             };
             om.UpdateDescAndTotal();
@@ -280,12 +305,18 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 AddEditPosition(new OrderHistoryEditPosition
                 {
-                    ProductId = pos.Product.ProductID,
-                    ProductName = pos.Product.Name,
-                    UnitPrice = pos.Product.Price,
-                    ColorBrush = pos.Product.Color,
-                    OriginalAmount = pos.Amount,
+                    Kind = pos.Kind,
+                    ProductId = pos.ProductId,
+                    ProductName = pos.Product?.Name ?? string.Empty,
+                    Note = pos.Note,
+                    ListPrice = pos.ListPrice,
+                    ColorBrush = pos.ColorBrush,
+                    UnitPrice = pos.UnitPrice,
                     Amount = pos.Amount,
+                    OriginalAmount = pos.Amount,
+                    OriginalUnitPrice = pos.UnitPrice,
+                    OriginalProductId = pos.ProductId,
+                    OriginalNote = pos.Note,
                     IsNew = false
                 });
             }
@@ -310,33 +341,90 @@ namespace KerwaKasse.MVVM.ViewModel
             OnPropertyChanged(nameof(CanSave));
         }
 
-        private void AddPosition()
+        /// <summary>"Position nachtragen": a product, asking for the price of one with a variable price,
+        /// or a free entry, asking for its amount and what it is for.</summary>
+        private async Task AddPosition()
         {
-            var usedIds = EditPositions.Select(p => p.ProductId).ToHashSet();
-            var addable = _allProducts.Where(p => !usedIds.Contains(p.ProductID)).ToList();
+            // A product is listed once at its normal price; one with a variable price can appear again
+            // at another price.
+            var usedIds = EditPositions.Where(p => p.Kind == OrderPositionKind.Regular).Select(p => p.ProductId).ToHashSet();
+            var addable = _allProducts.Where(p => p.VariablePrice || !usedIds.Contains(p.ProductID)).ToList();
 
-            if (addable.Count == 0)
+            var choice = await _dialogService.ShowAddPositionAsync(addable);
+            if (choice == null)
                 return;
 
-            ShowAddPositionPicker?.Invoke(addable, product =>
+            if (choice.IsFreeEntry)
             {
-                if (product == null)
-                    return;
+                var entry = await _dialogService.ShowFreeEntryAsync(_orderService.GetRecentNotes(RecentNoteCount), _allProducts);
+                if (entry != null)
+                    AddNewPosition(entry.Product, OrderPositionKind.FreeEntry, entry.Amount, entry.Note);
+                return;
+            }
 
-                AddEditPosition(new OrderHistoryEditPosition
-                {
-                    ProductId = product.ProductID,
-                    ProductName = product.Name,
-                    // A newly added position uses the product's current price.
-                    UnitPrice = product.Price,
-                    ColorBrush = product.Color,
-                    OriginalAmount = 0,
-                    Amount = 1,
-                    IsNew = true
-                });
+            var product = choice.Product;
+            if (!product.VariablePrice)
+            {
+                // A newly added position uses the product's current price.
+                AddNewPosition(product, OrderPositionKind.Regular, product.Price, note: null);
+            }
+            else if (await _dialogService.ShowPriceEntryAsync(product.Name, product.Price) is decimal price)
+            {
+                AddNewPosition(product, OrderPositionKind.VariablePrice, price, note: null);
+            }
+        }
 
-                RecalculateEditTotal();
+        private void AddNewPosition(ProductModel product, OrderPositionKind kind, decimal unitPrice, string note)
+        {
+            AddEditPosition(new OrderHistoryEditPosition
+            {
+                Kind = kind,
+                ProductId = product?.ProductID,
+                ProductName = product?.Name ?? string.Empty,
+                Note = note,
+                ListPrice = product?.Price,
+                ColorBrush = product?.Color ?? OrderPositionModel.FreeEntryBrush,
+                UnitPrice = unitPrice,
+                Amount = 1,
+                OriginalAmount = 0,
+                IsNew = true
             });
+
+            RecalculateEditTotal();
+        }
+
+        /// <summary>A new price for a variable-price position or a free entry, on the till's number pad.</summary>
+        private async Task EditPrice(OrderHistoryEditPosition position)
+        {
+            if (!position.CanEditPrice)
+                return;
+
+            if (await _dialogService.ShowPriceEntryAsync(position.DisplayName, position.UnitPrice, change: true) is decimal price)
+            {
+                position.UnitPrice = price;
+                RecalculateEditTotal();
+            }
+        }
+
+        /// <summary>Another description and/or product for a free entry.</summary>
+        private async Task EditPurpose(OrderHistoryEditPosition position)
+        {
+            if (!position.CanEditPurpose)
+                return;
+
+            var product = position.ProductId is int id ? _allProducts.FirstOrDefault(p => p.ProductID == id) : null;
+            if (position.ProductId != null && product == null)
+                // The product no longer exists; keep it selectable under its old name.
+                product = new ProductModel { ProductID = position.ProductId.Value, Name = position.ProductName, Price = position.ListPrice ?? position.UnitPrice };
+
+            var result = await _dialogService.ShowFreeEntryPurposeAsync(
+                new FreeEntryResult(position.UnitPrice, position.Note, product),
+                _orderService.GetRecentNotes(RecentNoteCount), _allProducts);
+            if (result == null)
+                return;
+
+            position.SetPurpose(result.Product, result.Note);
+            RecalculateEditTotal();
         }
 
         private void ToggleRemove(OrderHistoryEditPosition position)
@@ -389,14 +477,20 @@ namespace KerwaKasse.MVVM.ViewModel
             {
                 Id = SelectedOrder.OrderID,
                 OrderTime = SelectedOrder.OrderTime,
+                // Rows that ended up alike (same product, kind, price and description) are saved as one,
+                // like the till adds them up.
                 Positions = EditPositions
                     .Where(p => !p.IsRemoved)
-                    .Select(p => new OrderPosition
+                    .GroupBy(p => (p.ProductId, p.Kind, p.UnitPrice, p.Note))
+                    .Select(g => new OrderPosition
                     {
                         OrderId = SelectedOrder.OrderID,
-                        ProductId = p.ProductId,
-                        Amount = p.Amount,
-                        UnitPrice = p.UnitPrice
+                        ProductId = g.Key.ProductId,
+                        Kind = g.Key.Kind,
+                        Amount = g.Sum(p => p.Amount),
+                        UnitPrice = g.Key.UnitPrice,
+                        ListPrice = g.First().ListPrice,
+                        Note = g.Key.Note
                     }).ToList()
             };
 
